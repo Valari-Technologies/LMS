@@ -1,0 +1,35 @@
+# env
+.env
+.env.local
+
+# node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+frontend/.vite/
+
+# java
+target/
+backend/target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# uploads
+uploads/
+backend/uploads/
+
+# logs
+logs/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# build
+build/

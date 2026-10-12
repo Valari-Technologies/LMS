@@ -1,0 +1,98 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+  application:
+    name: onetutor-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/onetutor}
+    username: ${DATABASE_USERNAME:onetutor}
+    password: ${DATABASE_PASSWORD:onetutor_dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # schema is owned by Flyway, never by Hibernate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+  servlet:
+    multipart:
+      max-file-size: 1000MB
+      max-request-size: 1000MB
+
+server:
+  port: ${SERVER_PORT:${PORT:8080}}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-this-to-a-long-random-secret-in-production-min-32-bytes}
+    access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:86400000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:2592000000}
+  base-url: ${APP_BASE_URL:http://localhost:5173}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,https://*.github.io,https://*.vercel.app}
+  storage:
+    provider: ${STORAGE_PROVIDER:cloudinary}
+    path: ${STORAGE_PATH:./uploads}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:onetutor}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+  firebase:
+    enabled: ${FIREBASE_ENABLED:true}
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+    credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+    project-id: ${FIREBASE_PROJECT_ID:}
+  mail:
+
+    from: ${MAIL_FROM:no-reply@onetutor.local}
+    sender-name: ${MAIL_SENDER_NAME:OneTutor Academy}
+    login-alert-enabled: ${MAIL_LOGIN_ALERT_ENABLED:false}
+  whisper:
+    api-key: ${OPENAI_API_KEY:}
+    url: ${WHISPER_API_URL:https://api.openai.com/v1/audio/transcriptions}
+    model: ${WHISPER_MODEL:whisper-1}
+    python-bin: ${WHISPER_PYTHON_BIN:python}
+    script-path: ${WHISPER_SCRIPT_PATH:}
+    local-model: ${WHISPER_LOCAL_MODEL:base}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder_key}
+    key-secret: ${RAZORPAY_KEY_SECRET:rzp_test_placeholder_secret}
+    currency: ${RAZORPAY_CURRENCY:INR}
+    enabled: ${RAZORPAY_ENABLED:true}
+  seed:
+    admin-email: admin@onetutor.local
+    admin-password: Admin@12345
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.onetutor: INFO
+    org.springframework.security: WARN

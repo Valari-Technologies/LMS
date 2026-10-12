@@ -1,0 +1,2552 @@
+{
+  "summary": {
+    "total": 214,
+    "passed": 214,
+    "failed": 0,
+    "passRate": "100.0%",
+    "timestamp": "2026-10-09T10:47:06.213Z"
+  },
+  "subsystemBreakdown": {
+    "media-controller": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    "user-controller": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "section-controller": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "video-note-controller": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "course-controller": {
+      "total": 13,
+      "passed": 13,
+      "failed": 0
+    },
+    "content-controller": {
+      "total": 16,
+      "passed": 16,
+      "failed": 0
+    },
+    "progress-controller": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "community-controller": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    "category-controller": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "admin-user-controller": {
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    "admin-live-session-controller": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    "admin-enrollment-controller": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "Admin Coupons": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "admin-contact-controller": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "admin-community-controller": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "Cloudinary Operations": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "admin-batch-controller": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    "Admin Hero Banners": {
+      "total": 17,
+      "passed": 17,
+      "failed": 0
+    },
+    "payment-controller": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    "notification-controller": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "Course Reviews": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "enrollment-controller": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "Coupons": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "subtitle-controller": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "assessment-admin-controller": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "contact-controller": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "auth-controller": {
+      "total": 14,
+      "passed": 14,
+      "failed": 0
+    },
+    "assessment-student-controller": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "admin-notification-controller": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "Admin Reviews & Ratings": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "live-session-controller": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "health-controller": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "student-batch-controller": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "Banners": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "admin-progress-controller": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "admin-dashboard-controller": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "audit-log-controller": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "index": 1,
+      "method": "GET",
+      "rawPath": "/api/v1/media/files/{id}",
+      "actualPath": "/api/v1/media/files/67",
+      "status": 200,
+      "duration": 3935,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 2,
+      "method": "HEAD",
+      "rawPath": "/api/v1/media/files/{id}",
+      "actualPath": "/api/v1/media/files/67",
+      "status": 200,
+      "duration": 27,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 3,
+      "method": "GET",
+      "rawPath": "/api/v1/media/file",
+      "actualPath": "/api/v1/media/file?path=sample.txt",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 4,
+      "method": "HEAD",
+      "rawPath": "/api/v1/media/file",
+      "actualPath": "/api/v1/media/file?path=sample.txt",
+      "status": 200,
+      "duration": 3,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 5,
+      "method": "GET",
+      "rawPath": "/api/v1/users/me",
+      "actualPath": "/api/v1/users/me",
+      "status": 200,
+      "duration": 5,
+      "passed": true,
+      "notes": "Success",
+      "tag": "user-controller"
+    },
+    {
+      "index": 6,
+      "method": "PUT",
+      "rawPath": "/api/v1/users/me",
+      "actualPath": "/api/v1/users/me",
+      "status": 200,
+      "duration": 13,
+      "passed": true,
+      "notes": "Success",
+      "tag": "user-controller"
+    },
+    {
+      "index": 7,
+      "method": "PUT",
+      "rawPath": "/api/v1/sections/{id}",
+      "actualPath": "/api/v1/sections/47",
+      "status": 422,
+      "duration": 18,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "section-controller"
+    },
+    {
+      "index": 8,
+      "method": "DELETE",
+      "rawPath": "/api/v1/sections/{id}",
+      "actualPath": "/api/v1/sections/47",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "section-controller"
+    },
+    {
+      "index": 9,
+      "method": "PUT",
+      "rawPath": "/api/v1/notes/{noteId}",
+      "actualPath": "/api/v1/notes/1",
+      "status": 404,
+      "duration": 16,
+      "passed": true,
+      "notes": "Handled Not Found (Note not found with id: 1)",
+      "tag": "video-note-controller"
+    },
+    {
+      "index": 10,
+      "method": "DELETE",
+      "rawPath": "/api/v1/notes/{noteId}",
+      "actualPath": "/api/v1/notes/1",
+      "status": 404,
+      "duration": 10,
+      "passed": true,
+      "notes": "Handled Not Found (Note not found with id: 1)",
+      "tag": "video-note-controller"
+    },
+    {
+      "index": 11,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{id}",
+      "actualPath": "/api/v1/courses/16",
+      "status": 200,
+      "duration": 5,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 12,
+      "method": "PUT",
+      "rawPath": "/api/v1/courses/{id}",
+      "actualPath": "/api/v1/courses/16",
+      "status": 422,
+      "duration": 13,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "course-controller"
+    },
+    {
+      "index": 13,
+      "method": "PUT",
+      "rawPath": "/api/v1/contents/{id}",
+      "actualPath": "/api/v1/contents/37",
+      "status": 422,
+      "duration": 10,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 14,
+      "method": "DELETE",
+      "rawPath": "/api/v1/contents/{id}",
+      "actualPath": "/api/v1/contents/37",
+      "status": 200,
+      "duration": 29,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 15,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{contentId}/progress",
+      "actualPath": "/api/v1/contents/37/progress",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "progress-controller"
+    },
+    {
+      "index": 16,
+      "method": "PUT",
+      "rawPath": "/api/v1/contents/{contentId}/progress",
+      "actualPath": "/api/v1/contents/37/progress",
+      "status": 200,
+      "duration": 42,
+      "passed": true,
+      "notes": "Success",
+      "tag": "progress-controller"
+    },
+    {
+      "index": 17,
+      "method": "PUT",
+      "rawPath": "/api/v1/contents/resources/{resourceId}",
+      "actualPath": "/api/v1/contents/resources/1",
+      "status": 422,
+      "duration": 31,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 18,
+      "method": "DELETE",
+      "rawPath": "/api/v1/contents/resources/{resourceId}",
+      "actualPath": "/api/v1/contents/resources/1",
+      "status": 404,
+      "duration": 9,
+      "passed": true,
+      "notes": "Handled Not Found (Resource not found)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 19,
+      "method": "PUT",
+      "rawPath": "/api/v1/contents/content-resources/{resourceId}",
+      "actualPath": "/api/v1/contents/content-resources/1",
+      "status": 404,
+      "duration": 12,
+      "passed": true,
+      "notes": "Handled Not Found (Content resource not found)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 20,
+      "method": "DELETE",
+      "rawPath": "/api/v1/contents/content-resources/{resourceId}",
+      "actualPath": "/api/v1/contents/content-resources/1",
+      "status": 404,
+      "duration": 9,
+      "passed": true,
+      "notes": "Handled Not Found (Content resource not found)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 21,
+      "method": "PUT",
+      "rawPath": "/api/v1/community/{courseId}/messages/{messageId}",
+      "actualPath": "/api/v1/community/16/messages/1",
+      "status": 422,
+      "duration": 10,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "community-controller"
+    },
+    {
+      "index": 22,
+      "method": "DELETE",
+      "rawPath": "/api/v1/community/{courseId}/messages/{messageId}",
+      "actualPath": "/api/v1/community/16/messages/1",
+      "status": 404,
+      "duration": 22,
+      "passed": true,
+      "notes": "Handled Not Found (Message not found in this course)",
+      "tag": "community-controller"
+    },
+    {
+      "index": 23,
+      "method": "GET",
+      "rawPath": "/api/v1/categories/{id}",
+      "actualPath": "/api/v1/categories/1",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "category-controller"
+    },
+    {
+      "index": 24,
+      "method": "PUT",
+      "rawPath": "/api/v1/categories/{id}",
+      "actualPath": "/api/v1/categories/1",
+      "status": 422,
+      "duration": 10,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "category-controller"
+    },
+    {
+      "index": 25,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/users/{id}/permissions",
+      "actualPath": "/api/v1/admin/users/3/permissions",
+      "status": 400,
+      "duration": 10,
+      "passed": true,
+      "notes": "Business logic validated (Malformed JSON request body or invalid parameter format)",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 26,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/media/{id}",
+      "actualPath": "/api/v1/admin/media/67",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 27,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/media/{id}",
+      "actualPath": "/api/v1/admin/media/67",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 28,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/media/{id}",
+      "actualPath": "/api/v1/admin/media/67",
+      "status": 200,
+      "duration": 9794,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 29,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/live-sessions/{sessionId}/recordings/{recordingId}",
+      "actualPath": "/api/v1/admin/live-sessions/18/recordings/1",
+      "status": 400,
+      "duration": 14,
+      "passed": true,
+      "notes": "Business logic validated (Recording does not belong to this session)",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 30,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/live-sessions/{sessionId}/recordings/{recordingId}",
+      "actualPath": "/api/v1/admin/live-sessions/18/recordings/1",
+      "status": 400,
+      "duration": 10,
+      "passed": true,
+      "notes": "Business logic validated (Recording does not belong to this session)",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 31,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/live-sessions/{id}",
+      "actualPath": "/api/v1/admin/live-sessions/18",
+      "status": 200,
+      "duration": 16,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 32,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/enrollments/{id}/remove",
+      "actualPath": "/api/v1/admin/enrollments/1/remove",
+      "status": 200,
+      "duration": 24,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-enrollment-controller"
+    },
+    {
+      "index": 33,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/enrollments/{id}/rejoin",
+      "actualPath": "/api/v1/admin/enrollments/1/rejoin",
+      "status": 200,
+      "duration": 13,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-enrollment-controller"
+    },
+    {
+      "index": 34,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/enrollments/{id}/batch",
+      "actualPath": "/api/v1/admin/enrollments/1/batch",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-enrollment-controller"
+    },
+    {
+      "index": 35,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/coupons/{id}",
+      "actualPath": "/api/v1/admin/coupons/1",
+      "status": 404,
+      "duration": 10,
+      "passed": true,
+      "notes": "Handled Not Found (Coupon not found with ID: 1)",
+      "tag": "Admin Coupons"
+    },
+    {
+      "index": 36,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/coupons/{id}",
+      "actualPath": "/api/v1/admin/coupons/1",
+      "status": 422,
+      "duration": 20,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "Admin Coupons"
+    },
+    {
+      "index": 37,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/coupons/{id}",
+      "actualPath": "/api/v1/admin/coupons/1",
+      "status": 404,
+      "duration": 7,
+      "passed": true,
+      "notes": "Handled Not Found (Coupon not found with ID: 1)",
+      "tag": "Admin Coupons"
+    },
+    {
+      "index": 38,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/contact-messages/{id}/archive",
+      "actualPath": "/api/v1/admin/contact-messages/11/archive",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-contact-controller"
+    },
+    {
+      "index": 39,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/community/{courseId}/members/{userId}/status",
+      "actualPath": "/api/v1/admin/community/16/members/3/status",
+      "status": 200,
+      "duration": 18,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-community-controller"
+    },
+    {
+      "index": 40,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/cloudinary/replace",
+      "actualPath": "/api/v1/admin/cloudinary/replace",
+      "status": 200,
+      "duration": 1521,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Cloudinary Operations"
+    },
+    {
+      "index": 41,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/batches/{id}",
+      "actualPath": "/api/v1/admin/batches/5",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 42,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/batches/{id}",
+      "actualPath": "/api/v1/admin/batches/5",
+      "status": 422,
+      "duration": 12,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 43,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/batches/{id}/students/{enrollmentId}/change-batch",
+      "actualPath": "/api/v1/admin/batches/5/students/28/change-batch",
+      "status": 422,
+      "duration": 8,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 44,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/batches/{id}/status",
+      "actualPath": "/api/v1/admin/batches/5/status",
+      "status": 400,
+      "duration": 6,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: status)",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 45,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/banners/{id}",
+      "actualPath": "/api/v1/admin/banners/10",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 46,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/banners/{id}",
+      "actualPath": "/api/v1/admin/banners/10",
+      "status": 422,
+      "duration": 9,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 47,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/banners/{id}",
+      "actualPath": "/api/v1/admin/banners/10",
+      "status": 200,
+      "duration": 5150,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 48,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/banners/promo",
+      "actualPath": "/api/v1/admin/banners/promo",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 49,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/banners/promo",
+      "actualPath": "/api/v1/admin/banners/promo",
+      "status": 200,
+      "duration": 16,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 50,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/banners/promo",
+      "actualPath": "/api/v1/admin/banners/promo",
+      "status": 201,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 51,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/banners/promo/{id}",
+      "actualPath": "/api/v1/admin/banners/promo/10",
+      "status": 404,
+      "duration": 9,
+      "passed": true,
+      "notes": "Handled Not Found (Promo banner not found with ID: 10)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 52,
+      "method": "PUT",
+      "rawPath": "/api/v1/admin/banners/promo/{id}",
+      "actualPath": "/api/v1/admin/banners/promo/10",
+      "status": 404,
+      "duration": 9,
+      "passed": true,
+      "notes": "Handled Not Found (Promo banner not found with ID: 10)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 53,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/banners/promo/{id}",
+      "actualPath": "/api/v1/admin/banners/promo/10",
+      "status": 404,
+      "duration": 8,
+      "passed": true,
+      "notes": "Handled Not Found (Promo banner not found with ID: 10)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 54,
+      "method": "POST",
+      "rawPath": "/api/v1/users/heartbeat",
+      "actualPath": "/api/v1/users/heartbeat",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "user-controller"
+    },
+    {
+      "index": 55,
+      "method": "GET",
+      "rawPath": "/api/v1/sections/{sectionId}/contents",
+      "actualPath": "/api/v1/sections/47/contents",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 56,
+      "method": "POST",
+      "rawPath": "/api/v1/sections/{sectionId}/contents",
+      "actualPath": "/api/v1/sections/47/contents",
+      "status": 422,
+      "duration": 6,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 57,
+      "method": "POST",
+      "rawPath": "/api/v1/sections/{sectionId}/contents/reorder",
+      "actualPath": "/api/v1/sections/47/contents/reorder",
+      "status": 422,
+      "duration": 9,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 58,
+      "method": "POST",
+      "rawPath": "/api/v1/sections/{id}/restore",
+      "actualPath": "/api/v1/sections/47/restore",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "section-controller"
+    },
+    {
+      "index": 59,
+      "method": "POST",
+      "rawPath": "/api/v1/payments/razorpay/verify",
+      "actualPath": "/api/v1/payments/razorpay/verify",
+      "status": 422,
+      "duration": 7,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 60,
+      "method": "POST",
+      "rawPath": "/api/v1/payments/razorpay/create-order",
+      "actualPath": "/api/v1/payments/razorpay/create-order",
+      "status": 409,
+      "duration": 11,
+      "passed": true,
+      "notes": "Handled Conflict (You are already actively enrolled in this course.)",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 61,
+      "method": "POST",
+      "rawPath": "/api/v1/payments/checkout",
+      "actualPath": "/api/v1/payments/checkout",
+      "status": 409,
+      "duration": 14,
+      "passed": true,
+      "notes": "Handled Conflict (You are already actively enrolled in this course.)",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 62,
+      "method": "POST",
+      "rawPath": "/api/v1/notifications/{id}/read",
+      "actualPath": "/api/v1/notifications/1/read",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "notification-controller"
+    },
+    {
+      "index": 63,
+      "method": "POST",
+      "rawPath": "/api/v1/notifications/read-all",
+      "actualPath": "/api/v1/notifications/read-all",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "notification-controller"
+    },
+    {
+      "index": 64,
+      "method": "POST",
+      "rawPath": "/api/v1/notifications/fcm-token",
+      "actualPath": "/api/v1/notifications/fcm-token",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "notification-controller"
+    },
+    {
+      "index": 65,
+      "method": "DELETE",
+      "rawPath": "/api/v1/notifications/fcm-token",
+      "actualPath": "/api/v1/notifications/fcm-token",
+      "status": 400,
+      "duration": 5,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: token)",
+      "tag": "notification-controller"
+    },
+    {
+      "index": 66,
+      "method": "POST",
+      "rawPath": "/api/v1/media/upload",
+      "actualPath": "/api/v1/media/upload",
+      "status": 200,
+      "duration": 2272,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 67,
+      "method": "GET",
+      "rawPath": "/api/v1/courses",
+      "actualPath": "/api/v1/courses",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 68,
+      "method": "POST",
+      "rawPath": "/api/v1/courses",
+      "actualPath": "/api/v1/courses",
+      "status": 422,
+      "duration": 5,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "course-controller"
+    },
+    {
+      "index": 69,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/unpublish",
+      "actualPath": "/api/v1/courses/16/unpublish",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 70,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/unarchive",
+      "actualPath": "/api/v1/courses/16/unarchive",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 71,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/reject-edits",
+      "actualPath": "/api/v1/courses/16/reject-edits",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 72,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/publish",
+      "actualPath": "/api/v1/courses/16/publish",
+      "status": 200,
+      "duration": 28,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 73,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/duplicate",
+      "actualPath": "/api/v1/courses/16/duplicate",
+      "status": 200,
+      "duration": 59,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 74,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/archive",
+      "actualPath": "/api/v1/courses/16/archive",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 75,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{id}/approve-edits",
+      "actualPath": "/api/v1/courses/16/approve-edits",
+      "status": 200,
+      "duration": 21,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 76,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/sections",
+      "actualPath": "/api/v1/courses/16/sections",
+      "status": 200,
+      "duration": 12,
+      "passed": true,
+      "notes": "Success",
+      "tag": "section-controller"
+    },
+    {
+      "index": 77,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{courseId}/sections",
+      "actualPath": "/api/v1/courses/16/sections",
+      "status": 200,
+      "duration": 13,
+      "passed": true,
+      "notes": "Success",
+      "tag": "section-controller"
+    },
+    {
+      "index": 78,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{courseId}/sections/reorder",
+      "actualPath": "/api/v1/courses/16/sections/reorder",
+      "status": 422,
+      "duration": 8,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "section-controller"
+    },
+    {
+      "index": 79,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/reviews",
+      "actualPath": "/api/v1/courses/16/reviews",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Course Reviews"
+    },
+    {
+      "index": 80,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{courseId}/reviews",
+      "actualPath": "/api/v1/courses/16/reviews",
+      "status": 201,
+      "duration": 37,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Course Reviews"
+    },
+    {
+      "index": 81,
+      "method": "POST",
+      "rawPath": "/api/v1/courses/{courseId}/enroll",
+      "actualPath": "/api/v1/courses/16/enroll",
+      "status": 409,
+      "duration": 12,
+      "passed": true,
+      "notes": "Handled Conflict (You are already enrolled in this course)",
+      "tag": "enrollment-controller"
+    },
+    {
+      "index": 82,
+      "method": "POST",
+      "rawPath": "/api/v1/coupons/validate",
+      "actualPath": "/api/v1/coupons/validate",
+      "status": 422,
+      "duration": 15,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "Coupons"
+    },
+    {
+      "index": 83,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{id}/restore",
+      "actualPath": "/api/v1/contents/37/restore",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 84,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{id}/resources",
+      "actualPath": "/api/v1/contents/37/resources",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 85,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{id}/resources",
+      "actualPath": "/api/v1/contents/37/resources",
+      "status": 422,
+      "duration": 5,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "content-controller"
+    },
+    {
+      "index": 86,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{id}/content-resources",
+      "actualPath": "/api/v1/contents/37/content-resources",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 87,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{id}/content-resources",
+      "actualPath": "/api/v1/contents/37/content-resources",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 88,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{id}/auto-subtitles",
+      "actualPath": "/api/v1/contents/37/auto-subtitles",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "subtitle-controller"
+    },
+    {
+      "index": 89,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{contentId}/session",
+      "actualPath": "/api/v1/contents/37/session",
+      "status": 200,
+      "duration": 20,
+      "passed": true,
+      "notes": "Success",
+      "tag": "progress-controller"
+    },
+    {
+      "index": 90,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{contentId}/notes",
+      "actualPath": "/api/v1/contents/37/notes",
+      "status": 200,
+      "duration": 12,
+      "passed": true,
+      "notes": "Success",
+      "tag": "video-note-controller"
+    },
+    {
+      "index": 91,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{contentId}/notes",
+      "actualPath": "/api/v1/contents/37/notes",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "video-note-controller"
+    },
+    {
+      "index": 92,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{contentId}/complete",
+      "actualPath": "/api/v1/contents/37/complete",
+      "status": 200,
+      "duration": 12,
+      "passed": true,
+      "notes": "Success",
+      "tag": "progress-controller"
+    },
+    {
+      "index": 93,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{contentId}/assessment",
+      "actualPath": "/api/v1/contents/37/assessment",
+      "status": 403,
+      "duration": 7,
+      "passed": true,
+      "notes": "Role/Enrollment security enforced (You do not have permission to perform this action)",
+      "tag": "assessment-admin-controller"
+    },
+    {
+      "index": 94,
+      "method": "POST",
+      "rawPath": "/api/v1/contents/{contentId}/assessment",
+      "actualPath": "/api/v1/contents/37/assessment",
+      "status": 422,
+      "duration": 23,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "assessment-admin-controller"
+    },
+    {
+      "index": 95,
+      "method": "DELETE",
+      "rawPath": "/api/v1/contents/{contentId}/assessment",
+      "actualPath": "/api/v1/contents/37/assessment",
+      "status": 404,
+      "duration": 8,
+      "passed": true,
+      "notes": "Handled Not Found (No assessment found for this lesson)",
+      "tag": "assessment-admin-controller"
+    },
+    {
+      "index": 96,
+      "method": "POST",
+      "rawPath": "/api/v1/contact",
+      "actualPath": "/api/v1/contact",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "contact-controller"
+    },
+    {
+      "index": 97,
+      "method": "POST",
+      "rawPath": "/api/v1/community/{courseId}/read",
+      "actualPath": "/api/v1/community/16/read",
+      "status": 200,
+      "duration": 16,
+      "passed": true,
+      "notes": "Success",
+      "tag": "community-controller"
+    },
+    {
+      "index": 98,
+      "method": "GET",
+      "rawPath": "/api/v1/community/{courseId}/messages",
+      "actualPath": "/api/v1/community/16/messages",
+      "status": 200,
+      "duration": 20,
+      "passed": true,
+      "notes": "Success",
+      "tag": "community-controller"
+    },
+    {
+      "index": 99,
+      "method": "POST",
+      "rawPath": "/api/v1/community/{courseId}/messages",
+      "actualPath": "/api/v1/community/16/messages",
+      "status": 400,
+      "duration": 11,
+      "passed": true,
+      "notes": "Business logic validated (Message must have text content or a media attachment)",
+      "tag": "community-controller"
+    },
+    {
+      "index": 100,
+      "method": "POST",
+      "rawPath": "/api/v1/cloudinary/upload",
+      "actualPath": "/api/v1/cloudinary/upload",
+      "status": 200,
+      "duration": 1993,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Cloudinary Operations"
+    },
+    {
+      "index": 101,
+      "method": "GET",
+      "rawPath": "/api/v1/categories",
+      "actualPath": "/api/v1/categories",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "category-controller"
+    },
+    {
+      "index": 102,
+      "method": "POST",
+      "rawPath": "/api/v1/categories",
+      "actualPath": "/api/v1/categories",
+      "status": 422,
+      "duration": 5,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "category-controller"
+    },
+    {
+      "index": 103,
+      "method": "POST",
+      "rawPath": "/api/v1/categories/{id}/unarchive",
+      "actualPath": "/api/v1/categories/1/unarchive",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "category-controller"
+    },
+    {
+      "index": 104,
+      "method": "POST",
+      "rawPath": "/api/v1/categories/{id}/archive",
+      "actualPath": "/api/v1/categories/1/archive",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "category-controller"
+    },
+    {
+      "index": 105,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/test-email",
+      "actualPath": "/api/v1/auth/test-email",
+      "status": 200,
+      "duration": 5194,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 106,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/register",
+      "actualPath": "/api/v1/auth/register",
+      "status": 422,
+      "duration": 9,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 107,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/register-otp/verify",
+      "actualPath": "/api/v1/auth/register-otp/verify",
+      "status": 400,
+      "duration": 17,
+      "passed": true,
+      "notes": "Business logic validated (Verification code has expired. Please request a new code.)",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 108,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/register-otp/send",
+      "actualPath": "/api/v1/auth/register-otp/send",
+      "status": 200,
+      "duration": 6444,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 109,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/refresh",
+      "actualPath": "/api/v1/auth/refresh",
+      "status": 200,
+      "duration": 12,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 110,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/logout",
+      "actualPath": "/api/v1/auth/logout",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 111,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/login",
+      "actualPath": "/api/v1/auth/login",
+      "status": 200,
+      "duration": 79,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 112,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/login-otp/verify",
+      "actualPath": "/api/v1/auth/login-otp/verify",
+      "status": 400,
+      "duration": 8,
+      "passed": true,
+      "notes": "Business logic validated (Verification code has expired. Please request a new code.)",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 113,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/login-otp/send",
+      "actualPath": "/api/v1/auth/login-otp/send",
+      "status": 200,
+      "duration": 5278,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 114,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/google",
+      "actualPath": "/api/v1/auth/google",
+      "status": 401,
+      "duration": 533,
+      "passed": true,
+      "notes": "Secure token rejection verified (INVALID_GOOGLE_TOKEN)",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 115,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/forgot-password",
+      "actualPath": "/api/v1/auth/forgot-password",
+      "status": 200,
+      "duration": 7106,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 116,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/forgot-password-otp/verify",
+      "actualPath": "/api/v1/auth/forgot-password-otp/verify",
+      "status": 400,
+      "duration": 10,
+      "passed": true,
+      "notes": "Business logic validated (Verification code has expired. Please request a new code.)",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 117,
+      "method": "POST",
+      "rawPath": "/api/v1/auth/forgot-password-otp/send",
+      "actualPath": "/api/v1/auth/forgot-password-otp/send",
+      "status": 200,
+      "duration": 5969,
+      "passed": true,
+      "notes": "Success",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 118,
+      "method": "POST",
+      "rawPath": "/api/v1/assessments/{assessmentId}/attempts",
+      "actualPath": "/api/v1/assessments/1/attempts",
+      "status": 404,
+      "duration": 10,
+      "passed": true,
+      "notes": "Handled Not Found (Assessment not found)",
+      "tag": "assessment-student-controller"
+    },
+    {
+      "index": 119,
+      "method": "POST",
+      "rawPath": "/api/v1/assessment-attempts/{attemptId}/terminate",
+      "actualPath": "/api/v1/assessment-attempts/1/terminate",
+      "status": 404,
+      "duration": 9,
+      "passed": true,
+      "notes": "Handled Not Found (Assessment attempt not found)",
+      "tag": "assessment-student-controller"
+    },
+    {
+      "index": 120,
+      "method": "POST",
+      "rawPath": "/api/v1/assessment-attempts/{attemptId}/submit",
+      "actualPath": "/api/v1/assessment-attempts/1/submit",
+      "status": 404,
+      "duration": 13,
+      "passed": true,
+      "notes": "Handled Not Found (Assessment attempt not found)",
+      "tag": "assessment-student-controller"
+    },
+    {
+      "index": 121,
+      "method": "POST",
+      "rawPath": "/api/v1/assessment-attempts/{attemptId}/answer",
+      "actualPath": "/api/v1/assessment-attempts/1/answer",
+      "status": 422,
+      "duration": 8,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "assessment-student-controller"
+    },
+    {
+      "index": 122,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/users/{id}/reset-password",
+      "actualPath": "/api/v1/admin/users/3/reset-password",
+      "status": 422,
+      "duration": 9,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 123,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/users/{id}/enable",
+      "actualPath": "/api/v1/admin/users/3/enable",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 124,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/users/{id}/disable",
+      "actualPath": "/api/v1/admin/users/3/disable",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 125,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/students/{id}/enable",
+      "actualPath": "/api/v1/admin/students/3/enable",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 126,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/students/{id}/disable",
+      "actualPath": "/api/v1/admin/students/3/disable",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 127,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/notifications/broadcast",
+      "actualPath": "/api/v1/admin/notifications/broadcast",
+      "status": 200,
+      "duration": 35,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-notification-controller"
+    },
+    {
+      "index": 128,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/notifications/broadcast/{id}/resend",
+      "actualPath": "/api/v1/admin/notifications/broadcast/1/resend",
+      "status": 200,
+      "duration": 29,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-notification-controller"
+    },
+    {
+      "index": 129,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/media/upload",
+      "actualPath": "/api/v1/admin/media/upload",
+      "status": 200,
+      "duration": 1492,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 130,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/live-sessions",
+      "actualPath": "/api/v1/admin/live-sessions",
+      "status": 200,
+      "duration": 20,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 131,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/live-sessions",
+      "actualPath": "/api/v1/admin/live-sessions",
+      "status": 200,
+      "duration": 28,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 132,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/live-sessions/{id}/recording",
+      "actualPath": "/api/v1/admin/live-sessions/18/recording",
+      "status": 400,
+      "duration": 8,
+      "passed": true,
+      "notes": "Business logic validated (Either url or mediaAssetId must be provided)",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 133,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/live-sessions/{id}/complete",
+      "actualPath": "/api/v1/admin/live-sessions/18/complete",
+      "status": 400,
+      "duration": 7,
+      "passed": true,
+      "notes": "Business logic validated (Cannot complete a cancelled session)",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 134,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/live-sessions/{id}/cancel",
+      "actualPath": "/api/v1/admin/live-sessions/18/cancel",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 135,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/coupons",
+      "actualPath": "/api/v1/admin/coupons",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Coupons"
+    },
+    {
+      "index": 136,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/coupons",
+      "actualPath": "/api/v1/admin/coupons",
+      "status": 422,
+      "duration": 5,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "Admin Coupons"
+    },
+    {
+      "index": 137,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/contents/{id}/generate-subtitles",
+      "actualPath": "/api/v1/admin/contents/37/generate-subtitles",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "subtitle-controller"
+    },
+    {
+      "index": 138,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/contact-messages/{id}/reply",
+      "actualPath": "/api/v1/admin/contact-messages/11/reply",
+      "status": 200,
+      "duration": 5169,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-contact-controller"
+    },
+    {
+      "index": 139,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/cloudinary/upload",
+      "actualPath": "/api/v1/admin/cloudinary/upload",
+      "status": 200,
+      "duration": 1378,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Cloudinary Operations"
+    },
+    {
+      "index": 140,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/batches",
+      "actualPath": "/api/v1/admin/batches",
+      "status": 200,
+      "duration": 16,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 141,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/batches",
+      "actualPath": "/api/v1/admin/batches",
+      "status": 422,
+      "duration": 10,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 142,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/banners",
+      "actualPath": "/api/v1/admin/banners",
+      "status": 200,
+      "duration": 5,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 143,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/banners",
+      "actualPath": "/api/v1/admin/banners",
+      "status": 422,
+      "duration": 5,
+      "passed": true,
+      "notes": "Input schema validated (Request validation failed)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 144,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/banners/upload",
+      "actualPath": "/api/v1/admin/banners/upload",
+      "status": 200,
+      "duration": 1395,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 145,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/banners/promo/upload",
+      "actualPath": "/api/v1/admin/banners/promo/upload",
+      "status": 200,
+      "duration": 1811,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 146,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/admins",
+      "actualPath": "/api/v1/admin/admins",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 147,
+      "method": "POST",
+      "rawPath": "/api/v1/admin/admins",
+      "actualPath": "/api/v1/admin/admins",
+      "status": 200,
+      "duration": 80,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 148,
+      "method": "PATCH",
+      "rawPath": "/api/v1/admin/reviews/{id}/publish",
+      "actualPath": "/api/v1/admin/reviews/2/publish",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Reviews & Ratings"
+    },
+    {
+      "index": 149,
+      "method": "PATCH",
+      "rawPath": "/api/v1/admin/coupons/{id}/toggle",
+      "actualPath": "/api/v1/admin/coupons/1/toggle",
+      "status": 404,
+      "duration": 6,
+      "passed": true,
+      "notes": "Handled Not Found (Coupon not found with ID: 1)",
+      "tag": "Admin Coupons"
+    },
+    {
+      "index": 150,
+      "method": "PATCH",
+      "rawPath": "/api/v1/admin/banners/{id}/status",
+      "actualPath": "/api/v1/admin/banners/10/status",
+      "status": 400,
+      "duration": 5,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: active)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 151,
+      "method": "PATCH",
+      "rawPath": "/api/v1/admin/banners/promo/{id}/status",
+      "actualPath": "/api/v1/admin/banners/promo/10/status",
+      "status": 400,
+      "duration": 4,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: active)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 152,
+      "method": "PATCH",
+      "rawPath": "/api/v1/admin/banners/promo/status",
+      "actualPath": "/api/v1/admin/banners/promo/status",
+      "status": 400,
+      "duration": 6,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: active)",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 153,
+      "method": "GET",
+      "rawPath": "/api/v1/payments/razorpay/config",
+      "actualPath": "/api/v1/payments/razorpay/config",
+      "status": 200,
+      "duration": 5,
+      "passed": true,
+      "notes": "Success",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 154,
+      "method": "GET",
+      "rawPath": "/api/v1/payments/my-payments",
+      "actualPath": "/api/v1/payments/my-payments",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 155,
+      "method": "GET",
+      "rawPath": "/api/v1/payments/admin/stats",
+      "actualPath": "/api/v1/payments/admin/stats",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 156,
+      "method": "GET",
+      "rawPath": "/api/v1/payments/admin/all",
+      "actualPath": "/api/v1/payments/admin/all",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "payment-controller"
+    },
+    {
+      "index": 157,
+      "method": "GET",
+      "rawPath": "/api/v1/notifications",
+      "actualPath": "/api/v1/notifications",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "notification-controller"
+    },
+    {
+      "index": 158,
+      "method": "GET",
+      "rawPath": "/api/v1/notifications/unread-count",
+      "actualPath": "/api/v1/notifications/unread-count",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "notification-controller"
+    },
+    {
+      "index": 159,
+      "method": "GET",
+      "rawPath": "/api/v1/my-progress",
+      "actualPath": "/api/v1/my-progress",
+      "status": 200,
+      "duration": 24,
+      "passed": true,
+      "notes": "Success",
+      "tag": "progress-controller"
+    },
+    {
+      "index": 160,
+      "method": "GET",
+      "rawPath": "/api/v1/my-courses",
+      "actualPath": "/api/v1/my-courses",
+      "status": 200,
+      "duration": 68,
+      "passed": true,
+      "notes": "Success",
+      "tag": "enrollment-controller"
+    },
+    {
+      "index": 161,
+      "method": "GET",
+      "rawPath": "/api/v1/live-sessions",
+      "actualPath": "/api/v1/live-sessions",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "live-session-controller"
+    },
+    {
+      "index": 162,
+      "method": "GET",
+      "rawPath": "/api/v1/live-sessions/{id}",
+      "actualPath": "/api/v1/live-sessions/18",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "live-session-controller"
+    },
+    {
+      "index": 163,
+      "method": "GET",
+      "rawPath": "/api/v1/live-sessions/{id}/join-info",
+      "actualPath": "/api/v1/live-sessions/18/join-info",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "live-session-controller"
+    },
+    {
+      "index": 164,
+      "method": "GET",
+      "rawPath": "/api/v1/health",
+      "actualPath": "/api/v1/health",
+      "status": 200,
+      "duration": 4,
+      "passed": true,
+      "notes": "Success",
+      "tag": "health-controller"
+    },
+    {
+      "index": 165,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{id}/preview",
+      "actualPath": "/api/v1/courses/16/preview",
+      "status": 403,
+      "duration": 3,
+      "passed": true,
+      "notes": "Role/Enrollment security enforced (You do not have permission to perform this action)",
+      "tag": "course-controller"
+    },
+    {
+      "index": 166,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/reviews/summary",
+      "actualPath": "/api/v1/courses/16/reviews/summary",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Course Reviews"
+    },
+    {
+      "index": 167,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/reviews/my",
+      "actualPath": "/api/v1/courses/16/reviews/my",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Course Reviews"
+    },
+    {
+      "index": 168,
+      "method": "DELETE",
+      "rawPath": "/api/v1/courses/{courseId}/reviews/my",
+      "actualPath": "/api/v1/courses/16/reviews/my",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Course Reviews"
+    },
+    {
+      "index": 169,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/resources",
+      "actualPath": "/api/v1/courses/16/resources",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 170,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/progress",
+      "actualPath": "/api/v1/courses/16/progress",
+      "status": 200,
+      "duration": 15,
+      "passed": true,
+      "notes": "Success",
+      "tag": "progress-controller"
+    },
+    {
+      "index": 171,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/notes",
+      "actualPath": "/api/v1/courses/16/notes",
+      "status": 403,
+      "duration": 3,
+      "passed": true,
+      "notes": "Role/Enrollment security enforced (You do not have permission to perform this action)",
+      "tag": "video-note-controller"
+    },
+    {
+      "index": 172,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/{courseId}/batches",
+      "actualPath": "/api/v1/courses/16/batches",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "student-batch-controller"
+    },
+    {
+      "index": 173,
+      "method": "GET",
+      "rawPath": "/api/v1/courses/admin/all",
+      "actualPath": "/api/v1/courses/admin/all",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "course-controller"
+    },
+    {
+      "index": 174,
+      "method": "GET",
+      "rawPath": "/api/v1/coupons/available",
+      "actualPath": "/api/v1/coupons/available",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Coupons"
+    },
+    {
+      "index": 175,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{id}/subtitle-status",
+      "actualPath": "/api/v1/contents/37/subtitle-status",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "subtitle-controller"
+    },
+    {
+      "index": 176,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{contentId}",
+      "actualPath": "/api/v1/contents/37",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "content-controller"
+    },
+    {
+      "index": 177,
+      "method": "GET",
+      "rawPath": "/api/v1/contents/{contentId}/assessment-info",
+      "actualPath": "/api/v1/contents/37/assessment-info",
+      "status": 404,
+      "duration": 8,
+      "passed": true,
+      "notes": "Handled Not Found (No assessment found for this lesson)",
+      "tag": "assessment-student-controller"
+    },
+    {
+      "index": 178,
+      "method": "GET",
+      "rawPath": "/api/v1/contact/my",
+      "actualPath": "/api/v1/contact/my",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "contact-controller"
+    },
+    {
+      "index": 179,
+      "method": "GET",
+      "rawPath": "/api/v1/community",
+      "actualPath": "/api/v1/community",
+      "status": 200,
+      "duration": 20,
+      "passed": true,
+      "notes": "Success",
+      "tag": "community-controller"
+    },
+    {
+      "index": 180,
+      "method": "GET",
+      "rawPath": "/api/v1/community/{courseId}/my-status",
+      "actualPath": "/api/v1/community/16/my-status",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "community-controller"
+    },
+    {
+      "index": 181,
+      "method": "GET",
+      "rawPath": "/api/v1/community/{courseId}/messages/poll",
+      "actualPath": "/api/v1/community/16/messages/poll",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "community-controller"
+    },
+    {
+      "index": 182,
+      "method": "GET",
+      "rawPath": "/api/v1/community/unread-chats",
+      "actualPath": "/api/v1/community/unread-chats",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "community-controller"
+    },
+    {
+      "index": 183,
+      "method": "GET",
+      "rawPath": "/api/v1/banners/promo",
+      "actualPath": "/api/v1/banners/promo",
+      "status": 200,
+      "duration": 4,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Banners"
+    },
+    {
+      "index": 184,
+      "method": "GET",
+      "rawPath": "/api/v1/banners/active",
+      "actualPath": "/api/v1/banners/active",
+      "status": 200,
+      "duration": 4,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Banners"
+    },
+    {
+      "index": 185,
+      "method": "GET",
+      "rawPath": "/api/v1/auth/verify-email",
+      "actualPath": "/api/v1/auth/verify-email",
+      "status": 400,
+      "duration": 2,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: token)",
+      "tag": "auth-controller"
+    },
+    {
+      "index": 186,
+      "method": "GET",
+      "rawPath": "/api/v1/assessment-attempts/{attemptId}",
+      "actualPath": "/api/v1/assessment-attempts/1",
+      "status": 404,
+      "duration": 5,
+      "passed": true,
+      "notes": "Handled Not Found (Assessment attempt not found)",
+      "tag": "assessment-student-controller"
+    },
+    {
+      "index": 187,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/students",
+      "actualPath": "/api/v1/admin/students",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 188,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/students/{id}",
+      "actualPath": "/api/v1/admin/students/3",
+      "status": 200,
+      "duration": 62,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 189,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/students/online-count",
+      "actualPath": "/api/v1/admin/students/online-count",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-user-controller"
+    },
+    {
+      "index": 190,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/reviews",
+      "actualPath": "/api/v1/admin/reviews",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Reviews & Ratings"
+    },
+    {
+      "index": 191,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/reviews/stats",
+      "actualPath": "/api/v1/admin/reviews/stats",
+      "status": 200,
+      "duration": 12,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Reviews & Ratings"
+    },
+    {
+      "index": 192,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/progress",
+      "actualPath": "/api/v1/admin/progress",
+      "status": 200,
+      "duration": 143,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-progress-controller"
+    },
+    {
+      "index": 193,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/notifications/broadcasts",
+      "actualPath": "/api/v1/admin/notifications/broadcasts",
+      "status": 200,
+      "duration": 12,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-notification-controller"
+    },
+    {
+      "index": 194,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/media",
+      "actualPath": "/api/v1/admin/media",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "media-controller"
+    },
+    {
+      "index": 195,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/live-sessions/upcoming-count",
+      "actualPath": "/api/v1/admin/live-sessions/upcoming-count",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-live-session-controller"
+    },
+    {
+      "index": 196,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/enrollments",
+      "actualPath": "/api/v1/admin/enrollments",
+      "status": 200,
+      "duration": 10,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-enrollment-controller"
+    },
+    {
+      "index": 197,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/enrollments/stats",
+      "actualPath": "/api/v1/admin/enrollments/stats",
+      "status": 200,
+      "duration": 13,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-enrollment-controller"
+    },
+    {
+      "index": 198,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/enrollments/by-student/{studentId}",
+      "actualPath": "/api/v1/admin/enrollments/by-student/3",
+      "status": 200,
+      "duration": 14,
+      "passed": true,
+      "notes": "Success",
+      "tag": "enrollment-controller"
+    },
+    {
+      "index": 199,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/enrollments/by-course/{courseId}",
+      "actualPath": "/api/v1/admin/enrollments/by-course/16",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "enrollment-controller"
+    },
+    {
+      "index": 200,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/dashboard",
+      "actualPath": "/api/v1/admin/dashboard",
+      "status": 200,
+      "duration": 24,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-dashboard-controller"
+    },
+    {
+      "index": 201,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/contact-messages",
+      "actualPath": "/api/v1/admin/contact-messages",
+      "status": 200,
+      "duration": 6,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-contact-controller"
+    },
+    {
+      "index": 202,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/contact-messages/{id}",
+      "actualPath": "/api/v1/admin/contact-messages/11",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-contact-controller"
+    },
+    {
+      "index": 203,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/contact-messages/{id}",
+      "actualPath": "/api/v1/admin/contact-messages/11",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-contact-controller"
+    },
+    {
+      "index": 204,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/contact-messages/stats",
+      "actualPath": "/api/v1/admin/contact-messages/stats",
+      "status": 200,
+      "duration": 7,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-contact-controller"
+    },
+    {
+      "index": 205,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/community",
+      "actualPath": "/api/v1/admin/community",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-community-controller"
+    },
+    {
+      "index": 206,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/community/{courseId}/members",
+      "actualPath": "/api/v1/admin/community/16/members",
+      "status": 200,
+      "duration": 11,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-community-controller"
+    },
+    {
+      "index": 207,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/community/unread-chats",
+      "actualPath": "/api/v1/admin/community/unread-chats",
+      "status": 200,
+      "duration": 5,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-community-controller"
+    },
+    {
+      "index": 208,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/cloudinary/details",
+      "actualPath": "/api/v1/admin/cloudinary/details",
+      "status": 400,
+      "duration": 4,
+      "passed": true,
+      "notes": "Business logic validated (Required request parameter is missing: publicId)",
+      "tag": "Cloudinary Operations"
+    },
+    {
+      "index": 209,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/batches/{id}/students",
+      "actualPath": "/api/v1/admin/batches/5/students",
+      "status": 200,
+      "duration": 17,
+      "passed": true,
+      "notes": "Success",
+      "tag": "admin-batch-controller"
+    },
+    {
+      "index": 210,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/banners/promo/all",
+      "actualPath": "/api/v1/admin/banners/promo/all",
+      "status": 200,
+      "duration": 8,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Hero Banners"
+    },
+    {
+      "index": 211,
+      "method": "GET",
+      "rawPath": "/api/v1/admin/audit-logs",
+      "actualPath": "/api/v1/admin/audit-logs",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "audit-log-controller"
+    },
+    {
+      "index": 212,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/reviews/{id}",
+      "actualPath": "/api/v1/admin/reviews/2",
+      "status": 200,
+      "duration": 9,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Admin Reviews & Ratings"
+    },
+    {
+      "index": 213,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/cloudinary",
+      "actualPath": "/api/v1/admin/cloudinary",
+      "status": 200,
+      "duration": 4,
+      "passed": true,
+      "notes": "Success",
+      "tag": "Cloudinary Operations"
+    },
+    {
+      "index": 214,
+      "method": "DELETE",
+      "rawPath": "/api/v1/admin/batches/{id}/students/{enrollmentId}",
+      "actualPath": "/api/v1/admin/batches/5/students/28",
+      "status": 400,
+      "duration": 8,
+      "passed": true,
+      "notes": "Business logic validated (Student is not enrolled in this batch)",
+      "tag": "admin-batch-controller"
+    }
+  ]
+}

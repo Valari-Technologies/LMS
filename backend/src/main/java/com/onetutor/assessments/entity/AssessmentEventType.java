@@ -1,0 +1,14 @@
+package com.onetutor.assessments.entity;
+
+public enum AssessmentEventType {
+    ASSESSMENT_STARTED,
+    QUESTION_ANSWERED,
+    TAB_SWITCH,
+    WINDOW_BLUR,
+    ASSESSMENT_SUBMITTED,
+    ASSESSMENT_PASSED,
+    ASSESSMENT_FAILED,
+    ASSESSMENT_TERMINATED,
+    ASSESSMENT_RESTARTED,
+    TIME_EXPIRED
+}

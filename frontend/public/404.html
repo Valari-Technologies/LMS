@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>One Tutor</title>
+    <script type="text/javascript">
+      // Single Page Apps for GitHub Pages
+      // MIT License - https://github.com/rafgraph/spa-github-pages
+      // This script takes the current url and redirects to index.html with the
+      // path and query string embedded in the query string, enabling SPA routing
+      // to work properly on static GitHub Pages hosting.
+      var l = window.location;
+      var pathSegments = l.pathname.split('/').filter(Boolean);
+      // If deployed on github.io user/org page with repository subfolder (e.g. username.github.io/repo-name/)
+      // we keep 1 segment (the repo-name). If custom domain or username.github.io root, keep 0.
+      var pathSegmentsToKeep = (l.hostname.endsWith('github.io') && pathSegments.length > 0) ? 1 : 0;
+
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

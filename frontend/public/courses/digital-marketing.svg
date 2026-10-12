@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgDm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e2faf2"/>
+      <stop offset="50%" stop-color="#edfbf6"/>
+      <stop offset="100%" stop-color="#cff7e8"/>
+    </linearGradient>
+    <linearGradient id="megaG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00b488"/>
+      <stop offset="100%" stop-color="#006b52"/>
+    </linearGradient>
+    <linearGradient id="coneG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0fdf4"/>
+      <stop offset="100%" stop-color="#99f6e4"/>
+    </linearGradient>
+    <filter id="dmShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#004d3a" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="340" fill="url(#bgDm)"/>
+
+  <!-- Subtle grid & particles -->
+  <g opacity="0.15" stroke="#008767" stroke-width="1">
+    <line x1="0" y1="85" x2="600" y2="85"/>
+    <line x1="0" y1="170" x2="600" y2="170"/>
+    <line x1="0" y1="255" x2="600" y2="255"/>
+    <line x1="150" y1="0" x2="150" y2="340"/>
+    <line x1="300" y1="0" x2="300" y2="340"/>
+    <line x1="450" y1="0" x2="450" y2="340"/>
+  </g>
+  <circle cx="90" cy="60" r="4" fill="#008767" opacity="0.25"/>
+  <circle cx="510" cy="70" r="5" fill="#008767" opacity="0.2"/>
+  <circle cx="120" cy="270" r="6" fill="#008767" opacity="0.18"/>
+
+  <!-- Center-Top Title: DIGITAL MARKETING -->
+  <g filter="url(#dmShadow)">
+    <text x="300" y="115" fill="#063228" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="44" letter-spacing="2" text-anchor="middle">DIGITAL</text>
+    <text x="300" y="162" fill="#008767" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="42" letter-spacing="2.5" text-anchor="middle">MARKETING</text>
+  </g>
+
+  <!-- Subtitle pill text -->
+  <text x="300" y="194" fill="#0f766e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="11" letter-spacing="2" text-anchor="middle">STRATEGY • CONTENT • ADS • GROWTH</text>
+
+  <!-- Floating Social Media Icons -->
+  <g transform="translate(255, 175)" filter="url(#dmShadow)">
+    <!-- Facebook -->
+    <circle cx="15" cy="28" r="13" fill="#1877f2"/>
+    <text x="15" y="34" fill="#fff" font-family="sans-serif" font-weight="bold" font-size="16" text-anchor="middle">f</text>
+
+    <!-- Social / Megaphone speaker -->
+    <circle cx="48" cy="22" r="13" fill="#0284c7"/>
+    <circle cx="48" cy="22" r="4" fill="#ffffff"/>
+
+    <!-- Instagram/Ads -->
+    <circle cx="80" cy="35" r="13" fill="#e1306c"/>
+    <rect x="74" y="29" width="12" height="12" rx="3" fill="none" stroke="#fff" stroke-width="1.8"/>
+    <circle cx="80" cy="35" r="3" fill="#fff"/>
+  </g>
+
+  <!-- Big 3D Megaphone Graphic (Left-Center) -->
+  <g transform="translate(190, 190) rotate(-18)" filter="url(#dmShadow)">
+    <!-- Sound Waves -->
+    <path d="M110 -15 A 35 35 0 0 1 110 35" fill="none" stroke="#00b488" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M125 -25 A 50 50 0 0 1 125 45" fill="none" stroke="#008767" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Cone -->
+    <path d="M10 5 L75 -20 L75 40 L10 15 Z" fill="url(#coneG)" stroke="#008767" stroke-width="2"/>
+    <ellipse cx="75" cy="10" rx="9" ry="30" fill="url(#megaG)"/>
+    <ellipse cx="10" cy="10" rx="5" ry="8" fill="#006b52"/>
+
+    <!-- Handle & Trigger -->
+    <rect x="25" y="15" width="12" height="26" rx="4" fill="#063228" transform="rotate(15 25 15)"/>
+  </g>
+
+  <!-- Laptop with Analytics Chart (Right) -->
+  <g transform="translate(425, 200)" filter="url(#dmShadow)">
+    <!-- Screen -->
+    <rect x="0" y="0" width="110" height="72" rx="4" fill="#051f18" stroke="#008767" stroke-width="1.5"/>
+    <rect x="5" y="5" width="100" height="62" rx="2" fill="#0d2b23"/>
+    <!-- Bar chart on screen -->
+    <rect x="18" y="42" width="9" height="18" rx="1.5" fill="#38bdf8"/>
+    <rect x="33" y="30" width="9" height="30" rx="1.5" fill="#34d399"/>
+    <rect x="48" y="36" width="9" height="24" rx="1.5" fill="#fbbf24"/>
+    <rect x="63" y="20" width="9" height="40" rx="1.5" fill="#00e599"/>
+    <rect x="78" y="14" width="9" height="46" rx="1.5" fill="#f43f5e"/>
+    <!-- Upward trend line -->
+    <path d="M18 40 Q 45 28 85 12" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Laptop base -->
+    <path d="M-10 72 L120 72 L110 82 L0 82 Z" fill="#334155"/>
+  </g>
+</svg>
