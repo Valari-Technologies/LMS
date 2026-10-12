@@ -45,9 +45,9 @@ jobs:
       - name: Build Frontend
         working-directory: ./frontend
         env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || vars.VITE_API_BASE_URL }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || vars.VITE_GOOGLE_CLIENT_ID }}
-          VITE_BASE_PATH: ${{ steps.pages.outputs.base_path || '/' }}/
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || vars.VITE_API_BASE_URL || 'https://lms-u5ll.onrender.com/api/v1' }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || vars.VITE_GOOGLE_CLIENT_ID || '415709486195-i7irlufbupli5e221l0iakjg9ts18u8p.apps.googleusercontent.com' }}
+          VITE_BASE_PATH: ${{ steps.pages.outputs.base_path || '/LMS' }}/
         run: npm run build
 
       - name: Upload Pages Artifact
