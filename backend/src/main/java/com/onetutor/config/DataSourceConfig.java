@@ -47,12 +47,10 @@ public class DataSourceConfig {
                 URI uri = new URI(resolvedUrl.replace("postgres://", "http://").replace("postgresql://", "http://"));
 
                 String userInfo = uri.getUserInfo();
-                if (userInfo != null) {
+                if (userInfo != null && !userInfo.isBlank()) {
                     String[] userParts = userInfo.split(":", 2);
-                    if (resolvedUser == null || resolvedUser.isBlank()) {
-                        resolvedUser = userParts[0];
-                    }
-                    if ((resolvedPass == null || resolvedPass.isBlank()) && userParts.length > 1) {
+                    resolvedUser = userParts[0];
+                    if (userParts.length > 1) {
                         resolvedPass = userParts[1];
                     }
                 }
