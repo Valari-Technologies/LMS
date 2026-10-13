@@ -52,6 +52,17 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Auto-retry GET requests on network failures or 502/503/504 caused by Render free-tier cold starts
+    const isColdStartError = !error.response || [502, 503, 504].includes(status);
+    const retryCount = originalRequest._retryCount || 0;
+    const isGetMethod = (originalRequest.method || 'get').toLowerCase() === 'get';
+    if (isColdStartError && isGetMethod && retryCount < 2) {
+      originalRequest._retryCount = retryCount + 1;
+      const delay = (retryCount + 1) * 3000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return api(originalRequest);
+    }
+
     // Don't attempt refresh on the auth endpoints themselves
     const isAuthCall = originalRequest.url?.includes('/auth/');
 

@@ -1,6 +1,22 @@
 const BACKEND_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/api\/v1\/?$/, '');
 
 /**
+ * Resolves frontend public assets respecting Vite's base path (e.g. /LMS/ on GitHub Pages).
+ */
+export function resolvePublicAsset(path) {
+  if (!path || typeof path !== 'string') return '';
+  const trimmed = path.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+  const base = import.meta.env.BASE_URL || '/';
+  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  const cleanPath = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+  return `${cleanBase}${cleanPath}`;
+}
+
+/**
  * Resolves any media or image URL to an accessible URL.
  * Handles full URLs (http/https/blob/data), backend relative paths (/api/v1/...),
  * storage paths, Windows backslashes, and misdirected frontend ports.
@@ -18,6 +34,19 @@ export function resolveMediaUrl(url) {
 
   if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('blob:') || normalized.startsWith('data:')) {
     return normalized;
+  }
+
+  // If already prefixed with frontend base path (e.g. /LMS/...)
+  const base = import.meta.env.BASE_URL || '/';
+  if (base !== '/' && normalized.startsWith(base)) {
+    return normalized;
+  }
+
+  // Handle local frontend static assets in public/
+  const staticAssetNames = ['hero-banner.', 'hero-student.', 'courses/', 'manifest.json'];
+  const isStatic = staticAssetNames.some(name => normalized.startsWith(name) || normalized.startsWith(`/${name}`));
+  if (isStatic) {
+    return resolvePublicAsset(normalized);
   }
 
   const cleanPath = normalized.startsWith('/') ? normalized : `/${normalized}`;

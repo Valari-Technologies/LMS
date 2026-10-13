@@ -12,7 +12,7 @@ import CourseCard from '../../components/CourseCard';
 import StudentReviewsSection from '../../components/StudentReviewsSection';
 import PromoBannerSection from '../../components/PromoBannerSection';
 import EnrolledCoursesRowSection from '../../components/EnrolledCoursesRowSection';
-import { resolveMediaUrl } from '../../utils/mediaUtils';
+import { resolveMediaUrl, resolvePublicAsset } from '../../utils/mediaUtils';
 import { getCourseDefaultRating } from '../../utils/courseRatingUtils';
 
 /** Status computation: completed/cancelled are respected; time-passed sessions show live */
@@ -293,9 +293,11 @@ export default function StudentDashboard() {
     };
   }, [user, applyLiveFilter, refreshLiveSessions, refreshCatalogCourses]);
 
+  const defaultHeroFallback = resolvePublicAsset('hero-banner.png');
+
   const displayBanners = banners && banners.length > 0
     ? banners
-    : [{ id: 'default-hero', imageUrl: '/hero-banner.png', ctaLink: '/student/courses' }];
+    : [{ id: 'default-hero', imageUrl: defaultHeroFallback, ctaLink: '/student/courses' }];
 
   // Auto-advance banner carousel every 6.5 seconds when not hovered
   useEffect(() => {
@@ -373,11 +375,16 @@ export default function StudentDashboard() {
                 style={{ cursor: banner.ctaLink ? 'pointer' : 'default' }}
               >
                 <img
-                  src={resolveMediaUrl(banner.imageUrl) || '/hero-banner.png'}
+                  src={resolveMediaUrl(banner.imageUrl) || defaultHeroFallback}
                   alt="OneTutor Hero Banner"
                   className="ot-banner-hero-img"
                   onError={(e) => {
-                    e.currentTarget.src = '/hero-banner.png';
+                    e.currentTarget.onerror = null;
+                    if (e.currentTarget.src !== defaultHeroFallback && !e.currentTarget.src.endsWith('hero-banner.png')) {
+                      e.currentTarget.src = defaultHeroFallback;
+                    } else {
+                      e.currentTarget.style.display = 'none';
+                    }
                   }}
                 />
               </div>
