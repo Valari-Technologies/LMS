@@ -7,6 +7,7 @@ import { ProtectedRoute, AdminRoute, GuestOnlyRoute } from '../routes/guards';
 import AdminLayout from '../components/AdminLayout';
 import StudentLayout from '../components/StudentLayout';
 import FcmNotificationManager from '../components/FcmNotificationManager';
+import BackendColdStartBanner from '../components/BackendColdStartBanner';
 
 // Auth Pages (kept for specific flows only)
 import VerifyEmailPage from '../pages/auth/VerifyEmailPage';
@@ -90,6 +91,7 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <NotificationProvider>
+            <BackendColdStartBanner />
             <Routes>
             {/* Public & Student browsing routes within StudentLayout */}
             <Route element={<StudentLayout />}>

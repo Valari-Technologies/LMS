@@ -28,6 +28,8 @@ public class AppConfig {
         config.addAllowedOriginPattern("http://127.0.0.1:*");
         config.addAllowedOriginPattern("https://*.vercel.app");
         config.addAllowedOriginPattern("https://*.github.io");
+        config.addAllowedOriginPattern("https://valari-technologies.github.io");
+        config.addAllowedOriginPattern("https://valari-technologies.github.io/*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
@@ -37,5 +39,10 @@ public class AppConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean
+    public CorsFilter corsFilter(org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource) {
+        return new CorsFilter(corsConfigurationSource);
     }
 }

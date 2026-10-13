@@ -39,9 +39,17 @@ api.interceptors.request.use((config) => {
 let refreshingPromise = null;
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Notify UI that backend is actively responding
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('render:cold-start', { detail: { active: false } }));
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+
     const status = error.response?.status;
     const errCode = error.response?.data?.code || error.response?.data?.error?.code;
     const isAnotherDevice = errCode === 'SESSION_EXPIRED_ANOTHER_DEVICE' || 
@@ -52,13 +60,23 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Auto-retry GET requests on network failures or 502/503/504 caused by Render free-tier cold starts
+    // Auto-retry GET requests on network failures or 502/503/504 caused by Render free-tier cold starts (~30-50s)
     const isColdStartError = !error.response || [502, 503, 504].includes(status);
     const retryCount = originalRequest._retryCount || 0;
     const isGetMethod = (originalRequest.method || 'get').toLowerCase() === 'get';
-    if (isColdStartError && isGetMethod && retryCount < 2) {
+    const MAX_COLD_RETRIES = 5;
+
+    if (isColdStartError && isGetMethod && retryCount < MAX_COLD_RETRIES) {
       originalRequest._retryCount = retryCount + 1;
-      const delay = (retryCount + 1) * 3000;
+      const delays = [3000, 5000, 8000, 12000, 15000];
+      const delay = delays[retryCount] || 15000;
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('render:cold-start', { 
+          detail: { active: true, attempt: retryCount + 1, maxRetries: MAX_COLD_RETRIES } 
+        }));
+      }
+
       await new Promise(resolve => setTimeout(resolve, delay));
       return api(originalRequest);
     }

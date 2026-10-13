@@ -1,0 +1,27 @@
+name: Keep Render Backend Alive
+
+on:
+  schedule:
+    # Ping every 14 minutes to prevent Render free-tier instance from sleeping (spins down after 15m)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: 'keep-alive'
+  cancel-in-progress: true
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping OneTutor Render Health Check
+        run: |
+          echo "Pinging OneTutor Render backend health check..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "https://lms-u5ll.onrender.com/api/v1/health")
+          echo "Received HTTP status code: $STATUS"
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "Render backend is warm and healthy (Status: $STATUS)"
+          else
+            echo "Notice: Backend responded with status $STATUS (or is waking up)."
+          fi

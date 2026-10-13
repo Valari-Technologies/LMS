@@ -65,7 +65,11 @@ export default function StudentLayout() {
   useEffect(() => {
     if (!user) return;
     loadUnread();
-    const interval = setInterval(loadUnread, 15000);
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadUnread();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, [user]);
 

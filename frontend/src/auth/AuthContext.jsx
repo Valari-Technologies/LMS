@@ -54,19 +54,36 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
   }, [loadUser]);
 
-  // Periodic heartbeat while logged in (keeps lastActiveAt fresh, and instantly detects session invalidation from another device)
+  // Periodic heartbeat while logged in (keeps lastActiveAt fresh, and detects session invalidation)
   useEffect(() => {
     if (!user) return;
 
+    let consecutiveFailures = 0;
+
     function sendHeartbeat() {
-      api.post('/users/heartbeat').catch(() => {});
+      // Don't send if tab is hidden in background
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
+      // If server is unreachable/offline, back off to avoid spamming errors
+      if (consecutiveFailures > 2 && Math.random() > 0.25) {
+        return;
+      }
+
+      api.post('/users/heartbeat')
+        .then(() => {
+          consecutiveFailures = 0;
+        })
+        .catch(() => {
+          consecutiveFailures++;
+        });
     }
 
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 3_000);
+    const interval = setInterval(sendHeartbeat, 30_000);
 
     function handleVisibility() {
-      if (document.visibilityState === 'hidden') {
+      if (document.visibilityState === 'visible') {
         sendHeartbeat();
       }
     }
