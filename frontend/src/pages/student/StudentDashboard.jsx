@@ -472,9 +472,9 @@ export default function StudentDashboard() {
                     {activeContinueCourse?.courseName || activeContinueCourse?.name || activeContinueCourse?.title || 'Course'}
                   </h4>
                   <div className="ot-continue-lesson-info">
-                    <span>Section: <strong>{continueLearning?.sectionTitle || activeContinueCourse?.sectionTitle || 'Course Curriculum'}</strong></span>
-                    <span>•</span>
-                    <span>Lesson: <strong>{continueLearning?.lessonTitle || activeContinueCourse?.lessonTitle || 'Current Lesson'}</strong></span>
+                    <span className="ot-continue-section-name">Section: <strong>{continueLearning?.sectionTitle || activeContinueCourse?.sectionTitle || 'Course Curriculum'}</strong></span>
+                    <span className="ot-continue-lesson-separator">•</span>
+                    <span className="ot-continue-lesson-name">Lesson: <strong>{continueLearning?.lessonTitle || activeContinueCourse?.lessonTitle || 'Current Lesson'}</strong></span>
                   </div>
 
                   <div className="ot-continue-progress-wrap">

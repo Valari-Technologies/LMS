@@ -7053,6 +7053,21 @@ h6,
   align-items: center;
   gap: 5px;
   line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ot-continue-lesson-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ot-continue-lesson-info .ot-continue-lesson-separator {
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .ot-continue-progress-wrap {
@@ -7839,6 +7854,12 @@ h6,
 
 }
 
+@media (max-width: 992px) {
+  .ot-continue-doodle {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .ot-banner-carousel-wrap {
     height: auto;
@@ -7969,22 +7990,29 @@ h6,
     display: none !important;
   }
 
-  /* Continue Learning Mobile (Compact & proportional relative to hero banner) */
+  /* Continue Learning Mobile (Clean, responsive layout) */
   .ot-continue-learning-section {
-    margin: 10px auto 0 auto;
-    padding: 0 12px;
+    margin: 12px auto 0 auto;
+    padding: 0 14px;
   }
 
   .ot-continue-card {
-    padding: 8px 12px;
-    border-radius: 12px;
-    gap: 5px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    gap: 10px;
+    background: #E8EBFA;
+    box-shadow: 0 3px 12px rgba(90, 112, 211, 0.08);
+  }
+
+  .ot-continue-header-row {
+    gap: 2px;
   }
 
   .ot-continue-title {
-    font-size: 0.86rem;
-    font-weight: 700;
-    line-height: 1.15;
+    font-size: 0.94rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #18131F;
   }
 
   .ot-continue-subtitle {
@@ -7992,92 +8020,151 @@ h6,
   }
 
   .ot-continue-body-row {
-    gap: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
   }
 
   .ot-continue-course-info {
-    gap: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
   }
 
   .ot-continue-thumb-box {
-    width: 60px;
-    height: 40px;
-    min-width: 60px;
-    border-radius: 6px;
+    width: 72px;
+    height: 48px;
+    min-width: 72px;
+    border-radius: 8px;
     gap: 2px;
+    flex-shrink: 0;
   }
 
   .ot-continue-thumb-icons {
-    font-size: 0.72rem;
-    gap: 3px;
+    font-size: 0.8rem;
+    gap: 4px;
   }
 
   .ot-continue-thumb-title {
-    font-size: 0.52rem;
+    font-size: 0.58rem;
+    font-weight: 800;
   }
 
   .ot-continue-details {
-    gap: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
   }
 
   .ot-badge-in-progress {
-    font-size: 0.55rem;
-    padding: 1px 5px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 2px 6px;
     line-height: 1.1;
+    border-radius: 9999px;
+    width: fit-content;
   }
 
   .ot-continue-course-title {
-    font-size: 0.80rem;
-    line-height: 1.2;
-    white-space: nowrap;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #18131F;
+    margin: 0;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .ot-continue-lesson-info {
-    font-size: 0.65rem;
-    line-height: 1.15;
+    font-size: 0.70rem;
+    color: #5F5868;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .ot-continue-lesson-info span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .ot-continue-progress-wrap {
-    width: 100%;
-    max-width: 100%;
-    gap: 6px;
-    margin-top: 1px;
-  }
-
-  .ot-continue-progress-track {
-    height: 4px;
-  }
-
-  .ot-continue-progress-percent {
-    font-size: 0.66rem;
-  }
-
-  .ot-continue-actions {
-    flex-direction: row;
+    display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     width: 100%;
+    max-width: 100%;
     margin-top: 2px;
   }
 
-  .ot-continue-resume-btn {
-    padding: 4px 12px;
-    font-size: 0.72rem;
-    flex: 0 0 auto;
-    max-width: 150px;
+  .ot-continue-progress-track {
+    flex: 1;
+    width: 100%;
+    height: 5px;
     border-radius: 9999px;
   }
 
-  .ot-continue-mylearning-link {
-    font-size: 0.68rem;
+  .ot-continue-progress-percent {
+    font-size: 0.70rem;
+    font-weight: 700;
+    color: #3b50b2;
     white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .ot-continue-doodle {
+    display: none !important;
+  }
+
+  .ot-continue-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px solid rgba(90, 112, 211, 0.14);
+    margin-top: 0;
+    flex-wrap: wrap;
+  }
+
+  .ot-continue-resume-btn {
+    padding: 6px 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: unset;
+  }
+
+  .ot-continue-mylearning-link {
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   /* Popular Courses Header Mobile */
@@ -8110,79 +8197,119 @@ h6,
 }
 
 @media (max-width: 480px) {
+  /* Continue Learning Small Mobile (iPhone SE, 375px & 320px) */
   .ot-continue-learning-section {
-    margin: 8px auto 0 auto;
+    margin: 10px auto 0 auto;
     padding: 0 10px;
   }
 
   .ot-continue-card {
-    padding: 6px 10px;
-    gap: 4px;
-    border-radius: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    gap: 8px;
   }
 
   .ot-continue-title {
-    font-size: 0.80rem;
+    font-size: 0.88rem;
+    font-weight: 800;
+  }
+
+  .ot-continue-body-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
   }
 
   .ot-continue-course-info {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
   }
 
   .ot-continue-thumb-box {
-    width: 52px;
-    height: 34px;
-    min-width: 52px;
-    border-radius: 5px;
+    width: 64px;
+    height: 44px;
+    min-width: 64px;
+    border-radius: 7px;
     gap: 2px;
   }
 
   .ot-continue-thumb-icons {
-    font-size: 0.65rem;
-    gap: 2px;
+    font-size: 0.72rem;
+    gap: 3px;
   }
 
   .ot-continue-thumb-title {
-    font-size: 0.48rem;
+    font-size: 0.52rem;
+    font-weight: 800;
+  }
+
+  .ot-continue-details {
+    gap: 2px;
   }
 
   .ot-badge-in-progress {
-    font-size: 0.50rem;
-    padding: 1px 4px;
+    font-size: 0.54rem;
+    padding: 1px 5px;
   }
 
   .ot-continue-course-title {
-    font-size: 0.76rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.2;
+    -webkit-line-clamp: 1;
   }
 
   .ot-continue-lesson-info {
-    font-size: 0.60rem;
+    font-size: 0.66rem;
   }
 
-  .ot-continue-progress-track {
-    height: 3px;
+  .ot-continue-section-name,
+  .ot-continue-lesson-separator {
+    display: none;
   }
 
-  .ot-continue-progress-percent {
-    font-size: 0.62rem;
-  }
-
-  .ot-continue-actions {
-    flex-wrap: nowrap;
+  .ot-continue-progress-wrap {
     gap: 6px;
     margin-top: 1px;
   }
 
+  .ot-continue-progress-track {
+    height: 4px;
+  }
+
+  .ot-continue-progress-percent {
+    font-size: 0.66rem;
+  }
+
+  .ot-continue-doodle {
+    display: none !important;
+  }
+
+  .ot-continue-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding-top: 7px;
+    border-top: 1px solid rgba(90, 112, 211, 0.12);
+    margin-top: 0;
+    flex-wrap: wrap;
+  }
+
   .ot-continue-resume-btn {
-    padding: 3px 9px;
-    font-size: 0.68rem;
-    max-width: 120px;
+    padding: 5px 14px;
+    font-size: 0.74rem;
+    border-radius: 9999px;
+    max-width: unset;
   }
 
   .ot-continue-mylearning-link {
-    font-size: 0.64rem;
+    font-size: 0.68rem;
   }
 
   .ot-popular-header {
