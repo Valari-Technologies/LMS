@@ -12,6 +12,7 @@ import CommunityToastNotifier from './CommunityToastNotifier';
 import BrandLandingSplash from './BrandLandingSplash';
 import oneTutorBrandImg from '../assets/images/oneTutorBrand.png';
 import { showSystemNotification } from '../utils/firebase';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 
 export default function StudentLayout() {
   const { user, logout, openAuthModal } = useAuth();
@@ -484,43 +485,69 @@ export default function StudentLayout() {
                         ) : (
                           <>
                             <div className="ud-subcourses-list">
-                              {activeCatCourses.slice(0, Math.max(2, Math.min(3, Math.floor((categories.length || 4) * 0.6)))).map(course => (
-                                <div
-                                  key={course.id}
-                                  className="ud-subcourse-card"
-                                  onClick={() => {
-                                    if (categoriesTimeoutRef.current) clearTimeout(categoriesTimeoutRef.current);
-                                    setShowCategories(false);
-                                    navigate(`/student/courses/${course.id}`);
-                                  }}
-                                >
-                                  <div className="ud-subcourse-thumb">
-                                    {course.thumbnail ? (
-                                      <img src={course.thumbnail} alt={course.name} />
-                                    ) : (
-                                      <span className="ud-subcourse-thumb-fallback">
-                                        <i className="fa-solid fa-graduation-cap"></i>
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="ud-subcourse-info">
-                                    <div className="ud-subcourse-title" title={course.name}>
-                                      {course.name}
-                                    </div>
-                                    <div className="ud-subcourse-meta">
-                                      {course.level && <span className="ud-pill">{course.level}</span>}
-                                      {course.duration && (
-                                        <span>
-                                          <i className="fa-regular fa-clock" style={{ marginRight: '3px' }}></i>
-                                          {course.duration}
+                              {activeCatCourses.slice(0, Math.max(2, Math.min(3, Math.floor((categories.length || 4) * 0.6)))).map(course => {
+                                const isFree = !course.price || Number(course.price) === 0 || course.pricingType === 'free';
+                                return (
+                                  <div
+                                    key={course.id}
+                                    className="ud-subcourse-card"
+                                    onClick={() => {
+                                      if (categoriesTimeoutRef.current) clearTimeout(categoriesTimeoutRef.current);
+                                      setShowCategories(false);
+                                      navigate(`/student/courses/${course.id}`);
+                                    }}
+                                  >
+                                    <div className="ud-subcourse-thumb">
+                                      {(course.thumbnail || course.courseThumbnail) ? (
+                                        <img src={resolveMediaUrl(course.thumbnail || course.courseThumbnail)} alt={course.name} />
+                                      ) : (
+                                        <span className="ud-subcourse-thumb-fallback">
+                                          <i className="fa-solid fa-graduation-cap"></i>
                                         </span>
                                       )}
-                                      <span className="ud-free">Free</span>
                                     </div>
+                                    <div className="ud-subcourse-info">
+                                      {/* First line: Course name */}
+                                      <div className="ud-subcourse-title" title={course.name}>
+                                        {course.name}
+                                      </div>
+
+                                      {/* Second line: Level */}
+                                      {course.level && (
+                                        <div className="ud-subcourse-level-row">
+                                          <span className="ud-pill">{course.level}</span>
+                                        </div>
+                                      )}
+
+                                      {/* Third line: Duration and Free or Cost details */}
+                                      <div className="ud-subcourse-details-row">
+                                        {course.duration && (
+                                          <span className="ud-subcourse-duration">
+                                            <i className="fa-regular fa-clock" style={{ marginRight: '3px' }}></i>
+                                            {course.duration}
+                                          </span>
+                                        )}
+                                        {course.duration && <span className="ud-subcourse-dot">•</span>}
+                                        <span className={`ud-subcourse-price ${isFree ? 'ud-free' : 'ud-paid'}`}>
+                                          {isFree ? (
+                                            'Free'
+                                          ) : (
+                                            <>
+                                              {course.currency === 'USD' ? '$' : '₹'}{Number(course.price).toLocaleString()}
+                                              {course.pricingType === 'subscription' && (
+                                                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b' }}>
+                                                  /{course.subscriptionPeriod === 'yearly' ? 'yr' : 'mo'}
+                                                </span>
+                                              )}
+                                            </>
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <i className="fa-solid fa-chevron-right ud-subcourse-arrow"></i>
                                   </div>
-                                  <i className="fa-solid fa-chevron-right ud-subcourse-arrow"></i>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
 
                             <div className="ud-subcourses-footer">
