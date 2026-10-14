@@ -499,12 +499,24 @@ export default function StudentLayout() {
                                   >
                                     <div className="ud-subcourse-thumb">
                                       {(course.thumbnail || course.courseThumbnail) ? (
-                                        <img src={resolveMediaUrl(course.thumbnail || course.courseThumbnail)} alt={course.name} />
-                                      ) : (
-                                        <span className="ud-subcourse-thumb-fallback">
-                                          <i className="fa-solid fa-graduation-cap"></i>
-                                        </span>
-                                      )}
+                                        <img
+                                          src={resolveMediaUrl(course.thumbnail || course.courseThumbnail)}
+                                          alt={course.name}
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            if (e.currentTarget.parentElement) {
+                                              const fb = e.currentTarget.parentElement.querySelector('.ud-subcourse-thumb-fallback');
+                                              if (fb) fb.style.display = 'flex';
+                                            }
+                                          }}
+                                        />
+                                      ) : null}
+                                      <span
+                                        className="ud-subcourse-thumb-fallback"
+                                        style={{ display: (course.thumbnail || course.courseThumbnail) ? 'none' : 'flex' }}
+                                      >
+                                        <i className="fa-solid fa-graduation-cap"></i>
+                                      </span>
                                     </div>
                                     <div className="ud-subcourse-info">
                                       {/* First line: Course name */}
