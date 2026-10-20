@@ -12,7 +12,7 @@ import CourseCard from '../../components/CourseCard';
 import StudentReviewsSection from '../../components/StudentReviewsSection';
 import PromoBannerSection from '../../components/PromoBannerSection';
 import EnrolledCoursesRowSection from '../../components/EnrolledCoursesRowSection';
-import { resolveMediaUrl, resolvePublicAsset } from '../../utils/mediaUtils';
+import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { getCourseDefaultRating } from '../../utils/courseRatingUtils';
 
 /** Status computation: completed/cancelled are respected; time-passed sessions show live */
@@ -76,6 +76,7 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
 
   const [banners, setBanners] = useState([]);
+  const [bannersLoading, setBannersLoading] = useState(true);
   const [promoBanner, setPromoBanner] = useState(null);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerHovered, setIsBannerHovered] = useState(false);
@@ -206,10 +207,24 @@ export default function StudentDashboard() {
       setPromoBanner(promo || null);
     } catch (e) {
       // silently ignore in background
+    } finally {
+      setBannersLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // 1. Fetch banners immediately so real banners load without waiting for other queries
+    getActiveBanners()
+      .then(bannerList => {
+        setBanners(bannerList || []);
+      })
+      .catch(() => {
+        setBanners([]);
+      })
+      .finally(() => {
+        setBannersLoading(false);
+      });
+
     const studentPromises = user ? [
       getContinueLearning().catch(() => null),
       myCourses({ size: 50 }).catch(() => ({ content: [] })),
@@ -221,13 +236,11 @@ export default function StudentDashboard() {
     ];
 
     Promise.all([
-      getActiveBanners().catch(() => []),
       getPromoBanner().catch(() => null),
       browseCourses({ size: 24 }).catch(() => ({ content: [] })),
       listCategories({ size: 100 }).catch(() => ({ content: [] })),
       ...studentPromises,
-    ]).then(([bannerList, promo, bc, cat, cl, mc, live]) => {
-      setBanners(bannerList || []);
+    ]).then(([promo, bc, cat, cl, mc, live]) => {
       setPromoBanner(promo);
       const arr = [...(bc?.content || [])];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -293,27 +306,23 @@ export default function StudentDashboard() {
     };
   }, [user, applyLiveFilter, refreshLiveSessions, refreshCatalogCourses]);
 
-  const defaultHeroFallback = resolvePublicAsset('hero-banner.png');
-
-  const displayBanners = banners && banners.length > 0
-    ? banners
-    : [{ id: 'default-hero', imageUrl: defaultHeroFallback, ctaLink: '/student/courses' }];
-
   // Auto-advance banner carousel every 6.5 seconds when not hovered
   useEffect(() => {
-    if (displayBanners.length <= 1 || isBannerHovered) return;
+    if (banners.length <= 1 || isBannerHovered) return;
     const interval = setInterval(() => {
-      setCurrentBannerIndex(prev => (prev + 1) % displayBanners.length);
+      setCurrentBannerIndex(prev => (prev + 1) % banners.length);
     }, 6500);
     return () => clearInterval(interval);
-  }, [displayBanners.length, isBannerHovered]);
+  }, [banners.length, isBannerHovered]);
 
   const prevSlide = () => {
-    setCurrentBannerIndex(prev => (prev === 0 ? displayBanners.length - 1 : prev - 1));
+    if (banners.length <= 1) return;
+    setCurrentBannerIndex(prev => (prev === 0 ? banners.length - 1 : prev - 1));
   };
 
   const nextSlide = () => {
-    setCurrentBannerIndex(prev => (prev + 1) % displayBanners.length);
+    if (banners.length <= 1) return;
+    setCurrentBannerIndex(prev => (prev + 1) % banners.length);
   };
 
   const handleBannerClick = (link) => {
@@ -359,81 +368,83 @@ export default function StudentDashboard() {
       {/* ====================================================================
           1. DYNAMIC TOP HERO BANNER (100% FULL-WIDTH EDGE-TO-EDGE FROM TABLE)
           ==================================================================== */}
-      <section className="ot-hero-dynamic-section">
-        <div
-          className="ot-banner-carousel-wrap"
-          onMouseEnter={() => setIsBannerHovered(true)}
-          onMouseLeave={() => setIsBannerHovered(false)}
-        >
-          {displayBanners.map((banner, idx) => {
-            const isActive = idx === currentBannerIndex;
-            return (
-              <div
-                key={banner.id || idx}
-                className={`ot-banner-slide ${isActive ? 'active' : ''}`}
-                onClick={() => handleBannerClick(banner.ctaLink)}
-                style={{ cursor: banner.ctaLink ? 'pointer' : 'default' }}
-              >
-                <img
-                  src={resolveMediaUrl(banner.imageUrl) || defaultHeroFallback}
-                  alt="OneTutor Hero Banner"
-                  className="ot-banner-hero-img"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    if (e.currentTarget.src !== defaultHeroFallback && !e.currentTarget.src.endsWith('hero-banner.png')) {
-                      e.currentTarget.src = defaultHeroFallback;
-                    } else {
+      {bannersLoading ? (
+        <section className="ot-hero-dynamic-section" aria-busy="true" aria-label="Loading banner">
+          <div className="ot-banner-carousel-wrap ot-banner-skeleton" />
+        </section>
+      ) : banners.length > 0 ? (
+        <section className="ot-hero-dynamic-section">
+          <div
+            className="ot-banner-carousel-wrap"
+            onMouseEnter={() => setIsBannerHovered(true)}
+            onMouseLeave={() => setIsBannerHovered(false)}
+          >
+            {banners.map((banner, idx) => {
+              const isActive = idx === (currentBannerIndex % banners.length);
+              return (
+                <div
+                  key={banner.id || idx}
+                  className={`ot-banner-slide ${isActive ? 'active' : ''}`}
+                  onClick={() => handleBannerClick(banner.ctaLink)}
+                  style={{ cursor: banner.ctaLink ? 'pointer' : 'default' }}
+                >
+                  <img
+                    src={resolveMediaUrl(banner.imageUrl)}
+                    alt={banner.title || 'OneTutor Hero Banner'}
+                    className="ot-banner-hero-img"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
                       e.currentTarget.style.display = 'none';
-                    }
-                  }}
-                />
-              </div>
-            );
-          })}
-
-          {displayBanners.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="ot-banner-arrow ot-banner-prev"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  prevSlide();
-                }}
-                aria-label="Previous banner"
-              >
-                <i className="fa-solid fa-chevron-left"></i>
-              </button>
-              <button
-                type="button"
-                className="ot-banner-arrow ot-banner-next"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  nextSlide();
-                }}
-                aria-label="Next banner"
-              >
-                <i className="fa-solid fa-chevron-right"></i>
-              </button>
-
-              <div className="ot-banner-dots">
-                {displayBanners.map((_, dotIdx) => (
-                  <button
-                    key={dotIdx}
-                    type="button"
-                    className={`ot-banner-dot ${dotIdx === currentBannerIndex ? 'active' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentBannerIndex(dotIdx);
                     }}
-                    aria-label={`Go to banner ${dotIdx + 1}`}
                   />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </section>
+                </div>
+              );
+            })}
+
+            {banners.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="ot-banner-arrow ot-banner-prev"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevSlide();
+                  }}
+                  aria-label="Previous banner"
+                >
+                  <i className="fa-solid fa-chevron-left"></i>
+                </button>
+                <button
+                  type="button"
+                  className="ot-banner-arrow ot-banner-next"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextSlide();
+                  }}
+                  aria-label="Next banner"
+                >
+                  <i className="fa-solid fa-chevron-right"></i>
+                </button>
+
+                <div className="ot-banner-dots">
+                  {banners.map((_, dotIdx) => (
+                    <button
+                      key={dotIdx}
+                      type="button"
+                      className={`ot-banner-dot ${dotIdx === (currentBannerIndex % banners.length) ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentBannerIndex(dotIdx);
+                      }}
+                      aria-label={`Go to banner ${dotIdx + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {/* ====================================================================
           3. CONTINUE LEARNING SECTION

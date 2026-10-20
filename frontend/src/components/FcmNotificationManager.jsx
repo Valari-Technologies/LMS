@@ -8,7 +8,6 @@ export default function FcmNotificationManager() {
   const { user } = useAuth();
   const { toast } = useNotification();
   const [showPrompt, setShowPrompt] = useState(false);
-  const [enabling, setEnabling] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -70,24 +69,26 @@ export default function FcmNotificationManager() {
     }
   }
 
-  async function handleEnablePush() {
-    setEnabling(true);
-    try {
-      const token = await requestFcmToken();
-      if (token) {
-        try {
-          await registerFcmToken(token, 'web');
-        } catch (apiErr) {
-          console.warn('[FCM] Backend token registration notice:', apiErr.message);
+  function handleEnablePush() {
+    setShowPrompt(false);
+    sessionStorage.setItem('onetutor_fcm_prompt_dismissed', 'true');
+
+    // Process notification permission request and registration in background
+    (async () => {
+      try {
+        const token = await requestFcmToken();
+        if (token) {
+          try {
+            await registerFcmToken(token, 'web');
+          } catch (apiErr) {
+            console.warn('[FCM] Backend token registration notice:', apiErr.message);
+          }
+          toast.success('Push notifications enabled successfully!');
         }
-        toast.success('Push notifications enabled successfully!');
+      } catch (err) {
+        console.warn('[FCM] Failed to enable push notifications in background:', err);
       }
-      setShowPrompt(false);
-    } catch (err) {
-      toast.error('Failed to enable push notifications.');
-    } finally {
-      setEnabling(false);
-    }
+    })();
   }
 
   function handleDismiss() {
@@ -144,7 +145,6 @@ export default function FcmNotificationManager() {
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={handleEnablePush}
-              disabled={enabling}
               className="btn btn-primary btn-sm"
               style={{
                 fontSize: '0.8rem',
@@ -153,7 +153,7 @@ export default function FcmNotificationManager() {
                 borderRadius: '6px'
               }}
             >
-              {enabling ? 'Enabling...' : 'Allow Notifications'}
+              Enable
             </button>
             <button
               onClick={handleDismiss}

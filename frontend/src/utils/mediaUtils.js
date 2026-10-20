@@ -43,7 +43,7 @@ export function resolveMediaUrl(url) {
   }
 
   // Handle local frontend static assets in public/
-  const staticAssetNames = ['hero-banner.', 'hero-student.', 'courses/', 'manifest.json'];
+  const staticAssetNames = ['hero-student.', 'courses/', 'manifest.json'];
   const isStatic = staticAssetNames.some(name => normalized.startsWith(name) || normalized.startsWith(`/${name}`));
   if (isStatic) {
     return resolvePublicAsset(normalized);
