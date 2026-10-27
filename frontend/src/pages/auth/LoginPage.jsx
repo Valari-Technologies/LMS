@@ -25,6 +25,23 @@ export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
+  function resolveAuthErrorMessage(err, fallback = 'Operation failed. Please try again.') {
+    if (!err?.response) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('render:cold-start', { detail: { active: true, attempt: 1, maxRetries: 3 } }));
+      }
+      return 'Unable to reach backend server (offline or cold-booting). Please wait a few seconds and try again.';
+    }
+    const status = err.response.status;
+    if ([502, 503, 504].includes(status)) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('render:cold-start', { detail: { active: true, attempt: 1, maxRetries: 3 } }));
+      }
+      return 'Backend server is starting up or temporarily offline (502 Bad Gateway). Please wait ~30 seconds for it to wake up.';
+    }
+    return err.response.data?.message || fallback;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -35,7 +52,7 @@ export default function LoginPage() {
       const isStaff = ['admin', 'super_admin', 'superadmin', 'content_creator', 'creator', 'readonly_admin', 'read_only_admin'].includes(user?.role?.toLowerCase());
       navigate(redirect || (isStaff ? '/admin' : '/student'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please verify credentials.');
+      setError(resolveAuthErrorMessage(err, 'Login failed. Please verify credentials.'));
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +67,7 @@ export default function LoginPage() {
       const isStaff = ['admin', 'super_admin', 'superadmin', 'content_creator', 'creator', 'readonly_admin', 'read_only_admin'].includes(user?.role?.toLowerCase());
       navigate(redirect || (isStaff ? '/admin' : '/student'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+      setError(resolveAuthErrorMessage(err, 'Google sign-in failed. Please try again.'));
     } finally {
       setSubmitting(false);
     }

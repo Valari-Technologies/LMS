@@ -110,6 +110,23 @@ export default function FloatingAuthModal() {
 
   if (!authModalOpen) return null;
 
+  function resolveAuthErrorMessage(err, fallback = 'Operation failed. Please try again.') {
+    if (!err?.response) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('render:cold-start', { detail: { active: true, attempt: 1, maxRetries: 3 } }));
+      }
+      return 'Unable to reach backend server (offline or cold-booting). Please wait a few seconds and try again.';
+    }
+    const status = err.response.status;
+    if ([502, 503, 504].includes(status)) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('render:cold-start', { detail: { active: true, attempt: 1, maxRetries: 3 } }));
+      }
+      return 'Backend server is starting up or temporarily offline (502 Bad Gateway). Please wait ~30 seconds for it to wake up.';
+    }
+    return err.response.data?.message || fallback;
+  }
+
   // --- LOGIN HANDLERS ---
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -125,7 +142,7 @@ export default function FloatingAuthModal() {
         navigate('/admin');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please verify your credentials.');
+      setError(resolveAuthErrorMessage(err, 'Login failed. Please verify your credentials.'));
     } finally {
       setSubmitting(false);
     }
@@ -144,7 +161,7 @@ export default function FloatingAuthModal() {
         navigate('/admin');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+      setError(resolveAuthErrorMessage(err, 'Google sign-in failed. Please try again.'));
     } finally {
       setSubmitting(false);
     }

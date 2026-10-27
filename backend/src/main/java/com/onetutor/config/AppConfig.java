@@ -29,7 +29,6 @@ public class AppConfig {
         config.addAllowedOriginPattern("https://*.vercel.app");
         config.addAllowedOriginPattern("https://*.github.io");
         config.addAllowedOriginPattern("https://valari-technologies.github.io");
-        config.addAllowedOriginPattern("https://valari-technologies.github.io/*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization", "Content-Disposition"));

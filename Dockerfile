@@ -32,4 +32,4 @@ USER onetutor
 EXPOSE 8080
 ENV PORT=8080
 
-ENTRYPOINT ["sh", "-c", "java -XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dserver.port=${PORT:-8080} -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "java -XX:+UseSerialGC -Xmx320m -Xss256k -XX:MaxMetaspaceSize=128m -Dserver.port=${PORT:-8080} -jar /app/app.jar"]
