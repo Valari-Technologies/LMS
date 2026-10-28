@@ -71,22 +71,27 @@ function parseVttText(vttText) {
 /**
  * RecordingVideoPlayer
  * 
- * Reusable video player matching the exact custom course player style,
- * with complete button functionalities (play/pause, seek, volume, PiP,
- * quality selector, subtitles CC, fullscreen, auto-hide controls, keyboard shortcuts).
- * 
- * Specifically configured for Class Recordings:
- * - NO strict video tracking: The user can freely seek, play from any point, and view anywhere.
- * - Anti-Download Protection: Disables native browser download, disables right-click context menu,
- *   prevents dragging, and removes download controls.
+ * Reusable video player matching the EXACT custom course video player format
+ * from LearningPage.jsx with ALL button functionalities:
+ * - Top header overlay (Back arrow, Title, Subtitles CC badge, Settings/Quality HD gear)
+ * - Center play button overlay when paused
+ * - Center buffering spinner overlay
+ * - Closed captions text overlay (YouTube style)
+ * - Seek bar timeline with scrubber ball knob (freely seekable anywhere, NO strict sequential locking)
+ * - Left controls: Prev step (fa-backward-step), Play/Pause (ot-ctrl-play), Next step (fa-forward-step), Current / Total time
+ * - Right controls: Mute/Volume (fa-volume-*), Volume range slider, PiP (fa-window-restore), Auto-play (fa-forward-fast),
+ *   Subtitles CC (fa-closed-captioning - ALWAYS visible), Quality & Speed Settings gear, Fullscreen (fa-expand / fa-compress)
+ * - Strict Anti-Download Protection (nodownload, context menu blocked, drag disabled, text select none)
  */
 export default function RecordingVideoPlayer({
   url,
   title,
   courseName,
   subtitleUrl,
-  autoPlay = true,
+  autoPlay = false,
   onClose,
+  onPrev,
+  onNext,
   className = '',
   style = {}
 }) {
@@ -95,7 +100,6 @@ export default function RecordingVideoPlayer({
   const seekBarRef = useRef(null);
   const controlsHideTimer = useRef(null);
   const toastTimerRef = useRef(null);
-  // Quality popover refs
   const topQualityMenuRef = useRef(null);
   const bottomQualityMenuRef = useRef(null);
   const pendingQualityRestoreRef = useRef(null);
@@ -110,6 +114,14 @@ export default function RecordingVideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [toastNotice, setToastNotice] = useState(null);
+
+  // Auto-play next setting
+  const [autoPlayNext, setAutoPlayNext] = useState(() => {
+    return localStorage.getItem('onetutor_autoplay_next') === 'true';
+  });
+
+  // Playback speed setting
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   // Volume states
   const [videoVolume, setVideoVolume] = useState(() => {
@@ -132,13 +144,13 @@ export default function RecordingVideoPlayer({
   const [activeSubtitleText, setActiveSubtitleText] = useState('');
 
   const ytEmbedUrl = getYouTubeEmbedUrl(url);
-  const hasSubtitles = Boolean(subtitleUrl && subtitleUrl.trim().length > 0);
+  const hasSubtitles = Boolean(subtitleUrl && String(subtitleUrl).trim().length > 0);
 
   // Toast banner trigger
   const triggerToast = useCallback((notice) => {
     setToastNotice(notice);
     clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToastNotice(null), 2200);
+    toastTimerRef.current = setTimeout(() => setToastNotice(null), 2400);
   }, []);
 
   // Controls auto-hide: shows on user activity, auto-hides after 2.5s during playback
@@ -196,11 +208,24 @@ export default function RecordingVideoPlayer({
     setActiveSubtitleText(match ? match.text : '');
   }, [subtitlesEnabled, parsedCues]);
 
+  // Subtitles Toggle Handler (ALWAYS functional with clear feedback)
   const handleToggleSubtitles = () => {
-    if (!hasSubtitles) return;
+    if (!hasSubtitles) {
+      triggerToast({
+        message: 'Subtitles are not available for this recording',
+        icon: 'fa-regular fa-closed-captioning',
+        type: 'info'
+      });
+      return;
+    }
     setSubtitlesEnabled(prev => {
       const next = !prev;
       localStorage.setItem('onetutor_subtitles_enabled', String(next));
+      triggerToast({
+        message: next ? 'English Subtitles: ON' : 'English Subtitles: OFF',
+        icon: 'fa-regular fa-closed-captioning',
+        type: 'info'
+      });
       if (!next) {
         setActiveSubtitleText('');
       } else {
@@ -273,6 +298,20 @@ export default function RecordingVideoPlayer({
       videoRef.current.muted = v === 0;
       setVideoMuted(v === 0);
     }
+  };
+
+  // Playback speed change
+  const handleSpeedChange = (spd) => {
+    setPlaybackSpeed(spd);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = spd;
+    }
+    setShowQualityMenu(false);
+    triggerToast({
+      message: `Playback Speed: ${spd === 1 ? 'Normal (1x)' : `${spd}x`}`,
+      icon: 'fa-solid fa-gauge-high',
+      type: 'info'
+    });
   };
 
   // Seeking logic - Completely open, NO strict watching restriction!
@@ -435,7 +474,7 @@ export default function RecordingVideoPlayer({
     };
   }, [showQualityMenu]);
 
-  // Keyboard Shortcuts (Space: Play/Pause, Left/Right: Seek 5s freely, F: Fullscreen, M: Mute, Up/Down: Volume)
+  // Keyboard Shortcuts (Space: Play/Pause, Left/Right: Seek 5s freely, F: Fullscreen, M: Mute, Up/Down: Volume, C: CC)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!cardRef.current) return;
@@ -487,7 +526,7 @@ export default function RecordingVideoPlayer({
           setVideoMuted(newVol === 0);
           showVideoControls();
         }
-      } else if ((e.key === 'c' || e.key === 'C') && hasSubtitles) {
+      } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         handleToggleSubtitles();
       }
@@ -692,9 +731,19 @@ export default function RecordingVideoPlayer({
           }
           updateActiveSubtitle(vid.currentTime || 0);
         }}
-      />
+      >
+        {subtitleUrl && (
+          <track
+            kind="subtitles"
+            src={resolveMediaUrl(subtitleUrl)}
+            srcLang="en"
+            label="English"
+            default={subtitlesEnabled}
+          />
+        )}
+      </video>
 
-      {/* Closed Captions (Subtitles) Display */}
+      {/* Closed Captions (Subtitles) Display (YouTube style overlay) */}
       {subtitlesEnabled && activeSubtitleText && (
         <div
           className={`yt-caption-window-bottom ${
@@ -716,24 +765,24 @@ export default function RecordingVideoPlayer({
         onContextMenu={(e) => { e.preventDefault(); return false; }}
       >
         <div className="ot-video-top-left">
-          {onClose && (
-            <button
-              type="button"
-              className="ot-video-icon-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isFullscreen) {
-                  handleFullscreen();
-                } else {
-                  onClose();
-                }
-              }}
-              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Close'}
-              aria-label={isFullscreen ? 'Exit Fullscreen' : 'Close'}
-            >
-              <i className={`fa-solid ${isFullscreen ? 'fa-arrow-left' : 'fa-xmark'}`}></i>
-            </button>
-          )}
+          <button
+            type="button"
+            className="ot-video-icon-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isFullscreen) {
+                handleFullscreen();
+              } else if (onClose) {
+                onClose();
+              } else if (window.history.length > 1) {
+                window.history.back();
+              }
+            }}
+            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Back / Close'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Back / Close'}
+          >
+            <i className="fa-solid fa-arrow-left"></i>
+          </button>
           {title && (
             <span className="ot-video-top-title" title={title}>
               {title}
@@ -747,23 +796,27 @@ export default function RecordingVideoPlayer({
         </div>
 
         <div className="ot-video-top-right">
-          {/* Subtitles (CC) Toggle Button in Top Bar */}
-          {hasSubtitles && (
-            <button
-              type="button"
-              className="ot-video-icon-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleSubtitles();
-              }}
-              title={subtitlesEnabled ? 'Subtitles (c) - On' : 'Subtitles (c) - Off'}
-              aria-label="Toggle subtitles"
-            >
-              <div className={`ot-yt-top-cc ${subtitlesEnabled ? 'is-active' : ''}`}>
-                <span>CC</span>
-              </div>
-            </button>
-          )}
+          {/* Subtitles (CC) Toggle Button in Top Bar - ALWAYS ACCESSIBLE */}
+          <button
+            type="button"
+            className={`ot-video-icon-btn ${!hasSubtitles ? 'is-disabled' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleSubtitles();
+            }}
+            title={
+              !hasSubtitles
+                ? 'Subtitles not available for this video'
+                : (subtitlesEnabled
+                    ? 'Subtitles (c) - On'
+                    : 'Subtitles (c) - Off')
+            }
+            aria-label={hasSubtitles ? 'Toggle subtitles' : 'Subtitles not available'}
+          >
+            <div className={`ot-yt-top-cc ${subtitlesEnabled && hasSubtitles ? 'is-active' : ''}`}>
+              <span>CC</span>
+            </div>
+          </button>
 
           {/* Quality / Settings Gear Selector in Top Bar */}
           <div ref={topQualityMenuRef} style={{ position: 'relative', display: 'inline-block' }}>
@@ -801,6 +854,24 @@ export default function RecordingVideoPlayer({
                   >
                     <span>{opt.label}</span>
                     {videoQuality === opt.id && (
+                      <i className="fa-solid fa-check"></i>
+                    )}
+                  </button>
+                ))}
+
+                <div className="ot-quality-menu-header" style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <i className="fa-solid fa-gauge-high" style={{ fontSize: '0.72rem' }}></i>
+                  <span>Speed</span>
+                </div>
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                  <button
+                    key={spd}
+                    type="button"
+                    className={`ot-quality-option-btn ${playbackSpeed === spd ? 'is-active' : ''}`}
+                    onClick={() => handleSpeedChange(spd)}
+                  >
+                    <span>{spd === 1 ? '1x (Normal)' : `${spd}x`}</span>
+                    {playbackSpeed === spd && (
                       <i className="fa-solid fa-check"></i>
                     )}
                   </button>
@@ -862,26 +933,28 @@ export default function RecordingVideoPlayer({
           )}
         </div>
 
-        {/* Controls Row */}
+        {/* Controls Row (EXACT match of Course Video Player) */}
         <div className="ot-ctrl-row">
-          {/* Left Controls: Rewind 10s, Play/Pause, Forward 10s, Time */}
+          {/* Left Controls: Prev Step, Play/Pause, Next Step, Current Time / Duration */}
           <div className="ot-ctrl-left">
             <button
               type="button"
               className="ot-ctrl-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                if (videoRef.current) {
+                if (onPrev) {
+                  onPrev();
+                } else if (videoRef.current) {
                   const newTime = Math.max(0, videoRef.current.currentTime - 10);
                   videoRef.current.currentTime = newTime;
                   setVideoCurrentTime(newTime);
-                  triggerToast({ message: '-10s', icon: 'fa-solid fa-rotate-left', type: 'info' });
+                  triggerToast({ message: '-10s', icon: 'fa-solid fa-backward-step', type: 'info' });
                 }
               }}
-              title="Rewind 10s (j / ←)"
-              aria-label="Rewind 10 seconds"
+              title="Previous / Rewind 10s (j)"
+              aria-label="Previous"
             >
-              <i className="fa-solid fa-rotate-left"></i>
+              <i className="fa-solid fa-backward-step"></i>
             </button>
 
             <button
@@ -902,17 +975,19 @@ export default function RecordingVideoPlayer({
               className="ot-ctrl-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                if (videoRef.current) {
+                if (onNext) {
+                  onNext();
+                } else if (videoRef.current) {
                   const newTime = Math.min(videoDuration || Infinity, videoRef.current.currentTime + 10);
                   videoRef.current.currentTime = newTime;
                   setVideoCurrentTime(newTime);
-                  triggerToast({ message: '+10s', icon: 'fa-solid fa-rotate-right', type: 'info' });
+                  triggerToast({ message: '+10s', icon: 'fa-solid fa-forward-step', type: 'info' });
                 }
               }}
-              title="Forward 10s (l / →)"
-              aria-label="Forward 10 seconds"
+              title="Next / Forward 10s (l)"
+              aria-label="Next"
             >
-              <i className="fa-solid fa-rotate-right"></i>
+              <i className="fa-solid fa-forward-step"></i>
             </button>
 
             <span className="ot-ctrl-time">
@@ -920,7 +995,7 @@ export default function RecordingVideoPlayer({
             </span>
           </div>
 
-          {/* Right Controls: Volume, PiP, Subtitles (CC), Quality Gear, Fullscreen */}
+          {/* Right Controls: Volume, PiP, Auto-play, Subtitles (CC), Quality & Speed, Fullscreen */}
           <div className="ot-ctrl-right">
             {/* Volume Mute & Slider */}
             <button
@@ -963,23 +1038,50 @@ export default function RecordingVideoPlayer({
               <i className="fa-regular fa-window-restore"></i>
             </button>
 
-            {/* Subtitles (CC) Button in Bottom Bar */}
-            {hasSubtitles && (
-              <button
-                type="button"
-                className={`ot-ctrl-btn ${subtitlesEnabled ? 'ot-ctrl-btn--active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleSubtitles();
-                }}
-                title={subtitlesEnabled ? 'Subtitles (c) - On' : 'Subtitles (c) - Off'}
-                aria-label="Toggle subtitles"
-              >
-                <i className="fa-regular fa-closed-captioning"></i>
-              </button>
-            )}
+            {/* Auto-play Next Button */}
+            <button
+              type="button"
+              className={`ot-ctrl-btn ${autoPlayNext ? 'ot-ctrl-btn--active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setAutoPlayNext(p => {
+                  const next = !p;
+                  localStorage.setItem('onetutor_autoplay_next', String(next));
+                  triggerToast({
+                    message: next ? 'Auto-play Next: ON' : 'Auto-play Next: OFF',
+                    icon: 'fa-solid fa-forward-fast',
+                    type: 'info'
+                  });
+                  return next;
+                });
+              }}
+              title={autoPlayNext ? 'Auto-play: ON' : 'Auto-play: OFF'}
+              aria-label="Toggle auto-play next"
+            >
+              <i className="fa-solid fa-forward-fast"></i>
+            </button>
 
-            {/* Quality Popover Trigger in Bottom Bar */}
+            {/* Subtitles (CC) Button in Bottom Bar - ALWAYS VISIBLE */}
+            <button
+              type="button"
+              className={`ot-ctrl-btn ${subtitlesEnabled && hasSubtitles ? 'ot-ctrl-btn--active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleSubtitles();
+              }}
+              title={
+                !hasSubtitles
+                  ? 'Subtitles not available for this video'
+                  : (subtitlesEnabled
+                      ? 'Subtitles (c) - On'
+                      : 'Subtitles (c) - Off')
+              }
+              aria-label="Toggle subtitles (c)"
+            >
+              <i className="fa-regular fa-closed-captioning"></i>
+            </button>
+
+            {/* Quality & Speed Settings Popover in Bottom Bar */}
             <div ref={bottomQualityMenuRef} style={{ position: 'relative', display: 'inline-block' }}>
               <button
                 type="button"
@@ -1013,6 +1115,24 @@ export default function RecordingVideoPlayer({
                     >
                       <span>{opt.label}</span>
                       {videoQuality === opt.id && (
+                        <i className="fa-solid fa-check"></i>
+                      )}
+                    </button>
+                  ))}
+
+                  <div className="ot-quality-menu-header" style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                    <i className="fa-solid fa-gauge-high" style={{ fontSize: '0.72rem' }}></i>
+                    <span>Speed</span>
+                  </div>
+                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                    <button
+                      key={spd}
+                      type="button"
+                      className={`ot-quality-option-btn ${playbackSpeed === spd ? 'is-active' : ''}`}
+                      onClick={() => handleSpeedChange(spd)}
+                    >
+                      <span>{spd === 1 ? '1x (Normal)' : `${spd}x`}</span>
+                      {playbackSpeed === spd && (
                         <i className="fa-solid fa-check"></i>
                       )}
                     </button>

@@ -374,7 +374,14 @@ export default function StudentLiveClassesPage() {
                               key={r.id || idx}
                               type="button"
                               className="ot-live-btn-primary"
-                              onClick={() => setSelectedRecording({ ...r, url: recUrl, sessionTitle: s.title, courseName: s.courseName, description: s.description })}
+                              onClick={() => setSelectedRecording({
+                                ...r,
+                                url: recUrl,
+                                sessionTitle: s.title,
+                                courseName: s.courseName,
+                                description: s.description,
+                                subtitleUrl: r.subtitleUrl || r.subtitlesUrl || null
+                              })}
                             >
                               <i className="fa-solid fa-play"></i>
                               <span>Watch Recording {s.recordings.length > 1 ? `#${idx + 1}` : ''} {r.duration ? `(${Math.round(r.duration / 60)} mins)` : ''}</span>

@@ -1066,13 +1066,12 @@ export default function AdminLiveSessionsPage() {
                       </div>
 
                       {/* Immediate Video Player Preview */}
-                      <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000', maxWidth: '380px', margin: '0 auto 12px' }}>
-                        <video
-                          src={resolveMediaUrl(recordingForm.url)}
-                          controls
-                          crossOrigin="anonymous"
-                          style={{ width: '100%', maxHeight: '180px', display: 'block' }}
-                          preload="metadata"
+                      <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000', maxWidth: '420px', margin: '0 auto 12px' }}>
+                        <RecordingVideoPlayer
+                          url={recordingForm.url}
+                          title={recordingForm.title || 'Recording Upload Preview'}
+                          autoPlay={false}
+                          style={{ width: '100%', maxHeight: '220px' }}
                         />
                       </div>
 
@@ -1284,23 +1283,13 @@ export default function AdminLiveSessionsPage() {
                           style={{ width: '100%', height: '200px', border: 'none', display: 'block' }}
                         />
                       ) : (
-                        <video
-                          src={recUrl}
-                          controls
-                          crossOrigin="anonymous"
-                          style={{ width: '100%', maxHeight: '200px', display: 'block', background: '#000' }}
-                          preload="metadata"
-                        >
-                          {r.subtitleUrl && (
-                            <track
-                              kind="subtitles"
-                              src={resolveMediaUrl(r.subtitleUrl)}
-                              srcLang="en"
-                              label="English"
-                              default
-                            />
-                          )}
-                        </video>
+                        <RecordingVideoPlayer
+                          url={recUrl}
+                          title={`Recording ${idx + 1}`}
+                          subtitleUrl={r.subtitleUrl}
+                          autoPlay={false}
+                          style={{ width: '100%', maxHeight: '260px' }}
+                        />
                       )}
                     </div>
                     {/* Info row */}
