@@ -10711,6 +10711,63 @@ h6,
   padding: 14px 20px !important;
 }
 
+/* ========================================================
+   Portrait / Landscape Viewing Mode
+   ======================================================== */
+.ot-video-card.is-portrait {
+  aspect-ratio: 9 / 16 !important;
+  max-width: 440px !important;
+  max-height: 85vh !important;
+  min-height: 440px !important;
+  margin: 0 auto !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+  transition: max-width 0.3s ease, aspect-ratio 0.3s ease;
+}
+
+.ot-video-card.is-portrait .ot-video-player {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  background: #000000 !important;
+}
+
+.ot-video-card.is-portrait .ot-ctrl-row {
+  padding: 4px 8px 8px;
+  gap: 2px;
+}
+
+.ot-video-card.is-portrait .ot-ctrl-volume {
+  width: 45px;
+}
+
+.ot-video-card.is-portrait .ot-video-top-title {
+  max-width: 48%;
+  font-size: 0.82rem;
+}
+
+/* Fullscreen Portrait Mode */
+.ot-video-card:fullscreen.is-portrait,
+.ot-video-card:-webkit-full-screen.is-portrait {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  aspect-ratio: auto !important;
+  background: #000000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ot-video-card:fullscreen.is-portrait .ot-video-player,
+.ot-video-card:-webkit-full-screen.is-portrait .ot-video-player {
+  max-width: calc(100vh * (9 / 16)) !important;
+  height: 100vh !important;
+  object-fit: contain !important;
+  margin: 0 auto !important;
+}
+
 
 /* Mobile Video Player Controls Responsive Improvements */
 @media (max-width: 640px) {
