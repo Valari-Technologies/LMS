@@ -83,4 +83,12 @@ public class AdminLiveSessionController {
         liveSessionService.deleteRecording(sessionId, recordingId, actor);
         return ApiResponse.ok("Recording deleted successfully", null);
     }
+
+    @PostMapping("/{sessionId}/recordings/{recordingId}/generate-subtitles")
+    public ApiResponse<SessionRecordingResponse> generateSubtitles(@PathVariable Long sessionId,
+                                                                   @PathVariable Long recordingId,
+                                                                   @AuthenticationPrincipal User actor) {
+        return ApiResponse.ok("Subtitle generation job queued successfully",
+                liveSessionService.generateRecordingSubtitles(sessionId, recordingId, actor));
+    }
 }

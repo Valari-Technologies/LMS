@@ -44,6 +44,7 @@ public class LiveSessionService {
     private final AuditService auditService;
     private final com.onetutor.batches.repository.BatchRepository batchRepository;
     private final com.onetutor.notifications.service.NotificationService notificationService;
+    private final com.onetutor.subtitles.service.SubtitleService subtitleService;
 
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
                               SessionRecordingRepository sessionRecordingRepository,
@@ -54,7 +55,8 @@ public class LiveSessionService {
                               LiveMeetingProvider meetingProvider,
                               AuditService auditService,
                               com.onetutor.batches.repository.BatchRepository batchRepository,
-                              com.onetutor.notifications.service.NotificationService notificationService) {
+                              com.onetutor.notifications.service.NotificationService notificationService,
+                              @org.springframework.context.annotation.Lazy com.onetutor.subtitles.service.SubtitleService subtitleService) {
         this.liveSessionRepository = liveSessionRepository;
         this.sessionRecordingRepository = sessionRecordingRepository;
         this.courseRepository = courseRepository;
@@ -65,6 +67,7 @@ public class LiveSessionService {
         this.auditService = auditService;
         this.batchRepository = batchRepository;
         this.notificationService = notificationService;
+        this.subtitleService = subtitleService;
     }
 
     @Transactional
@@ -247,6 +250,15 @@ public class LiveSessionService {
             liveSessionRepository.save(session);
         }
 
+        // Automatically trigger English subtitle generation for this recording
+        try {
+            if (subtitleService != null) {
+                subtitleService.processSessionRecordingSubtitlesAsync(recording.getId());
+            }
+        } catch (Exception e) {
+            log.warn("[LiveSessionService] Failed to auto-trigger subtitles for recording #{}: {}", recording.getId(), e.getMessage());
+        }
+
         auditService.log(actor, "ATTACH_RECORDING", "LiveSession", session.getId(),
                 "Attached recording to live session: " + session.getTitle());
 
@@ -263,16 +275,25 @@ public class LiveSessionService {
             throw new BadRequestException("INVALID_RECORDING", "Recording does not belong to this session");
         }
 
+        boolean urlChanged = false;
         if (req.mediaAssetId() != null) {
             com.onetutor.media.entity.MediaAsset asset = mediaAssetRepository.findById(req.mediaAssetId())
                     .orElseThrow(() -> new NotFoundException("MEDIA_NOT_FOUND", "Media asset not found"));
             recording.setMediaAsset(asset);
             if (req.url() == null || req.url().isBlank()) {
-                recording.setUrl("/api/v1/media/files/" + asset.getId());
+                String newUrl = "/api/v1/media/files/" + asset.getId();
+                if (!newUrl.equals(recording.getUrl())) {
+                    recording.setUrl(newUrl);
+                    urlChanged = true;
+                }
             }
         }
         if (req.url() != null && !req.url().isBlank()) {
-            recording.setUrl(req.url().trim());
+            String newUrl = req.url().trim();
+            if (!newUrl.equals(recording.getUrl())) {
+                recording.setUrl(newUrl);
+                urlChanged = true;
+            }
         }
 
         if (req.duration() != null) {
@@ -280,9 +301,30 @@ public class LiveSessionService {
         }
 
         sessionRecordingRepository.save(recording);
+
+        if (urlChanged) {
+            try {
+                if (subtitleService != null) {
+                    subtitleService.processSessionRecordingSubtitlesAsync(recording.getId());
+                }
+            } catch (Exception e) {
+                log.warn("[LiveSessionService] Failed to trigger subtitles on updated recording #{}: {}", recording.getId(), e.getMessage());
+            }
+        }
+
         auditService.log(actor, "UPDATE_RECORDING", "LiveSession", session.getId(),
                 "Updated recording on live session: " + session.getTitle());
 
+        return SessionRecordingResponse.from(recording);
+    }
+
+    @Transactional
+    public SessionRecordingResponse generateRecordingSubtitles(Long sessionId, Long recordingId, User actor) {
+        SessionRecording recording = sessionRecordingRepository.findById(recordingId)
+                .orElseThrow(() -> new NotFoundException("RECORDING_NOT_FOUND", "Recording not found"));
+        if (subtitleService != null) {
+            subtitleService.triggerSessionRecordingSubtitles(recording.getId());
+        }
         return SessionRecordingResponse.from(recording);
     }
 

@@ -26,6 +26,18 @@ public class SessionRecording {
 
     private Integer duration;
 
+    @Column(name = "subtitle_url", length = 1000)
+    private String subtitleUrl;
+
+    @Column(name = "subtitle_status", length = 30)
+    private String subtitleStatus = "PENDING";
+
+    @Column(name = "subtitle_language", length = 20)
+    private String subtitleLanguage = "en";
+
+    @Column(name = "subtitle_progress")
+    private Integer subtitleProgress = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -52,6 +64,14 @@ public class SessionRecording {
     public void setUrl(String url) { this.url = url; }
     public Integer getDuration() { return duration; }
     public void setDuration(Integer duration) { this.duration = duration; }
+    public String getSubtitleUrl() { return subtitleUrl; }
+    public void setSubtitleUrl(String subtitleUrl) { this.subtitleUrl = subtitleUrl; }
+    public String getSubtitleStatus() { return subtitleStatus; }
+    public void setSubtitleStatus(String subtitleStatus) { this.subtitleStatus = subtitleStatus; }
+    public String getSubtitleLanguage() { return subtitleLanguage; }
+    public void setSubtitleLanguage(String subtitleLanguage) { this.subtitleLanguage = subtitleLanguage; }
+    public Integer getSubtitleProgress() { return subtitleProgress; }
+    public void setSubtitleProgress(Integer subtitleProgress) { this.subtitleProgress = subtitleProgress; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { listMedia, uploadMedia, updateMedia, deleteMedia } from '../../api/media';
 import { useNotification } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
+import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 export default function AdminMediaPage() {
   const { isReadOnly } = usePermission();
@@ -9,6 +10,8 @@ export default function AdminMediaPage() {
   const [mediaList, setMediaList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [page, setPage] = useState(0);
@@ -18,6 +21,7 @@ export default function AdminMediaPage() {
   const [editName, setEditName] = useState('');
   const [editFile, setEditFile] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(0);
   const [copiedId, setCopiedId] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
@@ -79,6 +83,8 @@ export default function AdminMediaPage() {
     if (!file) return;
 
     setUploading(true);
+    setUploadProgress(0);
+    setUploadFileName(file.name);
     const cat = getFileCategory(file.name, file.type);
     const tempUrl = URL.createObjectURL(file);
     const tempId = 'temp-' + Date.now();
@@ -102,14 +108,15 @@ export default function AdminMediaPage() {
 
     // Upload directly to Cloudinary
     try {
-      const realAsset = await uploadMedia(file);
+      const realAsset = await uploadMedia(file, (pct) => setUploadProgress(pct));
       setMediaList(prev => prev.map(a => a.id === tempId ? (realAsset || a) : a));
       toast.success(`"${file.name}" uploaded to Cloudinary successfully!`);
     } catch (err) {
       setMediaList(prev => prev.filter(a => a.id !== tempId));
-      toast.error(err.response?.data?.message || 'Failed to upload media asset to Cloudinary.');
+      toast.error(err.response?.data?.message || err.message || 'Failed to upload media asset to Cloudinary.');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -134,6 +141,7 @@ export default function AdminMediaPage() {
     try {
       await deleteMedia(id);
       toast.success(`Asset "${filename}" deleted from Cloudinary.`);
+      setMediaList(prev => prev.filter(a => a.id !== id));
       loadMedia();
       if (selectedAsset && selectedAsset.id === id) setSelectedAsset(null);
     } catch (e) {
@@ -145,26 +153,31 @@ export default function AdminMediaPage() {
     setEditingAsset(asset);
     setEditName(asset.filename || asset.fileName || '');
     setEditFile(null);
+    setUpdateProgress(0);
   }
 
   async function handleUpdateSubmit(e) {
     e.preventDefault();
     if (isReadOnly || !editingAsset) return;
     setUpdating(true);
+    setUpdateProgress(0);
     try {
-      await updateMedia(editingAsset.id, { name: editName, file: editFile });
+      const updated = await updateMedia(editingAsset.id, { name: editName, file: editFile });
       toast.success('Asset updated on Cloudinary successfully!');
       setEditingAsset(null);
+      setMediaList(prev => prev.map(a => a.id === editingAsset.id ? (updated || a) : a));
       loadMedia();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update asset on Cloudinary.');
+      toast.error(err.response?.data?.message || err.message || 'Failed to update asset on Cloudinary.');
     } finally {
       setUpdating(false);
+      setUpdateProgress(0);
     }
   }
 
   function copyUrl(asset) {
-    const fullUrl = asset.url?.startsWith('http') ? asset.url : `${window.location.origin}${asset.url}`;
+    const rawUrl = asset.url || asset.storagePath || '';
+    const fullUrl = resolveMediaUrl(rawUrl);
     navigator.clipboard.writeText(fullUrl);
     setCopiedId(asset.id);
     toast.info('Cloudinary CDN URL copied to clipboard!');
@@ -255,6 +268,18 @@ export default function AdminMediaPage() {
         <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '6px' }}>
           Supports <strong>Images</strong> (PNG, JPG, WebP, GIF, SVG), <strong>Documents</strong> (PDF, DOCX, XLSX, PPTX, TXT, CSV), <strong>Media</strong> (MP4, MP3, WAV), and <strong>Archives</strong> (ZIP, RAR) up to 100MB
         </div>
+
+        {uploading && (
+          <div style={{ marginTop: '16px', maxWidth: '420px', marginInline: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '6px', color: 'var(--text-muted)' }}>
+              <span>Uploading <strong>{uploadFileName}</strong></span>
+              <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{uploadProgress}%</span>
+            </div>
+            <div style={{ height: '8px', background: 'var(--bg-card-hover, rgba(255,255,255,0.08))', borderRadius: '999px', overflow: 'hidden' }}>
+              <div style={{ width: `${uploadProgress}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #06b6d4)', transition: 'width 0.2s ease', borderRadius: '999px' }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search & Category Filter Bar */}
@@ -321,7 +346,7 @@ export default function AdminMediaPage() {
                   }}
                 >
                   {cat === 'image' ? (
-                    <img src={asset.url} alt={fileName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={resolveMediaUrl(asset.url)} alt={fileName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : cat === 'video' ? (
                     <span style={{ fontSize: '2.5rem' }}><i className="fa-solid fa-film" style={{ color: '#a78bfa' }}></i></span>
                   ) : cat === 'audio' ? (
@@ -442,21 +467,23 @@ export default function AdminMediaPage() {
                 const fileName = selectedAsset.filename || selectedAsset.fileName || '';
                 const cat = getFileCategory(fileName, selectedAsset.mimeType);
 
+                const previewSrc = resolveMediaUrl(selectedAsset.url);
+
                 if (cat === 'video') {
-                  return <video src={selectedAsset.url} controls style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '8px' }} />;
+                  return <video src={previewSrc} controls style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '8px' }} />;
                 }
                 if (cat === 'image') {
-                  return <img src={selectedAsset.url} alt={fileName} style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain' }} />;
+                  return <img src={previewSrc} alt={fileName} style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain' }} />;
                 }
                 if (cat === 'audio') {
-                  return <audio src={selectedAsset.url} controls style={{ width: '100%' }} />;
+                  return <audio src={previewSrc} controls style={{ width: '100%' }} />;
                 }
                 if (cat === 'pdf') {
                   return (
                     <div style={{ width: '100%', height: '460px', display: 'flex', flexDirection: 'column' }}>
-                      <iframe src={selectedAsset.url} title={fileName} width="100%" height="400px" style={{ border: 'none', borderRadius: '8px', background: '#fff' }} />
+                      <iframe src={previewSrc} title={fileName} width="100%" height="400px" style={{ border: 'none', borderRadius: '8px', background: '#fff' }} />
                       <div style={{ marginTop: '10px' }}>
-                        <a href={selectedAsset.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
+                        <a href={previewSrc} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
                           <i className="fa-solid fa-up-right-from-square" style={{ marginRight: '6px' }}></i>
                           Open PDF in New Window
                         </a>
@@ -474,7 +501,7 @@ export default function AdminMediaPage() {
                        <i className="fa-solid fa-file" style={{ color: '#94a3b8' }}></i>}
                     </div>
                     <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem' }}>{fileName}</p>
-                    <a href={selectedAsset.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                    <a href={previewSrc} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
                       <i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: '6px' }}></i>
                       Download from Cloudinary
                     </a>

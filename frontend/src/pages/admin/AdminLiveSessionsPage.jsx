@@ -8,7 +8,8 @@ import {
   completeLiveSession,
   attachRecording,
   updateRecording,
-  deleteRecording
+  deleteRecording,
+  generateRecordingSubtitles
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
@@ -16,13 +17,7 @@ import { getCourseBatches } from '../../api/batches';
 import { useNotification } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
-
-function resolveMediaUrl(url) {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
-  if (url.startsWith('/api/')) return `http://localhost:8080${url}`;
-  return url;
-}
+import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 function getYouTubeEmbedUrl(url) {
   if (!url) return null;
@@ -130,6 +125,9 @@ export default function AdminLiveSessionsPage() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaSearch, setMediaSearch] = useState('');
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [generatingSubtitleId, setGeneratingSubtitleId] = useState(null);
   const [selectedMediaAsset, setSelectedMediaAsset] = useState(null);
   const [previewRecordingModal, setPreviewRecordingModal] = useState(null);
   const [manageRecordingsModal, setManageRecordingsModal] = useState(null); // session object
@@ -354,14 +352,17 @@ export default function AdminLiveSessionsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingVideo(true);
+    setUploadProgress(0);
+    setUploadFileName(file.name);
     try {
-      const uploaded = await uploadMedia(file);
+      const uploaded = await uploadMedia(file, (pct) => setUploadProgress(pct));
       const url = uploaded.fileUrl || uploaded.filePath || uploaded.url || '';
-      setRecordingForm(prev => ({ ...prev, url }));
+      setRecordingForm(prev => ({ ...prev, url, mediaAssetId: uploaded.id }));
       setSelectedMediaAsset(uploaded);
-      toast.success('Video uploaded to media library!');
+      toast.success('Video uploaded to Cloudinary media library!');
     } catch (err) {
-      toast.error('Failed to upload video');
+      const msg = err.response?.data?.message || err.message || 'Failed to upload video';
+      toast.error(msg);
     } finally {
       setUploadingVideo(false);
       if (recordingFileInputRef.current) recordingFileInputRef.current.value = '';
@@ -370,7 +371,7 @@ export default function AdminLiveSessionsPage() {
 
   function handleSelectRecordingMediaAsset(asset) {
     const url = asset.fileUrl || asset.filePath || asset.url || '';
-    setRecordingForm(prev => ({ ...prev, url }));
+    setRecordingForm(prev => ({ ...prev, url, mediaAssetId: asset.id }));
     setSelectedMediaAsset(asset);
     setRecordingTab('url'); // switch to URL tab to show/confirm the selected URL
   }
@@ -387,17 +388,38 @@ export default function AdminLiveSessionsPage() {
     try {
       await attachRecording(showRecordingModal.id, {
         url: finalUrl,
+        mediaAssetId: selectedMediaAsset?.id || recordingForm.mediaAssetId || null,
         duration: recordingForm.duration ? Number(recordingForm.duration) : null,
       });
       setShowRecordingModal(null);
-      setRecordingForm({ url: '', duration: '' });
+      setRecordingForm({ url: '', duration: '', mediaAssetId: null });
       setSelectedMediaAsset(null);
-      toast.success('Recording attached successfully! Students can now watch the archived session.');
+      toast.success('Recording attached successfully! English subtitles are generating automatically.');
       loadSessions();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to attach recording');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleGenerateSubtitles(sessionId, recordingId) {
+    setGeneratingSubtitleId(recordingId);
+    try {
+      await generateRecordingSubtitles(sessionId, recordingId);
+      toast.success('English subtitle generation queued! Processing now.');
+      loadSessions();
+      setManageRecordingsModal(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          recordings: (prev.recordings || []).map(r => r.id === recordingId ? { ...r, subtitleStatus: 'PROCESSING', subtitleProgress: 15 } : r)
+        };
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to trigger subtitle generation');
+    } finally {
+      setGeneratingSubtitleId(null);
     }
   }
 
@@ -1014,31 +1036,54 @@ export default function AdminLiveSessionsPage() {
                     onChange={handleUploadRecordingVideo}
                   />
                   {uploadingVideo ? (
-                    <div style={{ color: 'var(--text-muted)' }}>
-                      <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '12px', display: 'block' }}></i>
-                      Uploading video to media library… please wait
+                    <div style={{ color: 'var(--text-primary)', padding: '10px 0' }}>
+                      <i className="fa-solid fa-cloud-arrow-up fa-bounce" style={{ fontSize: '2.5rem', marginBottom: '14px', display: 'block', color: 'var(--primary)' }}></i>
+                      <div style={{ fontWeight: '700', fontSize: '1rem', marginBottom: '4px' }}>
+                        Uploading video to Cloudinary… {uploadProgress}%
+                      </div>
+                      {uploadFileName && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                          {uploadFileName}
+                        </div>
+                      )}
+                      <div style={{ width: '100%', maxWidth: '360px', height: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', margin: '0 auto 12px auto', overflow: 'hidden' }}>
+                        <div style={{ width: `${uploadProgress}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #a855f7)', transition: 'width 0.2s ease', borderRadius: '10px' }} />
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#a855f7' }}>
+                        <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '6px' }}></i>
+                        Subtitles will be generated automatically upon upload
+                      </div>
                     </div>
                   ) : selectedMediaAsset && recordingForm.url ? (
                     <div style={{ color: '#10b981' }}>
-                      <i className="fa-solid fa-circle-check" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block' }}></i>
-                      <div style={{ fontWeight: '700', fontSize: '0.95rem' }}>Video Uploaded Successfully!</div>
+                      <i className="fa-solid fa-circle-check" style={{ fontSize: '2.4rem', marginBottom: '10px', display: 'block' }}></i>
+                      <div style={{ fontWeight: '700', fontSize: '1rem' }}>Video Uploaded to Cloudinary!</div>
                       <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                         {selectedMediaAsset.filename || selectedMediaAsset.originalName || 'Uploaded file'}
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        style={{ marginTop: '12px' }}
-                        onClick={(e) => { e.stopPropagation(); setSelectedMediaAsset(null); setRecordingForm(f => ({ ...f, url: '' })); }}
-                      >
-                        Replace Video
-                      </button>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.78rem', marginTop: '10px' }}>
+                        <i className="fa-solid fa-closed-captioning"></i>
+                        <span>Auto English Subtitles: <strong>Enabled on Save</strong></span>
+                      </div>
+                      <div style={{ marginTop: '12px' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={(e) => { e.stopPropagation(); setSelectedMediaAsset(null); setRecordingForm(f => ({ ...f, url: '', mediaAssetId: null })); }}
+                        >
+                          Replace Video
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ color: 'var(--text-muted)' }}>
                       <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '2.5rem', marginBottom: '12px', display: 'block', color: 'var(--primary)' }}></i>
                       <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>Click to upload session recording</div>
-                      <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>MP4, WebM, MOV · The file will be saved to your media library</div>
+                      <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>MP4, WebM, MOV · Uploads directly to Cloudinary Media Library</div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--accent-primary)', marginTop: '6px' }}>
+                        <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '4px' }}></i>
+                        Automatic English subtitles will be generated
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1244,6 +1289,33 @@ export default function AdminLiveSessionsPage() {
                             {Math.floor(r.duration / 3600) > 0 ? `${Math.floor(r.duration / 3600)}h ` : ''}{Math.round((r.duration % 3600) / 60)} min
                           </div>
                         )}
+                        {/* Subtitles Status Badge & Actions */}
+                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {r.subtitleStatus === 'COMPLETED' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
+                              <i className="fa-solid fa-closed-captioning"></i> Subtitles Ready (EN)
+                            </span>
+                          ) : r.subtitleStatus === 'PROCESSING' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
+                              <i className="fa-solid fa-spinner fa-spin"></i> Generating Subtitles ({r.subtitleProgress || 0}%)
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
+                              <i className="fa-solid fa-closed-captioning"></i> Subtitles Pending
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: '2px 6px', fontSize: '0.72rem', color: 'var(--accent-primary)' }}
+                            disabled={generatingSubtitleId === r.id || r.subtitleStatus === 'PROCESSING'}
+                            onClick={() => handleGenerateSubtitles(manageRecordingsModal.id, r.id)}
+                            title="Generate or re-generate English subtitles"
+                          >
+                            <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '3px' }}></i>
+                            {generatingSubtitleId === r.id ? 'Queueing…' : r.subtitleUrl ? 'Regenerate' : 'Generate Subtitles'}
+                          </button>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
@@ -1471,11 +1543,22 @@ export default function AdminLiveSessionsPage() {
                 />
               ) : (
                 <video
-                  src={previewRecordingModal.url}
+                  src={resolveMediaUrl(previewRecordingModal.url)}
                   controls
                   autoPlay
+                  crossOrigin="anonymous"
                   style={{ width: '100%', maxHeight: '500px', display: 'block' }}
-                />
+                >
+                  {previewRecordingModal.subtitleUrl && (
+                    <track
+                      kind="subtitles"
+                      src={resolveMediaUrl(previewRecordingModal.subtitleUrl)}
+                      srcLang="en"
+                      label="English"
+                      default
+                    />
+                  )}
+                </video>
               )}
             </div>
             <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', background: '#1c1d1f' }}>

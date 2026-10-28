@@ -36,17 +36,20 @@ public class SubtitleService {
     private final WhisperSubtitleGenerator whisperSubtitleGenerator;
     private final ContentService contentService;
     private final com.onetutor.media.service.MediaService mediaService;
+    private final com.onetutor.live.repository.SessionRecordingRepository sessionRecordingRepository;
 
     public SubtitleService(ContentRepository contentRepository,
                            StorageService storageService,
                            WhisperSubtitleGenerator whisperSubtitleGenerator,
                            ContentService contentService,
-                           @org.springframework.context.annotation.Lazy com.onetutor.media.service.MediaService mediaService) {
+                           @org.springframework.context.annotation.Lazy com.onetutor.media.service.MediaService mediaService,
+                           @org.springframework.context.annotation.Lazy com.onetutor.live.repository.SessionRecordingRepository sessionRecordingRepository) {
         this.contentRepository = contentRepository;
         this.storageService = storageService;
         this.whisperSubtitleGenerator = whisperSubtitleGenerator;
         this.contentService = contentService;
         this.mediaService = mediaService;
+        this.sessionRecordingRepository = sessionRecordingRepository;
     }
 
     /**
@@ -186,6 +189,118 @@ public class SubtitleService {
                 processSubtitlesAsync(contentId);
             } catch (Exception e) {
                 log.error("[SubtitleService] Async execution error for content #{}: {}", contentId, e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
+     * Asynchronous background job for generating English subtitles for live session recordings.
+     * Transcribes audio using Whisper / educational fallback and uploads generated WebVTT to storage/Cloudinary.
+     */
+    @Async("subtitleExecutor")
+    public void processSessionRecordingSubtitlesAsync(Long recordingId) {
+        if (sessionRecordingRepository == null) return;
+        com.onetutor.live.entity.SessionRecording rec = sessionRecordingRepository.findById(recordingId).orElse(null);
+        if (rec == null) {
+            log.warn("[SubtitleService] SessionRecording #{} not found for async subtitle processing.", recordingId);
+            return;
+        }
+
+        String mediaRef = rec.getUrl();
+        if ((mediaRef == null || mediaRef.isBlank()) && rec.getMediaAsset() != null) {
+            mediaRef = "/api/v1/media/files/" + rec.getMediaAsset().getId();
+        }
+        if (mediaRef == null || mediaRef.isBlank()) {
+            log.warn("[SubtitleService] SessionRecording #{} has no URL or media asset. Skipping subtitles.", recordingId);
+            return;
+        }
+
+        String sessionTitle = (rec.getSession() != null && rec.getSession().getTitle() != null)
+                ? rec.getSession().getTitle() : "Live Class Session Recording";
+        String sessionDesc = (rec.getSession() != null && rec.getSession().getDescription() != null)
+                ? rec.getSession().getDescription() : "Comprehensive live session recording and discussion";
+
+        rec.setSubtitleStatus("PROCESSING");
+        rec.setSubtitleProgress(10);
+        sessionRecordingRepository.save(rec);
+
+        File resolvedVideoFile = null;
+        boolean isTempFile = false;
+        try {
+            Object[] resolved = resolveVideoFileWithMeta(mediaRef);
+            resolvedVideoFile = (File) resolved[0];
+            isTempFile = (boolean) resolved[1];
+
+            if (resolvedVideoFile == null || !resolvedVideoFile.exists()) {
+                throw new IllegalStateException("Could not resolve video media file for recording #" + recordingId);
+            }
+
+            rec.setSubtitleProgress(30);
+            sessionRecordingRepository.save(rec);
+
+            String vttContent = whisperSubtitleGenerator.generateEnglishVtt(
+                    resolvedVideoFile,
+                    sessionTitle,
+                    sessionDesc,
+                    pct -> {
+                        int overallPct = 30 + (int) Math.round(pct * 0.60);
+                        rec.setSubtitleProgress(Math.min(90, Math.max(30, overallPct)));
+                        sessionRecordingRepository.save(rec);
+                    }
+            );
+
+            if (vttContent == null || vttContent.isBlank()) {
+                throw new IllegalStateException("Generated subtitle content was empty");
+            }
+
+            byte[] vttBytes = vttContent.getBytes(StandardCharsets.UTF_8);
+            String fileName = "session_rec_" + recordingId + "_en.vtt";
+            MultipartFile multipartVtt = new ByteArrayMultipartFile(
+                    "file",
+                    fileName,
+                    "text/vtt",
+                    vttBytes
+            );
+
+            String storedPath = storageService.upload(multipartVtt, "subtitles");
+            String publicUrl = storageService.getUrl(storedPath);
+
+            rec.setSubtitleUrl(publicUrl);
+            rec.setSubtitleStatus("COMPLETED");
+            rec.setSubtitleLanguage("en");
+            rec.setSubtitleProgress(100);
+            sessionRecordingRepository.save(rec);
+
+            log.info("[SubtitleService] Successfully generated English subtitles for live session recording #{}: {}", recordingId, publicUrl);
+        } catch (Exception e) {
+            log.error("[SubtitleService] Failed subtitle generation for recording #{}: {}", recordingId, e.getMessage(), e);
+            rec.setSubtitleStatus("FAILED");
+            rec.setSubtitleProgress(0);
+            sessionRecordingRepository.save(rec);
+        } finally {
+            if (isTempFile && resolvedVideoFile != null && resolvedVideoFile.exists()) {
+                try {
+                    Files.deleteIfExists(resolvedVideoFile.toPath());
+                } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    @Transactional
+    public void triggerSessionRecordingSubtitles(Long recordingId) {
+        if (sessionRecordingRepository == null) return;
+        com.onetutor.live.entity.SessionRecording rec = sessionRecordingRepository.findById(recordingId).orElse(null);
+        if (rec != null) {
+            rec.setSubtitleStatus("PENDING");
+            rec.setSubtitleProgress(0);
+            sessionRecordingRepository.save(rec);
+        }
+
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                processSessionRecordingSubtitlesAsync(recordingId);
+            } catch (Exception e) {
+                log.error("[SubtitleService] Async execution error for recording #{}: {}", recordingId, e.getMessage(), e);
             }
         });
     }

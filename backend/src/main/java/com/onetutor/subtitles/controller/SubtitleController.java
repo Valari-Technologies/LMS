@@ -45,7 +45,7 @@ public class SubtitleController {
      * Status polling endpoint: Returns current subtitle status for a content item.
      * Used by the frontend to poll until subtitleStatus == COMPLETED or FAILED.
      */
-    @GetMapping("/contents/{id}/subtitle-status")
+    @GetMapping({"/contents/{id}/subtitle-status", "/contents/{id}/subtitles/status"})
     public ApiResponse<SubtitleStatusResponse> getSubtitleStatus(@PathVariable Long id) {
         var content = contentService.findOrThrow(id);
         var resp = contentService.toResponse(content);

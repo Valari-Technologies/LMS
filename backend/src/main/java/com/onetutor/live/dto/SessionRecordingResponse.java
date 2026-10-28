@@ -10,6 +10,10 @@ public record SessionRecordingResponse(
         String url,
         String recordingUrl,
         Integer duration,
+        String subtitleUrl,
+        String subtitleStatus,
+        String subtitleLanguage,
+        Integer subtitleProgress,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -24,6 +28,10 @@ public record SessionRecordingResponse(
                 finalUrl,
                 finalUrl,
                 r.getDuration(),
+                r.getSubtitleUrl(),
+                r.getSubtitleStatus() != null ? r.getSubtitleStatus() : "PENDING",
+                r.getSubtitleLanguage() != null ? r.getSubtitleLanguage() : "en",
+                r.getSubtitleProgress() != null ? r.getSubtitleProgress() : 0,
                 r.getCreatedAt(),
                 r.getUpdatedAt()
         );

@@ -487,18 +487,36 @@ export default function StudentLiveClassesPage() {
                     <video
                       src={getQualityVideoUrl(selectedRecording.url, videoQuality)}
                       controls
+                      crossOrigin="anonymous"
                       autoPlay
                       preload={videoQuality === 'high' ? 'auto' : videoQuality === 'medium' ? 'metadata' : 'none'}
                       style={{ position: 'relative', zIndex: 1, width: '100%', maxHeight: '480px', objectFit: 'contain', display: 'block' }}
-                    />
+                    >
+                      {selectedRecording.subtitleUrl && (
+                        <track
+                          kind="subtitles"
+                          src={resolveMediaUrl(selectedRecording.subtitleUrl)}
+                          srcLang="en"
+                          label="English"
+                          default
+                        />
+                      )}
+                    </video>
                   </>
                 )}
               </div>
 
-              {/* Video Quality Adjustment Bar */}
+              {/* Video Quality & Subtitle Status Bar */}
               <div style={{ padding: '10px 20px', background: '#0b1329', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, letterSpacing: '0.05em' }}>
-                  <span>VIDEO QUALITY</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, letterSpacing: '0.05em' }}>
+                    <span>VIDEO QUALITY</span>
+                  </div>
+                  {selectedRecording.subtitleUrl && (
+                    <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <i className="fa-solid fa-closed-captioning"></i> CC English Subtitles
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {VIDEO_QUALITY_OPTIONS.map(opt => (
