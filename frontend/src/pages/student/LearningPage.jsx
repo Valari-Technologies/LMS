@@ -210,9 +210,6 @@ export default function LearningPage() {
   const [courseProgress, setCourseProgress] = useState(null);
   const [liveVideoPercent, setLiveVideoPercent] = useState(0);
   const [theaterMode, setTheaterMode] = useState(false);
-  const [isPortrait, setIsPortrait] = useState(() => {
-    return localStorage.getItem('onetutor_video_portrait') === 'true';
-  });
   const [autoPlayNext, setAutoPlayNext] = useState(true);
   const [collapsedSidebar, setCollapsedSidebar] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
@@ -850,26 +847,6 @@ export default function LearningPage() {
     } catch (err) {
       console.log('PiP not supported or failed', err);
     }
-  };
-
-  const handleToggleOrientation = () => {
-    setIsPortrait(prev => {
-      const next = !prev;
-      localStorage.setItem('onetutor_video_portrait', String(next));
-      triggerToast({
-        message: next ? 'Switched to Portrait Mode (9:16)' : 'Switched to Landscape Mode (16:9)',
-        icon: 'fa-solid fa-mobile-screen',
-        type: 'info'
-      });
-      if (typeof window !== 'undefined' && window.screen && window.screen.orientation && window.screen.orientation.lock) {
-        try {
-          if (document.fullscreenElement) {
-            window.screen.orientation.lock(next ? 'portrait' : 'landscape').catch(() => {});
-          }
-        } catch (e) {}
-      }
-      return next;
-    });
   };
 
   const handleMuteToggle = () => {
@@ -1903,7 +1880,7 @@ export default function LearningPage() {
           <main className="ot-learn-main">
             {/* Video Viewport Card */}
             <div
-              className={`ot-video-card ${!showControls && isVideoPlaying ? 'controls-hidden' : ''} ${isPortrait ? 'is-portrait' : ''}`}
+              className={`ot-video-card ${!showControls && isVideoPlaying ? 'controls-hidden' : ''}`}
               onMouseMove={showVideoControls}
               onMouseEnter={showVideoControls}
               onMouseLeave={() => {
@@ -2178,24 +2155,6 @@ export default function LearningPage() {
                               </button>
                             )}
 
-                            {/* Orientation Mode: Portrait vs Landscape in Top Bar */}
-                            <button
-                              type="button"
-                              className={`ot-video-icon-btn ${isPortrait ? 'is-active' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleOrientation();
-                              }}
-                              title={isPortrait ? 'Switch to Landscape mode (16:9)' : 'Switch to Portrait mode (9:16)'}
-                              aria-label={isPortrait ? 'Switch to Landscape mode' : 'Switch to Portrait mode'}
-                            >
-                              {isPortrait ? (
-                                <i className="fa-solid fa-mobile-screen" style={{ transform: 'rotate(90deg)', display: 'inline-block' }} />
-                              ) : (
-                                <i className="fa-solid fa-mobile-screen" style={{ display: 'inline-block' }} />
-                              )}
-                            </button>
-
                             {/* Video Quality / Settings Selector */}
                             <div ref={qualityMenuRef} style={{ position: 'relative', display: 'inline-block' }}>
                               <button
@@ -2397,21 +2356,6 @@ export default function LearningPage() {
                                 aria-disabled={!hasSubtitles}
                               >
                                 <i className="fa-regular fa-closed-captioning"></i>
-                              </button>
-
-                              {/* Orientation Mode: Portrait (9:16) vs Landscape (16:9) */}
-                              <button
-                                type="button"
-                                className={`ot-ctrl-btn ${isPortrait ? 'ot-ctrl-btn--active' : ''}`}
-                                onClick={handleToggleOrientation}
-                                title={isPortrait ? 'Switch to Landscape mode (16:9)' : 'Switch to Portrait mode (9:16)'}
-                                aria-label={isPortrait ? 'Switch to Landscape mode' : 'Switch to Portrait mode'}
-                              >
-                                {isPortrait ? (
-                                  <i className="fa-solid fa-mobile-screen" style={{ transform: 'rotate(90deg)', display: 'inline-block' }} />
-                                ) : (
-                                  <i className="fa-solid fa-mobile-screen" style={{ display: 'inline-block' }} />
-                                )}
                               </button>
 
 
