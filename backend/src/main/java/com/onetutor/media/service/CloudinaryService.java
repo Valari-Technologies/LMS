@@ -106,10 +106,10 @@ public class CloudinaryService {
             options.put("fetch_format", "auto");
         }
 
-        // Check file size against Cloudinary limit (100MB plan limit)
-        if (file.getSize() > 100L * 1024 * 1024) {
-            log.warn("[Cloudinary] File size ({} MB) exceeds Cloudinary 100MB plan limit.", file.getSize() / (1024 * 1024));
-            throw new IllegalArgumentException("File size exceeds Cloudinary 100MB plan limit (" + (file.getSize() / (1024 * 1024)) + "MB)");
+        // Check file size against safety limit (500MB)
+        if (file.getSize() > 500L * 1024 * 1024) {
+            log.warn("[Cloudinary] File size ({} MB) exceeds maximum 500MB limit.", file.getSize() / (1024 * 1024));
+            throw new IllegalArgumentException("File size exceeds maximum 500MB limit (" + (file.getSize() / (1024 * 1024)) + "MB)");
         }
 
         @SuppressWarnings("unchecked")

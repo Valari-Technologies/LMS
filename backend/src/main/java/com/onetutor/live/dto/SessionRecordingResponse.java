@@ -19,8 +19,13 @@ public record SessionRecordingResponse(
 ) {
     public static SessionRecordingResponse from(SessionRecording r) {
         String finalUrl = r.getUrl();
-        if ((finalUrl == null || finalUrl.isBlank()) && r.getMediaAsset() != null) {
-            finalUrl = "/api/v1/media/files/" + r.getMediaAsset().getId();
+        if (r.getMediaAsset() != null) {
+            String assetStorage = r.getMediaAsset().getStoragePath();
+            if (assetStorage != null && (assetStorage.startsWith("http://") || assetStorage.startsWith("https://"))) {
+                finalUrl = assetStorage;
+            } else if (finalUrl == null || finalUrl.isBlank()) {
+                finalUrl = "/api/v1/media/files/" + r.getMediaAsset().getId();
+            }
         }
         return new SessionRecordingResponse(
                 r.getId(),

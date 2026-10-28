@@ -1055,13 +1055,27 @@ export default function AdminLiveSessionsPage() {
                       </div>
                     </div>
                   ) : selectedMediaAsset && recordingForm.url ? (
-                    <div style={{ color: '#10b981' }}>
-                      <i className="fa-solid fa-circle-check" style={{ fontSize: '2.4rem', marginBottom: '10px', display: 'block' }}></i>
-                      <div style={{ fontWeight: '700', fontSize: '1rem' }}>Video Uploaded to Cloudinary!</div>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <div style={{ color: '#10b981' }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ fontWeight: '700', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <i className="fa-solid fa-circle-check" style={{ color: '#10b981' }}></i>
+                        <span>Video Ready & Uploaded!</span>
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
                         {selectedMediaAsset.filename || selectedMediaAsset.originalName || 'Uploaded file'}
                       </div>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.78rem', marginTop: '10px' }}>
+
+                      {/* Immediate Video Player Preview */}
+                      <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000', maxWidth: '380px', margin: '0 auto 12px' }}>
+                        <video
+                          src={resolveMediaUrl(recordingForm.url)}
+                          controls
+                          crossOrigin="anonymous"
+                          style={{ width: '100%', maxHeight: '180px', display: 'block' }}
+                          preload="metadata"
+                        />
+                      </div>
+
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.78rem' }}>
                         <i className="fa-solid fa-closed-captioning"></i>
                         <span>Auto English Subtitles: <strong>Enabled on Save</strong></span>
                       </div>
@@ -1272,9 +1286,20 @@ export default function AdminLiveSessionsPage() {
                         <video
                           src={recUrl}
                           controls
+                          crossOrigin="anonymous"
                           style={{ width: '100%', maxHeight: '200px', display: 'block', background: '#000' }}
                           preload="metadata"
-                        />
+                        >
+                          {r.subtitleUrl && (
+                            <track
+                              kind="subtitles"
+                              src={resolveMediaUrl(r.subtitleUrl)}
+                              srcLang="en"
+                              label="English"
+                              default
+                            />
+                          )}
+                        </video>
                       )}
                     </div>
                     {/* Info row */}
