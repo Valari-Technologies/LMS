@@ -10,6 +10,7 @@ import {
 } from '../../components/CommunityToastNotifier';
 import { toast } from '../../context/NotificationContext';
 import { resolveMediaUrl, VIDEO_QUALITY_OPTIONS, getQualityVideoUrl } from '../../utils/mediaUtils';
+import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 
 function getYouTubeEmbedUrl(url) {
   if (!url) return null;
@@ -409,7 +410,7 @@ export default function StudentLiveClassesPage() {
               style={{
                 background: '#ffffff',
                 width: '100%',
-                maxWidth: '860px',
+                maxWidth: '960px',
                 borderRadius: '20px',
                 overflow: 'hidden',
                 boxShadow: '0 25px 60px rgba(11, 31, 58, 0.25)',
@@ -420,7 +421,7 @@ export default function StudentLiveClassesPage() {
               onClick={e => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderBottom: '1px solid #eef4f0', background: '#ffffff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '1px solid #eef4f0', background: '#ffffff' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(90, 112, 211, 0.08)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem' }}>
                     <i className="fa-solid fa-play"></i>
@@ -464,85 +465,16 @@ export default function StudentLiveClassesPage() {
                 </button>
               </div>
 
-              {/* Video Player Container */}
-              <div style={{ background: '#090d16', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '340px', maxHeight: '500px', overflow: 'hidden' }}>
-                {getYouTubeEmbedUrl(selectedRecording.url) ? (
-                  <iframe
-                    title={selectedRecording.sessionTitle}
-                    src={getYouTubeEmbedUrl(selectedRecording.url)}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ width: '100%', height: '480px', border: 'none', display: 'block' }}
-                  />
-                ) : (
-                  <>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundImage: 'radial-gradient(circle, rgba(90, 112, 211, 0.2) 0%, rgba(9, 13, 22, 0.95) 75%)',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    <video
-                      src={getQualityVideoUrl(selectedRecording.url, videoQuality)}
-                      controls
-                      crossOrigin="anonymous"
-                      autoPlay
-                      preload={videoQuality === 'high' ? 'auto' : videoQuality === 'medium' ? 'metadata' : 'none'}
-                      style={{ position: 'relative', zIndex: 1, width: '100%', maxHeight: '480px', objectFit: 'contain', display: 'block' }}
-                    >
-                      {selectedRecording.subtitleUrl && (
-                        <track
-                          kind="subtitles"
-                          src={resolveMediaUrl(selectedRecording.subtitleUrl)}
-                          srcLang="en"
-                          label="English"
-                          default
-                        />
-                      )}
-                    </video>
-                  </>
-                )}
-              </div>
-
-              {/* Video Quality & Subtitle Status Bar */}
-              <div style={{ padding: '10px 20px', background: '#0b1329', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, letterSpacing: '0.05em' }}>
-                    <span>VIDEO QUALITY</span>
-                  </div>
-                  {selectedRecording.subtitleUrl && (
-                    <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <i className="fa-solid fa-closed-captioning"></i> CC English Subtitles
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {VIDEO_QUALITY_OPTIONS.map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => {
-                        setVideoQuality(opt.id);
-                        localStorage.setItem('onetutor_video_quality', opt.id);
-                      }}
-                      style={{
-                        padding: '4px 14px',
-                        borderRadius: '20px',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        border: videoQuality === opt.id ? '1px solid #5A70D3' : '1px solid rgba(255,255,255,0.15)',
-                        background: videoQuality === opt.id ? 'rgba(90, 112, 211, 0.35)' : 'rgba(255,255,255,0.05)',
-                        color: videoQuality === opt.id ? '#ffffff' : '#cbd5e1',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
+              {/* Course-Style Video Player for Recording Class */}
+              <div style={{ background: '#000000', position: 'relative', width: '100%', overflow: 'hidden' }}>
+                <RecordingVideoPlayer
+                  url={selectedRecording.url}
+                  title={selectedRecording.sessionTitle}
+                  courseName={selectedRecording.courseName}
+                  subtitleUrl={selectedRecording.subtitleUrl}
+                  autoPlay={true}
+                  onClose={() => setSelectedRecording(null)}
+                />
               </div>
 
               {/* Description / Notes */}

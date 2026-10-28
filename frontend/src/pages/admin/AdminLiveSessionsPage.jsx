@@ -18,6 +18,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
+import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 
 function getYouTubeEmbedUrl(url) {
   if (!url) return null;
@@ -1558,33 +1559,14 @@ export default function AdminLiveSessionsPage() {
               </button>
             </div>
             <div style={{ background: '#000' }}>
-              {getYouTubeEmbedUrl(previewRecordingModal.url) ? (
-                <iframe
-                  title={previewRecordingModal.sessionTitle}
-                  src={getYouTubeEmbedUrl(previewRecordingModal.url)}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  style={{ width: '100%', height: '500px', border: 'none', display: 'block' }}
-                />
-              ) : (
-                <video
-                  src={resolveMediaUrl(previewRecordingModal.url)}
-                  controls
-                  autoPlay
-                  crossOrigin="anonymous"
-                  style={{ width: '100%', maxHeight: '500px', display: 'block' }}
-                >
-                  {previewRecordingModal.subtitleUrl && (
-                    <track
-                      kind="subtitles"
-                      src={resolveMediaUrl(previewRecordingModal.subtitleUrl)}
-                      srcLang="en"
-                      label="English"
-                      default
-                    />
-                  )}
-                </video>
-              )}
+              <RecordingVideoPlayer
+                url={previewRecordingModal.url}
+                title={previewRecordingModal.sessionTitle}
+                courseName={previewRecordingModal.courseName}
+                subtitleUrl={previewRecordingModal.subtitleUrl}
+                autoPlay={true}
+                onClose={() => setPreviewRecordingModal(null)}
+              />
             </div>
             <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', background: '#1c1d1f' }}>
               <button className="btn btn-secondary" style={{ color: '#fff', borderColor: '#6a6f73' }} onClick={() => setPreviewRecordingModal(null)}>
