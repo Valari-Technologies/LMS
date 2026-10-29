@@ -86,7 +86,7 @@ class BatchServiceTest {
         enrollmentService = new EnrollmentService(enrollmentRepository, courseRepository, batchRepository,
                 auditService, notificationService, null);
         liveSessionService = new LiveSessionService(liveSessionRepository, null, courseRepository,
-                null, enrollmentRepository, null, meetingProvider, auditService, batchRepository, notificationService);
+                null, enrollmentRepository, null, meetingProvider, auditService, batchRepository, notificationService, null);
 
         admin = new User();
         ReflectionTestUtils.setField(admin, "id", 1L);

@@ -74,6 +74,21 @@ public class LiveSessionService {
         this.subtitleService = subtitleService;
     }
 
+    public LiveSessionService(LiveSessionRepository liveSessionRepository,
+                              SessionRecordingRepository sessionRecordingRepository,
+                              CourseRepository courseRepository,
+                              SectionRepository sectionRepository,
+                              EnrollmentRepository enrollmentRepository,
+                              com.onetutor.media.repository.MediaAssetRepository mediaAssetRepository,
+                              LiveMeetingProvider meetingProvider,
+                              AuditService auditService,
+                              com.onetutor.batches.repository.BatchRepository batchRepository,
+                              com.onetutor.notifications.service.NotificationService notificationService) {
+        this(liveSessionRepository, sessionRecordingRepository, courseRepository, sectionRepository,
+                enrollmentRepository, mediaAssetRepository, meetingProvider, auditService, batchRepository,
+                notificationService, null);
+    }
+
     @Transactional
     public LiveSessionResponse create(CreateLiveSessionRequest req, User actor) {
         Course course = courseRepository.findById(req.courseId())
