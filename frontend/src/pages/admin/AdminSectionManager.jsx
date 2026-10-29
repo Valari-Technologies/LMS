@@ -26,6 +26,8 @@ import AlertBanner from '../../components/AlertBanner';
 import AssessmentAdminEditor from '../../components/assessments/AssessmentAdminEditor';
 import { usePermission } from '../../hooks/usePermission';
 import { useAuth } from '../../auth/AuthContext';
+import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
+import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 const CONTENT_TYPES = ['VIDEO', 'PDF', 'IMAGE'];
 
@@ -123,6 +125,14 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
 
   const fileInputRef = useRef(null);
   const resourceFileInputRef = useRef(null);
+  const inlineFileInputRefs = useRef({});
+  const editFileInputRef = useRef(null);
+
+  // Direct Video/File Uploading States
+  const [directUploadSectionId, setDirectUploadSectionId] = useState(null);
+  const [directUploadProgress, setDirectUploadProgress] = useState(0);
+  const [directUploadForEdit, setDirectUploadForEdit] = useState(false);
+  const [previewLessonModal, setPreviewLessonModal] = useState(null);
 
   const notifySuccess = (msg) => {
     setActionSuccess(msg);
@@ -431,17 +441,25 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
   };
 
   const handleSelectMedia = (asset) => {
-    const mediaUrl = asset.fileUrl || asset.filePath || asset.url || '';
+    const mediaUrl = asset.url || asset.storagePath || asset.fileUrl || asset.filePath || '';
 
-    // Infer content type from mime type
-    let inferredType = null;
-    if (asset.mimeType?.startsWith('video/')) inferredType = 'VIDEO';
-    else if (asset.mimeType === 'application/pdf') inferredType = 'PDF';
-    else if (asset.mimeType?.startsWith('image/')) inferredType = 'IMAGE';
+    // Infer content type from mime type or file extension
+    let inferredType = 'VIDEO';
+    const mime = (asset.mimeType || '').toLowerCase();
+    const name = (asset.filename || asset.originalName || asset.fileName || '').toLowerCase();
+    if (mime.includes('pdf') || name.endsWith('.pdf')) inferredType = 'PDF';
+    else if (mime.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(name)) inferredType = 'IMAGE';
+    else if (mime.startsWith('video/') || /\.(mp4|webm|mov|mkv|m4v)$/i.test(name)) inferredType = 'VIDEO';
+
+    const rawFileName = asset.originalName || asset.filename || asset.fileName || '';
+    const cleanTitle = rawFileName.replace(/\.[^/.]+$/, '').trim();
 
     if (isMediaPickerForEdit) {
       setEditingContentMedia(mediaUrl);
       if (inferredType) setEditingContentType(inferredType);
+      if (!editingContentTitle.trim() && cleanTitle) {
+        setEditingContentTitle(cleanTitle);
+      }
     } else {
       // Use functional updater to avoid stale closure over contentForms
       const sectionId = activeMediaPickerSection;
@@ -452,13 +470,70 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
           [sectionId]: {
             ...current,
             mediaReference: mediaUrl,
-            ...(inferredType ? { contentType: inferredType } : {}),
+            contentType: inferredType,
+            title: current.title.trim() ? current.title : cleanTitle,
           },
         };
       });
     }
     setActiveMediaPickerSection(null);
     setIsMediaPickerForEdit(false);
+  };
+
+  const handleDirectUploadContent = async (sectionId, e, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setDirectUploadSectionId(sectionId);
+    setDirectUploadForEdit(isEdit);
+    setDirectUploadProgress(0);
+    toast.info(`Uploading "${file.name}" to Cloudinary/server...`);
+
+    try {
+      const uploaded = await uploadMedia(file, (pct) => setDirectUploadProgress(pct));
+      const mediaUrl = uploaded?.url || uploaded?.storagePath || uploaded?.fileUrl || uploaded?.filePath || '';
+
+      const rawFileName = uploaded?.originalName || uploaded?.filename || uploaded?.fileName || file.name || '';
+      const cleanTitle = rawFileName.replace(/\.[^/.]+$/, '').trim();
+
+      let inferredType = 'VIDEO';
+      const mime = (uploaded?.mimeType || file.type || '').toLowerCase();
+      const lowerName = rawFileName.toLowerCase();
+      if (mime.includes('pdf') || lowerName.endsWith('.pdf')) inferredType = 'PDF';
+      else if (mime.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(lowerName)) inferredType = 'IMAGE';
+      else inferredType = 'VIDEO';
+
+      if (isEdit) {
+        setEditingContentMedia(mediaUrl);
+        if (inferredType) setEditingContentType(inferredType);
+        if (!editingContentTitle.trim() && cleanTitle) {
+          setEditingContentTitle(cleanTitle);
+        }
+      } else {
+        setContentForms(prev => {
+          const current = prev[sectionId] || { title: '', contentType: 'VIDEO', mediaReference: '', description: '' };
+          return {
+            ...prev,
+            [sectionId]: {
+              ...current,
+              mediaReference: mediaUrl,
+              contentType: inferredType,
+              title: current.title.trim() ? current.title : cleanTitle,
+            }
+          };
+        });
+      }
+
+      toast.success(`"${file.name}" uploaded successfully!`);
+    } catch (err) {
+      console.error('Direct video upload failed:', err);
+      toast.error('Failed to upload video file');
+    } finally {
+      setDirectUploadSectionId(null);
+      setDirectUploadForEdit(false);
+      setDirectUploadProgress(0);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const handleUploadNewMedia = async (e) => {
@@ -1095,6 +1170,23 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                                   onChange={(e) => setEditingContentMedia(e.target.value)}
                                   style={{ flex: '2 1 240px' }}
                                 />
+                                <input
+                                  type="file"
+                                  ref={editFileInputRef}
+                                  style={{ display: 'none' }}
+                                  accept="video/*,application/pdf,image/*"
+                                  onChange={(e) => handleDirectUploadContent(s.id, e, true)}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => editFileInputRef.current?.click()}
+                                  disabled={directUploadSectionId === s.id && directUploadForEdit}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                                >
+                                  <i className={`fa-solid ${directUploadSectionId === s.id && directUploadForEdit ? 'fa-spinner fa-spin' : 'fa-upload'}`} />
+                                  {directUploadSectionId === s.id && directUploadForEdit ? `Uploading (${directUploadProgress}%)...` : 'Upload Video'}
+                                </button>
                                 <button
                                   type="button"
                                   className="btn btn-secondary btn-sm"
@@ -1102,7 +1194,29 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                                 >
                                   <i className="fa-solid fa-folder-open" style={{ marginRight: '4px' }}></i> Library
                                 </button>
+                                {editingContentMedia && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => setPreviewLessonModal({ title: editingContentTitle || 'Preview', contentType: editingContentType, mediaReference: editingContentMedia })}
+                                    title="Test play this video URL"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}
+                                  >
+                                    <i className="fa-solid fa-play" /> Test Play
+                                  </button>
+                                )}
                               </div>
+                              {directUploadSectionId === s.id && directUploadForEdit && (
+                                <div style={{ background: 'rgba(90, 112, 211, 0.08)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(90, 112, 211, 0.25)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                    <span><i className="fa-solid fa-cloud-arrow-up" style={{ color: '#5A70D3', marginRight: '6px' }}></i> Uploading video...</span>
+                                    <span style={{ color: '#5A70D3' }}>{directUploadProgress}%</span>
+                                  </div>
+                                  <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${Math.max(directUploadProgress, 5)}%`, height: '100%', background: 'linear-gradient(90deg, #5A70D3, #7E92EB)', transition: 'width 0.2s ease' }} />
+                                  </div>
+                                </div>
+                              )}
                               <textarea
                                 className="form-control"
                                 placeholder="Video Overview / Description (optional) — shown to students in the Overview tab"
@@ -1253,6 +1367,19 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                             </div>
 
                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              {/* Preview Lesson */}
+                              {c.mediaReference && (
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => setPreviewLessonModal(c)}
+                                  title="Test play this video / preview lecture resource"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <i className="fa-solid fa-play" /> Preview
+                                </button>
+                              )}
+
                               {/* Edit Lesson */}
                               <button
                                 type="button"
@@ -1386,6 +1513,25 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                       style={{ flex: '2 1 240px' }}
                     />
 
+                    <input
+                      type="file"
+                      ref={(el) => (inlineFileInputRefs.current[s.id] = el)}
+                      style={{ display: 'none' }}
+                      accept="video/*,application/pdf,image/*"
+                      onChange={(e) => handleDirectUploadContent(s.id, e, false)}
+                    />
+
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => inlineFileInputRefs.current[s.id]?.click()}
+                      disabled={directUploadSectionId === s.id && !directUploadForEdit}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <i className={`fa-solid ${directUploadSectionId === s.id && !directUploadForEdit ? 'fa-spinner fa-spin' : 'fa-upload'}`} />
+                      {directUploadSectionId === s.id && !directUploadForEdit ? `Uploading (${directUploadProgress}%)...` : 'Upload Video'}
+                    </button>
+
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
@@ -1393,6 +1539,30 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                     >
                       <i className="fa-solid fa-folder-open" style={{ marginRight: '4px' }}></i> Library
                     </button>
+
+                    {contentForm(s.id).mediaReference && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setPreviewLessonModal({ title: contentForm(s.id).title || 'Preview', contentType: contentForm(s.id).contentType, mediaReference: contentForm(s.id).mediaReference })}
+                        title="Test play this video before saving"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}
+                      >
+                        <i className="fa-solid fa-play" /> Test Play
+                      </button>
+                    )}
+
+                    {directUploadSectionId === s.id && !directUploadForEdit && (
+                      <div style={{ flex: '1 1 100%', background: 'rgba(90, 112, 211, 0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(90, 112, 211, 0.25)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          <span><i className="fa-solid fa-cloud-arrow-up" style={{ color: '#5A70D3', marginRight: '6px' }}></i> Uploading video to CDN/server...</span>
+                          <span style={{ color: '#5A70D3' }}>{directUploadProgress}%</span>
+                        </div>
+                        <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.max(directUploadProgress, 5)}%`, height: '100%', background: 'linear-gradient(90deg, #5A70D3, #7E92EB)', transition: 'width 0.2s ease' }} />
+                        </div>
+                      </div>
+                    )}
 
                     <textarea
                       placeholder="Video Overview / Description (optional)"
@@ -1945,6 +2115,72 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                 </form>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Lesson Media Preview Modal */}
+      {previewLessonModal && (
+        <div className="modal-backdrop" onClick={() => setPreviewLessonModal(null)}>
+          <div
+            className="modal-dialog"
+            style={{ maxWidth: '840px', width: '92vw', padding: '20px', background: '#0b141a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="role-tag" style={{ background: '#5A70D3', color: '#ffffff' }}>
+                  {previewLessonModal.contentType || 'VIDEO'}
+                </span>
+                <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#ffffff' }}>
+                  {previewLessonModal.title}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPreviewLessonModal(null)}
+                style={{ color: '#ffffff', background: 'rgba(255,255,255,0.1)' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div style={{ borderRadius: '12px', overflow: 'hidden', background: '#000000', minHeight: '360px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {String(previewLessonModal.contentType || '').toUpperCase() === 'VIDEO' ||
+              /\.(mp4|webm|mov|mkv|m4v)(\?.*)?$/i.test(previewLessonModal.mediaReference || '') ||
+              (previewLessonModal.mediaReference && (previewLessonModal.mediaReference.includes('youtube.com') || previewLessonModal.mediaReference.includes('youtu.be') || previewLessonModal.mediaReference.includes('/video/upload') || previewLessonModal.mediaReference.includes('/media/files/'))) ? (
+                <RecordingVideoPlayer
+                  key={previewLessonModal.id || previewLessonModal.mediaReference}
+                  url={previewLessonModal.mediaReference}
+                  title={previewLessonModal.title}
+                  subtitleUrl={previewLessonModal.subtitleUrl}
+                  autoPlay={true}
+                  onClose={() => setPreviewLessonModal(null)}
+                  style={{ width: '100%', borderRadius: '12px' }}
+                />
+              ) : String(previewLessonModal.contentType || '').toUpperCase() === 'PDF' || /\.pdf(\?.*)?$/i.test(previewLessonModal.mediaReference || '') ? (
+                <iframe
+                  src={resolveMediaUrl(previewLessonModal.mediaReference)}
+                  title={previewLessonModal.title}
+                  style={{ width: '100%', height: '520px', border: 'none' }}
+                />
+              ) : (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#ffffff' }}>
+                  <p>Resource: {previewLessonModal.contentType}</p>
+                  {previewLessonModal.mediaReference && (
+                    <a
+                      href={resolveMediaUrl(previewLessonModal.mediaReference)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary"
+                      style={{ marginTop: '12px' }}
+                    >
+                      Open Resource ↗
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

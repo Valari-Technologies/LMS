@@ -7,6 +7,8 @@ import CourseCard from '../../components/CourseCard';
 import { usePermission } from '../../hooks/usePermission';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
+import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
+import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 export default function AdminCoursePreviewPage() {
   const { isReadOnly } = usePermission();
@@ -773,8 +775,8 @@ export default function AdminCoursePreviewPage() {
                   <div style={{ width: '100%', height: '190px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {course.thumbnail ? (
                       <img
-                        src={course.thumbnail}
-                        alt={course.name}
+                        src={resolveMediaUrl(course.thumbnail)}
+                        alt={course.name || course.title}
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     ) : (
@@ -981,15 +983,29 @@ export default function AdminCoursePreviewPage() {
                         justifyContent: 'center'
                       }}
                     >
-                      {activeContent.contentType === 'VIDEO' ? (
+                      {activeContent.contentType === 'VIDEO' ||
+                      /\.(mp4|webm|mov|mkv|m4v)(\?.*)?$/i.test(activeContent.mediaReference || '') ||
+                      (activeContent.mediaReference && (activeContent.mediaReference.includes('youtube.com') || activeContent.mediaReference.includes('youtu.be') || activeContent.mediaReference.includes('/video/upload') || activeContent.mediaReference.includes('/media/files/'))) ? (
                         activeContent.mediaReference ? (
-                          <video src={activeContent.mediaReference} controls style={{ width: '100%', maxHeight: '480px' }} />
+                          <RecordingVideoPlayer
+                            key={activeContent.id || activeContent.mediaReference}
+                            url={activeContent.mediaReference}
+                            title={activeContent.title}
+                            courseName={course?.title || course?.name}
+                            subtitleUrl={activeContent.subtitleUrl || activeContent.subtitlesUrl}
+                            autoPlay={false}
+                            style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
+                          />
                         ) : (
                           <div style={{ color: '#ffffff', padding: '40px' }}>No video reference configured.</div>
                         )
-                      ) : activeContent.contentType === 'PDF' ? (
+                      ) : activeContent.contentType === 'PDF' || /\.pdf(\?.*)?$/i.test(activeContent.mediaReference || '') ? (
                         activeContent.mediaReference ? (
-                          <iframe src={activeContent.mediaReference} title={activeContent.title} style={{ width: '100%', height: '520px', border: 'none' }} />
+                          <iframe
+                            src={resolveMediaUrl(activeContent.mediaReference)}
+                            title={activeContent.title}
+                            style={{ width: '100%', height: '520px', border: 'none' }}
+                          />
                         ) : (
                           <div style={{ color: '#ffffff', padding: '40px' }}>No PDF document reference configured.</div>
                         )
@@ -997,7 +1013,13 @@ export default function AdminCoursePreviewPage() {
                         <div style={{ color: '#ffffff', padding: '40px', textAlign: 'center' }}>
                           <p>Asset Reference: {activeContent.contentType}</p>
                           {activeContent.mediaReference && (
-                            <a href={activeContent.mediaReference} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ marginTop: '12px' }}>
+                            <a
+                              href={resolveMediaUrl(activeContent.mediaReference)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary"
+                              style={{ marginTop: '12px' }}
+                            >
                               Open Resource ↗
                             </a>
                           )}
