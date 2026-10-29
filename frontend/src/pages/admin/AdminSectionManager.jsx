@@ -20,7 +20,7 @@ import {
   deleteResource,
   generateAdminSubtitles
 } from '../../api/contents';
-import { listMedia, uploadMedia } from '../../api/media';
+import { listMedia, uploadMedia, getMedia } from '../../api/media';
 import { useNotification } from '../../context/NotificationContext';
 import AlertBanner from '../../components/AlertBanner';
 import AssessmentAdminEditor from '../../components/assessments/AssessmentAdminEditor';
@@ -28,6 +28,17 @@ import { usePermission } from '../../hooks/usePermission';
 import { useAuth } from '../../auth/AuthContext';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
+
+const getDirectMediaUrl = (asset) => {
+  if (!asset) return '';
+  if (asset.storagePath && (asset.storagePath.startsWith('http://') || asset.storagePath.startsWith('https://'))) {
+    return asset.storagePath;
+  }
+  if (asset.url && (asset.url.startsWith('http://') || asset.url.startsWith('https://'))) {
+    return asset.url;
+  }
+  return asset.storagePath || asset.url || asset.fileUrl || asset.filePath || '';
+};
 
 const CONTENT_TYPES = ['VIDEO', 'PDF', 'IMAGE'];
 
@@ -328,7 +339,27 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
     setEditingContentId(content.id);
     setEditingContentTitle(content.title);
     setEditingContentType(content.contentType || 'VIDEO');
-    setEditingContentMedia(content.mediaReference || '');
+    let mediaRef = content.mediaReference || '';
+    if (mediaRef.includes('/media/files/')) {
+      const match = mediaRef.match(/\/media\/files\/(\d+)/);
+      if (match) {
+        const assetId = Number(match[1]);
+        const matchingAsset = mediaList.find(a => a.id === assetId);
+        if (matchingAsset) {
+          const directUrl = getDirectMediaUrl(matchingAsset);
+          if (directUrl && directUrl.startsWith('http')) {
+            mediaRef = directUrl;
+          }
+        }
+        getMedia(assetId).then(asset => {
+          const directUrl = getDirectMediaUrl(asset);
+          if (directUrl && directUrl.startsWith('http')) {
+            setEditingContentMedia(directUrl);
+          }
+        }).catch(() => {});
+      }
+    }
+    setEditingContentMedia(mediaRef);
     setEditingContentDesc(content.description || '');
   };
 
@@ -441,7 +472,7 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
   };
 
   const handleSelectMedia = (asset) => {
-    const mediaUrl = asset.url || asset.storagePath || asset.fileUrl || asset.filePath || '';
+    const mediaUrl = getDirectMediaUrl(asset);
 
     // Infer content type from mime type or file extension
     let inferredType = 'VIDEO';
@@ -487,11 +518,11 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
     setDirectUploadSectionId(sectionId);
     setDirectUploadForEdit(isEdit);
     setDirectUploadProgress(0);
-    toast.info(`Uploading "${file.name}" to Cloudinary/server...`);
+    toast.info(`Uploading "${file.name}" to Cloudinary CDN...`);
 
     try {
       const uploaded = await uploadMedia(file, (pct) => setDirectUploadProgress(pct));
-      const mediaUrl = uploaded?.url || uploaded?.storagePath || uploaded?.fileUrl || uploaded?.filePath || '';
+      const mediaUrl = getDirectMediaUrl(uploaded);
 
       const rawFileName = uploaded?.originalName || uploaded?.filename || uploaded?.fileName || file.name || '';
       const cleanTitle = rawFileName.replace(/\.[^/.]+$/, '').trim();
@@ -680,7 +711,7 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
 
     uploadMedia(file)
       .then(uploaded => {
-        const fileUrl = uploaded?.fileUrl || uploaded?.filePath || uploaded?.url || '';
+        const fileUrl = getDirectMediaUrl(uploaded);
         if (fileUrl) {
           setResourceForm(prev => ({
             ...prev,
@@ -707,7 +738,7 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
   };
 
   const handleSelectMediaForResource = (asset) => {
-    const mediaUrl = asset.fileUrl || asset.filePath || asset.url || '';
+    const mediaUrl = getDirectMediaUrl(asset);
     let inferred = 'PDF';
     if (asset.mimeType === 'application/pdf') inferred = 'PDF';
     else if (asset.mimeType?.includes('zip') || asset.mimeType?.includes('compressed')) inferred = 'ZIP';

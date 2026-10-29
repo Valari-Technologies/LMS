@@ -81,9 +81,11 @@ export default function AdminCourseFormPage() {
 
     uploadMedia(file)
       .then(asset => {
-        const url = asset.url?.startsWith('http')
-          ? asset.url
-          : `${window.location.origin}${asset.url}`;
+        const url = (asset?.storagePath && (asset.storagePath.startsWith('http://') || asset.storagePath.startsWith('https://')))
+          ? asset.storagePath
+          : (asset?.url && (asset.url.startsWith('http://') || asset.url.startsWith('https://'))
+            ? asset.url
+            : resolveMediaUrl(asset?.url || asset?.storagePath));
         setForm(prev => ({ ...prev, thumbnail: url }));
         toast.success('Cover image uploaded successfully to Cloudinary!');
       })

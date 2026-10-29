@@ -248,19 +248,22 @@ public class LiveSessionService {
         SessionRecording recording = new SessionRecording();
         recording.setSession(session);
 
+        String effectiveUrl = req.url() != null ? req.url().trim() : null;
         if (req.mediaAssetId() != null) {
             com.onetutor.media.entity.MediaAsset asset = mediaAssetRepository.findById(req.mediaAssetId())
                     .orElseThrow(() -> new NotFoundException("MEDIA_NOT_FOUND", "Media asset not found"));
             recording.setMediaAsset(asset);
-            if (req.url() == null || req.url().isBlank()) {
-                recording.setUrl("/api/v1/media/files/" + asset.getId());
+            if (asset.getStoragePath() != null && (asset.getStoragePath().startsWith("http://") || asset.getStoragePath().startsWith("https://"))) {
+                effectiveUrl = asset.getStoragePath();
+            } else if (effectiveUrl == null || effectiveUrl.isBlank()) {
+                effectiveUrl = "/api/v1/media/files/" + asset.getId();
             }
         }
-        if (req.url() != null && !req.url().isBlank()) {
-            recording.setUrl(req.url().trim());
-        } else if (recording.getUrl() == null) {
+        effectiveUrl = resolveCloudinaryUrl(effectiveUrl);
+        if (effectiveUrl == null || effectiveUrl.isBlank()) {
             throw new BadRequestException("INVALID_RECORDING", "Either url or mediaAssetId must be provided");
         }
+        recording.setUrl(effectiveUrl);
 
         recording.setDuration(req.duration());
         sessionRecordingRepository.save(recording);
@@ -296,24 +299,21 @@ public class LiveSessionService {
         }
 
         boolean urlChanged = false;
+        String effectiveUrl = req.url() != null && !req.url().isBlank() ? req.url().trim() : null;
         if (req.mediaAssetId() != null) {
             com.onetutor.media.entity.MediaAsset asset = mediaAssetRepository.findById(req.mediaAssetId())
                     .orElseThrow(() -> new NotFoundException("MEDIA_NOT_FOUND", "Media asset not found"));
             recording.setMediaAsset(asset);
-            if (req.url() == null || req.url().isBlank()) {
-                String newUrl = "/api/v1/media/files/" + asset.getId();
-                if (!newUrl.equals(recording.getUrl())) {
-                    recording.setUrl(newUrl);
-                    urlChanged = true;
-                }
+            if (asset.getStoragePath() != null && (asset.getStoragePath().startsWith("http://") || asset.getStoragePath().startsWith("https://"))) {
+                effectiveUrl = asset.getStoragePath();
+            } else if (effectiveUrl == null || effectiveUrl.isBlank()) {
+                effectiveUrl = "/api/v1/media/files/" + asset.getId();
             }
         }
-        if (req.url() != null && !req.url().isBlank()) {
-            String newUrl = req.url().trim();
-            if (!newUrl.equals(recording.getUrl())) {
-                recording.setUrl(newUrl);
-                urlChanged = true;
-            }
+        effectiveUrl = resolveCloudinaryUrl(effectiveUrl);
+        if (effectiveUrl != null && !effectiveUrl.isBlank() && !effectiveUrl.equals(recording.getUrl())) {
+            recording.setUrl(effectiveUrl);
+            urlChanged = true;
         }
 
         if (req.duration() != null) {
@@ -566,6 +566,26 @@ public class LiveSessionService {
                 isAdmin,
                 session.getStatus().name()
         );
+    }
+
+    private String resolveCloudinaryUrl(String url) {
+        if (url == null || !url.contains("/media/files/")) {
+            return url;
+        }
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("/media/files/(\\d+)").matcher(url);
+            if (m.find()) {
+                Long assetId = Long.parseLong(m.group(1));
+                var assetOpt = mediaAssetRepository.findById(assetId);
+                if (assetOpt.isPresent()) {
+                    String cloud = assetOpt.get().getStoragePath();
+                    if (cloud != null && (cloud.startsWith("http://") || cloud.startsWith("https://"))) {
+                        return cloud;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return url;
     }
 }
 

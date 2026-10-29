@@ -24,9 +24,9 @@ public class CloudinaryService {
     private final boolean isConfigured;
 
     public CloudinaryService(
-            @Value("${app.cloudinary.cloud-name:onetutor}") String cloudName,
-            @Value("${app.cloudinary.api-key:}") String apiKey,
-            @Value("${app.cloudinary.api-secret:}") String apiSecret) {
+            @Value("${app.cloudinary.cloud-name:q9yidryy}") String cloudName,
+            @Value("${app.cloudinary.api-key:148762832864723}") String apiKey,
+            @Value("${app.cloudinary.api-secret:KprNV5T5a7TKDMDFjmO_tQIWvX4}") String apiSecret) {
 
         if (apiKey != null && !apiKey.isBlank() && apiSecret != null && !apiSecret.isBlank()) {
             this.cloudinary = new Cloudinary(ObjectUtils.asMap(

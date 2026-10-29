@@ -92,13 +92,18 @@ public class MediaService {
     /**
      * Read / List assets with pagination and search.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public PageResponse<MediaAssetResponse> list(String search, Pageable pageable) {
         Page<MediaAsset> page;
         if (search != null && !search.isBlank()) {
             page = mediaAssetRepository.searchActive(search.trim(), pageable);
         } else {
             page = mediaAssetRepository.findByStatusOrderByCreatedAtDesc("active", pageable);
+        }
+        for (MediaAsset asset : page.getContent()) {
+            if (asset.getStoragePath() != null && !asset.getStoragePath().startsWith("http")) {
+                ensureCloudinaryStorage(asset);
+            }
         }
         return PageResponse.from(page.map(MediaAssetResponse::from));
     }
@@ -143,6 +148,45 @@ public class MediaService {
             }
         }
         return storageService.loadAsResource(asset.getStoragePath());
+    }
+
+    /**
+     * Ensures an asset is stored on Cloudinary.
+     * If the asset was previously saved to local disk, uploads it to Cloudinary and saves the URL.
+     */
+    @Transactional
+    public String ensureCloudinaryStorage(MediaAsset asset) {
+        if (asset == null) return null;
+        String path = asset.getStoragePath();
+        if (path != null && (path.startsWith("http://") || path.startsWith("https://"))) {
+            return path;
+        }
+        if (cloudinaryService.isConfigured()) {
+            try {
+                Resource resource = loadAsResource(asset.getId());
+                if (resource != null && resource.exists()) {
+                    byte[] bytes;
+                    try (var in = resource.getInputStream()) {
+                        bytes = in.readAllBytes();
+                    }
+                    if (bytes.length > 0) {
+                        Map<String, Object> cRes = cloudinaryService.uploadBytes(bytes, asset.getOriginalName(), asset.getMimeType(), "media");
+                        String secureUrl = (String) cRes.get("url");
+                        String publicId = (String) cRes.get("public_id");
+                        if (secureUrl != null && !secureUrl.isBlank()) {
+                            asset.setStoragePath(secureUrl);
+                            asset.setThumbnailPath(publicId);
+                            mediaAssetRepository.save(asset);
+                            log.info("[MediaService] Auto-migrated local asset #{} ({}) to Cloudinary: {}", asset.getId(), asset.getFileName(), secureUrl);
+                            return secureUrl;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[MediaService] Auto-migration to Cloudinary failed for asset #{}: {}", asset.getId(), e.getMessage());
+            }
+        }
+        return asset.getStoragePath();
     }
 
     /**

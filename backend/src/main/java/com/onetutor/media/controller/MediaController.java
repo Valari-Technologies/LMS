@@ -72,7 +72,9 @@ public class MediaController {
     @GetMapping("/admin/media/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'CONTENT_CREATOR')")
     public ApiResponse<MediaAssetResponse> get(@PathVariable Long id) {
-        return ApiResponse.ok(MediaAssetResponse.from(mediaService.findOrThrow(id)));
+        MediaAsset asset = mediaService.findOrThrow(id);
+        mediaService.ensureCloudinaryStorage(asset);
+        return ApiResponse.ok(MediaAssetResponse.from(asset));
     }
 
     @PutMapping("/admin/media/{id}")
@@ -105,9 +107,10 @@ public class MediaController {
                           HttpServletResponse response) throws IOException {
         MediaAsset asset = mediaService.findOrThrow(id);
 
-        // Instant CDN redirect for assets hosted on Cloudinary
-        if (asset.getStoragePath() != null && (asset.getStoragePath().startsWith("http://") || asset.getStoragePath().startsWith("https://"))) {
-            response.sendRedirect(asset.getStoragePath());
+        // Ensure asset is on Cloudinary & redirect immediately
+        String cloudUrl = mediaService.ensureCloudinaryStorage(asset);
+        if (cloudUrl != null && (cloudUrl.startsWith("http://") || cloudUrl.startsWith("https://"))) {
+            response.sendRedirect(cloudUrl);
             return;
         }
 

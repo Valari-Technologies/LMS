@@ -20,6 +20,17 @@ import { usePermission } from '../../hooks/usePermission';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 
+const getDirectMediaUrl = (asset) => {
+  if (!asset) return '';
+  if (asset.storagePath && (asset.storagePath.startsWith('http://') || asset.storagePath.startsWith('https://'))) {
+    return asset.storagePath;
+  }
+  if (asset.url && (asset.url.startsWith('http://') || asset.url.startsWith('https://'))) {
+    return asset.url;
+  }
+  return asset.storagePath || asset.url || asset.fileUrl || asset.filePath || '';
+};
+
 function getYouTubeEmbedUrl(url) {
   if (!url) return null;
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -357,7 +368,7 @@ export default function AdminLiveSessionsPage() {
     setUploadFileName(file.name);
     try {
       const uploaded = await uploadMedia(file, (pct) => setUploadProgress(pct));
-      const url = uploaded.fileUrl || uploaded.filePath || uploaded.url || '';
+      const url = getDirectMediaUrl(uploaded);
       setRecordingForm(prev => ({ ...prev, url, mediaAssetId: uploaded.id }));
       setSelectedMediaAsset(uploaded);
       toast.success('Video uploaded to Cloudinary media library!');
@@ -371,7 +382,7 @@ export default function AdminLiveSessionsPage() {
   }
 
   function handleSelectRecordingMediaAsset(asset) {
-    const url = asset.fileUrl || asset.filePath || asset.url || '';
+    const url = getDirectMediaUrl(asset);
     setRecordingForm(prev => ({ ...prev, url, mediaAssetId: asset.id }));
     setSelectedMediaAsset(asset);
     setRecordingTab('url'); // switch to URL tab to show/confirm the selected URL

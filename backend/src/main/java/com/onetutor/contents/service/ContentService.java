@@ -354,7 +354,7 @@ public class ContentService {
         content.setTitle(req.title());
         content.setDescription(req.description());
         content.setContentType(type);
-        content.setMediaReference(req.mediaReference());
+        content.setMediaReference(resolveCloudinaryUrl(req.mediaReference()));
         content.setCompletionRule(req.completionRule() != null ? req.completionRule() : "DEFAULT");
     }
 
@@ -368,9 +368,12 @@ public class ContentService {
                 .stream().map(this::toResourceResponse).toList();
         List<ContentResourceResponse> contentResources = contentResourceRepository.findByContentIdOrderByDisplayOrderAsc(c.getId())
                 .stream().map(ContentResourceResponse::from).toList();
+
+        String mediaRef = resolveCloudinaryUrl(c.getMediaReference());
+
         return new ContentResponse(
                 c.getId(), c.getSection().getId(), c.getTitle(), c.getDescription(),
-                c.getContentType().name(), c.getMediaReference(), c.getDisplayOrder(),
+                c.getContentType().name(), mediaRef, c.getDisplayOrder(),
                 c.getCompletionRule(), c.getStatus().name(), resources, contentResources, c.getCreatedAt(),
                 c.getSubtitleUrl(),
                 c.getSubtitleStatus() != null ? c.getSubtitleStatus().name() : "PENDING",
@@ -380,6 +383,26 @@ public class ContentService {
                 c.getSubtitleError(),
                 c.getSubtitleProgress()
         );
+    }
+
+    private String resolveCloudinaryUrl(String mediaRef) {
+        if (mediaRef == null || !mediaRef.contains("/media/files/")) {
+            return mediaRef;
+        }
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("/media/files/(\\d+)").matcher(mediaRef);
+            if (m.find()) {
+                Long assetId = Long.parseLong(m.group(1));
+                var assetOpt = mediaAssetRepository.findById(assetId);
+                if (assetOpt.isPresent()) {
+                    String cloud = assetOpt.get().getStoragePath();
+                    if (cloud != null && (cloud.startsWith("http://") || cloud.startsWith("https://"))) {
+                        return cloud;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return mediaRef;
     }
 
     private ResourceResponse toResourceResponse(Resource r) {

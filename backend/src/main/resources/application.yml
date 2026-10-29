@@ -55,9 +55,9 @@ app:
     provider: ${STORAGE_PROVIDER:cloudinary}
     path: ${STORAGE_PATH:./uploads}
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:onetutor}
-    api-key: ${CLOUDINARY_API_KEY:}
-    api-secret: ${CLOUDINARY_API_SECRET:}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:q9yidryy}
+    api-key: ${CLOUDINARY_API_KEY:148762832864723}
+    api-secret: ${CLOUDINARY_API_SECRET:KprNV5T5a7TKDMDFjmO_tQIWvX4}
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
   firebase:

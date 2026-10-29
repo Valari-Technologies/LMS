@@ -176,7 +176,11 @@ export default function AdminMediaPage() {
   }
 
   function copyUrl(asset) {
-    const rawUrl = asset.url || asset.storagePath || '';
+    const rawUrl = (asset.storagePath && (asset.storagePath.startsWith('http://') || asset.storagePath.startsWith('https://')))
+      ? asset.storagePath
+      : (asset.url && (asset.url.startsWith('http://') || asset.url.startsWith('https://'))
+        ? asset.url
+        : (asset.storagePath || asset.url || ''));
     const fullUrl = resolveMediaUrl(rawUrl);
     navigator.clipboard.writeText(fullUrl);
     setCopiedId(asset.id);
