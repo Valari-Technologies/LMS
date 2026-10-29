@@ -50,6 +50,7 @@ public class LiveSessionService {
     private final com.onetutor.notifications.service.NotificationService notificationService;
     private final com.onetutor.subtitles.service.SubtitleService subtitleService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
                               SessionRecordingRepository sessionRecordingRepository,
                               CourseRepository courseRepository,
