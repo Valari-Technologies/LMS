@@ -19,6 +19,8 @@ import com.onetutor.live.repository.LiveSessionRepository;
 import com.onetutor.live.repository.SessionRecordingRepository;
 import com.onetutor.sections.repository.SectionRepository;
 import com.onetutor.users.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,8 @@ import java.util.List;
 @Service
 @Transactional
 public class LiveSessionService {
+
+    private static final Logger log = LoggerFactory.getLogger(LiveSessionService.class);
 
     private final LiveSessionRepository liveSessionRepository;
     private final SessionRecordingRepository sessionRecordingRepository;
