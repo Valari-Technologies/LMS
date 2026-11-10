@@ -767,7 +767,10 @@ public class LiveSessionService {
                 .sorted(Comparator.comparing(LiveSession::getScheduledAt).reversed())
                 .toList();
 
-        List<LiveSessionAttendance> attendances = liveSessionAttendanceRepository.findByCourseIdAndStudentId(courseId, student.getId());
+        List<Long> sessionIds = allSessions.stream().map(LiveSession::getId).toList();
+        List<LiveSessionAttendance> attendances = sessionIds.isEmpty()
+                ? List.of()
+                : liveSessionAttendanceRepository.findBySessionIdInAndStudentId(sessionIds, student.getId());
         Map<Long, LiveSessionAttendance> attendanceMap = attendances.stream()
                 .collect(Collectors.toMap(a -> a.getSession().getId(), a -> a, (k1, k2) -> k1));
 

@@ -131,7 +131,7 @@ export default function StudentCourseDashboardPage() {
     };
   }, [courseId]);
 
-  // Filter sessions specifically for this course
+  // Filter live sessions specifically for THIS course only
   const courseSessions = liveSessions.filter(s => String(s.courseId) === String(courseId));
 
   const upcomingSessions = courseSessions.filter(s => {
@@ -141,6 +141,14 @@ export default function StudentCourseDashboardPage() {
 
   const liveActiveSessions = courseSessions.filter(s => getLiveEffectiveStatus(s) === 'live');
   const recordingSessions = courseSessions.filter(s => s.recordings && s.recordings.length > 0);
+
+  // Core metrics scoped strictly to this course:
+  const upcomingLiveCount = upcomingSessions.length;
+  const daysPresent = attendance?.attendedSessions ?? 0;
+  const daysAbsent = attendance?.missedSessions ?? 0;
+  const totalLiveClassSessions = attendance?.sessions?.length || courseSessions.length || 0;
+  const totalHeldSessions = attendance?.totalSessions ?? 0;
+  const attendancePercentage = attendance?.attendancePercentage ?? 100;
 
   // Calculate syllabus stats
   const totalLessons = (course?.sections || []).reduce((acc, sec) => acc + (sec.contents?.length || 0), 0);
@@ -311,8 +319,8 @@ export default function StudentCourseDashboardPage() {
           {[
             { id: 'home', label: 'Home', icon: 'fa-solid fa-house' },
             { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
-            { id: 'attendance', label: 'Attendance', icon: 'fa-solid fa-calendar-check', badge: attendance ? `${attendance.attendancePercentage}%` : null },
-            { id: 'live', label: 'Live Classes', icon: 'fa-solid fa-tower-broadcast', badge: isSessionLiveNow ? 'LIVE' : (upcomingSessions.length > 0 ? upcomingSessions.length : null), badgeColor: isSessionLiveNow ? '#ef4444' : null },
+            { id: 'attendance', label: 'Attendance', icon: 'fa-solid fa-calendar-check', badge: attendance ? `${attendancePercentage}%` : null },
+            { id: 'live', label: 'Live Classes', icon: 'fa-solid fa-tower-broadcast', badge: isSessionLiveNow ? 'LIVE' : (upcomingLiveCount > 0 ? upcomingLiveCount : null), badgeColor: isSessionLiveNow ? '#ef4444' : null },
             { id: 'recordings', label: 'Recordings', icon: 'fa-solid fa-video', badge: recordingSessions.length > 0 ? recordingSessions.length : null }
           ].map(tab => {
             const isActive = activeTab === tab.id;
@@ -520,6 +528,10 @@ export default function StudentCourseDashboardPage() {
                         {course.category.name}
                       </span>
                     )}
+
+                    <span style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
+                      Scoped to this course only
+                    </span>
                   </div>
 
                   <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0', lineHeight: 1.25 }}>
@@ -529,7 +541,7 @@ export default function StudentCourseDashboardPage() {
                   <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                     <span><i className="fa-regular fa-folder-open" style={{ marginRight: '5px', color: '#5A70D3' }}></i> {course?.sections?.length || 0} Modules</span>
                     <span><i className="fa-regular fa-circle-play" style={{ marginRight: '5px', color: '#5A70D3' }}></i> {totalLessons} Lessons</span>
-                    <span><i className="fa-solid fa-tower-broadcast" style={{ marginRight: '5px', color: '#ef4444' }}></i> {courseSessions.length} Live Sessions</span>
+                    <span><i className="fa-solid fa-tower-broadcast" style={{ marginRight: '5px', color: '#ef4444' }}></i> {totalLiveClassSessions} Live Sessions</span>
                   </div>
                 </div>
               </div>
@@ -561,41 +573,41 @@ export default function StudentCourseDashboardPage() {
               </div>
             </div>
 
-            {/* 4 POS KPI Terminal Metric Cards */}
+            {/* 4 Primary Requested POS Metric Cards: Upcoming Live, Days Present, Days Absent, Total Live Sessions */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-              {/* Tile 1: Course Progress */}
+              {/* Tile 1: Upcoming Live Class Count */}
               <div
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => setActiveTab('live')}
                 style={{
                   background: '#ffffff',
                   borderRadius: '14px',
                   padding: '18px 20px',
-                  border: '1px solid #cbd5e1',
-                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                  boxShadow: isSessionLiveNow ? '0 4px 18px rgba(239, 68, 68, 0.15)' : '0 2px 8px rgba(15, 23, 42, 0.03)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#ef4444'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = isSessionLiveNow ? '#ef4444' : '#cbd5e1'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Course Progress
+                    Upcoming Live Classes
                   </span>
-                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fa-solid fa-chart-pie" style={{ fontSize: '0.86rem' }}></i>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: isSessionLiveNow ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.86rem' }}></i>
                   </span>
                 </div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
-                  {progressPercent}%
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: isSessionLiveNow ? '#ef4444' : '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {isSessionLiveNow ? 'LIVE' : upcomingLiveCount}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{completedLessons} / {totalLessons} lessons done</span>
-                  <span style={{ color: '#5A70D3', fontWeight: 700 }}>Open Syllabus →</span>
+                  <span>{isSessionLiveNow ? '🔴 Session in progress' : `${upcomingLiveCount} classes scheduled`}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>Schedule →</span>
                 </div>
               </div>
 
-              {/* Tile 2: Live Attendance */}
+              {/* Tile 2: No. of Days / Sessions Present */}
               <div
                 onClick={() => setActiveTab('attendance')}
                 style={{
@@ -612,56 +624,56 @@ export default function StudentCourseDashboardPage() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Attendance Rate
+                    Days Present
                   </span>
                   <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <i className="fa-solid fa-user-check" style={{ fontSize: '0.86rem' }}></i>
                   </span>
                 </div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: (attendance?.attendancePercentage ?? 100) >= 75 ? '#10b981' : '#ef4444', lineHeight: 1.1, marginBottom: '4px' }}>
-                  {attendance?.attendancePercentage ?? 100}%
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#10b981', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {daysPresent}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{attendance?.attendedSessions ?? 0} of {attendance?.totalSessions ?? 0} attended</span>
-                  <span style={{ color: '#10b981', fontWeight: 700 }}>Records →</span>
+                  <span>Verified present sessions</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>Attendance →</span>
                 </div>
               </div>
 
-              {/* Tile 3: Live Classes */}
+              {/* Tile 3: No. of Days / Sessions Absent */}
               <div
-                onClick={() => setActiveTab('live')}
+                onClick={() => setActiveTab('attendance')}
                 style={{
                   background: '#ffffff',
                   borderRadius: '14px',
                   padding: '18px 20px',
-                  border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #cbd5e1',
-                  boxShadow: isSessionLiveNow ? '0 4px 18px rgba(239, 68, 68, 0.15)' : '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#ef4444'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Live Classroom
+                    Days Absent
                   </span>
-                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: isSessionLiveNow ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.86rem' }}></i>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-user-xmark" style={{ fontSize: '0.86rem' }}></i>
                   </span>
                 </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: isSessionLiveNow ? '#ef4444' : '#0f172a', lineHeight: 1.2, marginBottom: '4px' }}>
-                  {isSessionLiveNow ? '🔴 LIVE NOW' : (upcomingSessions.length > 0 ? `${upcomingSessions.length} Scheduled` : 'Up to Date')}
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: daysAbsent > 0 ? '#ef4444' : '#64748b', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {daysAbsent}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{nextSession ? new Date(nextSession.scheduledAt).toLocaleDateString() : 'No pending classes'}</span>
-                  <span style={{ color: '#ef4444', fontWeight: 700 }}>Enter Class →</span>
+                  <span>{daysAbsent === 0 ? 'Zero absences recorded' : 'Watch missed replays'}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>Review →</span>
                 </div>
               </div>
 
-              {/* Tile 4: Recorded Classes */}
+              {/* Tile 4: Total Live Class Session Counts */}
               <div
-                onClick={() => setActiveTab('recordings')}
+                onClick={() => setActiveTab('live')}
                 style={{
                   background: '#ffffff',
                   borderRadius: '14px',
@@ -676,18 +688,18 @@ export default function StudentCourseDashboardPage() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Class Recordings
+                    Total Live Sessions
                   </span>
-                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.12)', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fa-solid fa-film" style={{ fontSize: '0.86rem' }}></i>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-layer-group" style={{ fontSize: '0.86rem' }}></i>
                   </span>
                 </div>
                 <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
-                  {recordingSessions.length} <span style={{ fontSize: '1rem', fontWeight: 700, color: '#64748b' }}>Replays</span>
+                  {totalLiveClassSessions}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Rate &amp; stream video</span>
-                  <span style={{ color: '#ca8a04', fontWeight: 700 }}>Watch Archive →</span>
+                  <span>{totalHeldSessions} held • {upcomingLiveCount} upcoming</span>
+                  <span style={{ color: '#5A70D3', fontWeight: 700 }}>View All →</span>
                 </div>
               </div>
             </div>
@@ -1018,174 +1030,577 @@ export default function StudentCourseDashboardPage() {
         )}
 
         {/* ===================================================================
-            TAB 2: DASHBOARD (Curriculum Syllabus & Progress)
+            TAB 2: DASHBOARD (Comprehensive Learning & Attendance Telemetry)
+            Shows: Upcoming live class count, Days Present, Days Absent, Total Live Sessions,
+            Course Progress, Attendance Standing, Attendance Breakdown Bar, Curriculum & Attendance Log.
+            Scoped strictly to this separate course only!
             =================================================================== */}
         {activeTab === 'dashboard' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-            {/* Left Column: Curriculum Syllabus Breakdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fa-solid fa-list-check" style={{ color: '#5A70D3' }}></i>
-                    <span>Curriculum Syllabus</span>
-                  </h3>
-                  <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 700, background: '#f8fafc', padding: '4px 12px', borderRadius: '9999px', border: '1px solid #e2e8f0' }}>
-                    {completedLessons} / {totalLessons} lessons completed
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+            
+            {/* Dashboard Sub-Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="fa-solid fa-chart-pie" style={{ color: '#5A70D3' }}></i>
+                  <span>Course Learning Dashboard</span>
+                </h2>
+                <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span>Live session telemetry, attendance records, and syllabus progression</span>
+                  <span style={{ fontSize: '0.74rem', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
+                    <i className="fa-solid fa-shield-halved" style={{ marginRight: '4px' }}></i>
+                    {course?.name || course?.title} Only
                   </span>
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {(course?.sections || []).map((sec, sIdx) => {
-                    const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
-                    const secTotal = sec.contents?.length || 0;
-                    return (
-                      <div key={sec.id || sIdx} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
-                            {sIdx + 1}. {sec.title}
-                          </span>
-                          <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 800, background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
-                            {secCompleted}/{secTotal} done
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {sec.contents?.map((c, cIdx) => {
-                            const isDone = progress?.completedContentIds?.includes(c.id);
-                            return (
-                              <div
-                                key={c.id || cIdx}
-                                onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '8px 10px',
-                                  borderRadius: '8px',
-                                  cursor: 'pointer',
-                                  transition: 'background 0.15s ease',
-                                  background: isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
-                                onMouseLeave={e => e.currentTarget.style.background = isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'}
-                              >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDone ? '#059669' : '#334155', fontWeight: isDone ? 700 : 500, fontSize: '0.88rem' }}>
-                                  <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ fontSize: '0.86rem', color: isDone ? '#10b981' : '#5A70D3' }}></i>
-                                  <span>{c.title}</span>
-                                </span>
-                                <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'capitalize' }}>
-                                  {c.contentType || 'video'}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
-            </div>
 
-            {/* Right Column: Next Lesson & Quick Links */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {nextLesson && (
-                <div style={{
-                  background: '#0f172a',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  color: '#ffffff',
-                  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
-                  border: '1px solid #1e293b'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                    <i className="fa-solid fa-play"></i>
-                    <span>Resume Learning</span>
-                  </div>
-
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', color: '#ffffff' }}>
-                    {nextLesson.title}
-                  </h3>
-
-                  <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '0 0 18px 0', lineHeight: 1.45 }}>
-                    {nextLesson.description || 'Watch the next curriculum video lesson to keep making progress.'}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/student/learn/${courseId}?contentId=${nextLesson.id}`)}
-                    style={{
-                      background: '#5A70D3',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '11px 22px',
-                      fontWeight: 800,
-                      fontSize: '0.92rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(90, 112, 211, 0.4)',
-                      transition: 'all 0.18s ease'
-                    }}
-                  >
-                    <i className="fa-solid fa-play"></i>
-                    <span>Play Video Lesson</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Attendance Quick Insight */}
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fa-solid fa-user-check" style={{ color: '#10b981' }}></i>
-                    <span>Live Class Attendance</span>
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('attendance')}
-                    style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Details →
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #cbd5e1' }}>
-                  <div style={{
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '50%',
-                    background: 'rgba(16, 185, 129, 0.12)',
-                    color: '#10b981',
-                    display: 'flex',
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('attendance')}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#334155',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.25rem',
-                    fontWeight: 900,
-                    flexShrink: 0
-                  }}>
-                    {attendance?.attendancePercentage ?? 100}%
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
-                      {attendance?.attendedSessions ?? 0} of {attendance?.totalSessions ?? 0} Sessions Attended
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                      {(attendance?.attendancePercentage ?? 100) >= 75
-                        ? '🟢 Meets 75% eligibility for batch certificate.'
-                        : '⚠️ Below 75%. Try attending upcoming classes.'}
-                    </div>
-                  </div>
+                    gap: '6px'
+                  }}
+                >
+                  <i className="fa-solid fa-calendar-check" style={{ color: '#10b981' }}></i>
+                  <span>Detailed Attendance</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('live')}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#334155',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <i className="fa-solid fa-tower-broadcast" style={{ color: '#ef4444' }}></i>
+                  <span>Live Calendar</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 6 High-Utility POS KPI Telemetry Cards:
+                1. Upcoming Live Classes Count
+                2. Days Present
+                3. Days Absent
+                4. Total Live Class Sessions Count
+                5. Course Progress %
+                6. Attendance Standing % */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              
+              {/* Metric 1: Upcoming Live Classes Count */}
+              <div
+                onClick={() => setActiveTab('live')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                  boxShadow: isSessionLiveNow ? '0 4px 18px rgba(239, 68, 68, 0.15)' : '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Upcoming Live
+                  </span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: isSessionLiveNow ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.84rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.9rem', fontWeight: 900, color: isSessionLiveNow ? '#ef4444' : '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {isSessionLiveNow ? 'LIVE' : upcomingLiveCount}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{isSessionLiveNow ? 'Class in session' : 'Classes scheduled'}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>Join →</span>
+                </div>
+              </div>
+
+              {/* Metric 2: Days Present */}
+              <div
+                onClick={() => setActiveTab('attendance')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#10b981'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Days Present
+                  </span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-user-check" style={{ fontSize: '0.84rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#10b981', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {daysPresent}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Verified attendance</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>Present</span>
+                </div>
+              </div>
+
+              {/* Metric 3: Days Absent */}
+              <div
+                onClick={() => setActiveTab('attendance')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#ef4444'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Days Absent
+                  </span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-user-xmark" style={{ fontSize: '0.84rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.9rem', fontWeight: 900, color: daysAbsent > 0 ? '#ef4444' : '#64748b', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {daysAbsent}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{daysAbsent === 0 ? 'No absences' : 'Missed sessions'}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>{daysAbsent > 0 ? 'Absent' : 'Clean'}</span>
+                </div>
+              </div>
+
+              {/* Metric 4: Total Live Class Sessions Count */}
+              <div
+                onClick={() => setActiveTab('live')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Total Live Sessions
+                  </span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-layer-group" style={{ fontSize: '0.84rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {totalLiveClassSessions}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{totalHeldSessions} held • {upcomingLiveCount} upcoming</span>
+                  <span style={{ color: '#5A70D3', fontWeight: 700 }}>Total</span>
+                </div>
+              </div>
+
+              {/* Metric 5: Course Progress % */}
+              <div
+                onClick={() => {
+                  const elem = document.getElementById('syllabus-section');
+                  if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Syllabus Progress
+                  </span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-chart-pie" style={{ fontSize: '0.84rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {progressPercent}%
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{completedLessons}/{totalLessons} lessons done</span>
+                  <span style={{ color: '#5A70D3', fontWeight: 700 }}>Syllabus →</span>
+                </div>
+              </div>
+
+              {/* Metric 6: Attendance Standing % */}
+              <div
+                onClick={() => setActiveTab('attendance')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#10b981'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Attendance Rate
+                  </span>
+                  <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-award" style={{ fontSize: '0.84rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.9rem', fontWeight: 900, color: attendancePercentage >= 75 ? '#10b981' : '#ef4444', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {attendancePercentage}%
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{attendancePercentage >= 75 ? '🟢 Eligible' : '⚠️ Warning'}</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>Min 75%</span>
                 </div>
               </div>
             </div>
+
+            {/* Attendance Telemetry Ratio Bar (Visualizing Present, Absent, Upcoming for this course) */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-chart-simple" style={{ color: '#5A70D3' }}></i>
+                  <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>Live Session Attendance Ratio</span>
+                  <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                    Separate Course Telemetry
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.8rem', fontWeight: 700 }}>
+                  <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                    Present: {daysPresent}
+                  </span>
+                  <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}></span>
+                    Absent: {daysAbsent}
+                  </span>
+                  <span style={{ color: '#5A70D3', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#5A70D3', display: 'inline-block' }}></span>
+                    Upcoming: {upcomingLiveCount}
+                  </span>
+                </div>
+              </div>
+
+              {/* Multi-segment ratio bar */}
+              <div style={{ height: '12px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden', display: 'flex' }}>
+                {totalLiveClassSessions > 0 ? (
+                  <>
+                    <div style={{ width: `${(daysPresent / totalLiveClassSessions) * 100}%`, background: '#10b981', transition: 'width 0.3s ease' }} title={`Present: ${daysPresent}`} />
+                    <div style={{ width: `${(daysAbsent / totalLiveClassSessions) * 100}%`, background: '#ef4444', transition: 'width 0.3s ease' }} title={`Absent: ${daysAbsent}`} />
+                    <div style={{ width: `${(upcomingLiveCount / totalLiveClassSessions) * 100}%`, background: '#5A70D3', transition: 'width 0.3s ease' }} title={`Upcoming: ${upcomingLiveCount}`} />
+                  </>
+                ) : (
+                  <div style={{ width: '100%', background: '#e2e8f0' }} />
+                )}
+              </div>
+            </div>
+
+            {/* Split Workstation Layout:
+                Left Column: Curriculum Syllabus Tree
+                Right Column: Resume Learning Hero Box & Course Attendance Log */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '22px' }}>
+              
+              {/* Left Column: Full Curriculum Syllabus Tree */}
+              <div id="syllabus-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-list-check" style={{ color: '#5A70D3' }}></i>
+                      <span>Curriculum Syllabus</span>
+                    </h3>
+                    <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 700, background: '#f8fafc', padding: '4px 12px', borderRadius: '9999px', border: '1px solid #e2e8f0' }}>
+                      {completedLessons} / {totalLessons} lessons completed
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {(course?.sections || []).map((sec, sIdx) => {
+                      const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
+                      const secTotal = sec.contents?.length || 0;
+                      return (
+                        <div key={sec.id || sIdx} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
+                              {sIdx + 1}. {sec.title}
+                            </span>
+                            <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 800, background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
+                              {secCompleted}/{secTotal} done
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {sec.contents?.map((c, cIdx) => {
+                              const isDone = progress?.completedContentIds?.includes(c.id);
+                              return (
+                                <div
+                                  key={c.id || cIdx}
+                                  onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '8px 10px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.15s ease',
+                                    background: isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
+                                  onMouseLeave={e => e.currentTarget.style.background = isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'}
+                                >
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDone ? '#059669' : '#334155', fontWeight: isDone ? 700 : 500, fontSize: '0.88rem' }}>
+                                    <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ fontSize: '0.86rem', color: isDone ? '#10b981' : '#5A70D3' }}></i>
+                                    <span>{c.title}</span>
+                                  </span>
+                                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'capitalize' }}>
+                                    {c.contentType || 'video'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Resume Learning Hero Box & Course Attendance Log */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {nextLesson && (
+                  <div style={{
+                    background: '#0f172a',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    color: '#ffffff',
+                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+                    border: '1px solid #1e293b'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      <i className="fa-solid fa-play"></i>
+                      <span>Resume Learning</span>
+                    </div>
+
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', color: '#ffffff' }}>
+                      {nextLesson.title}
+                    </h3>
+
+                    <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '0 0 18px 0', lineHeight: 1.45 }}>
+                      {nextLesson.description || 'Watch the next curriculum video lesson to keep making progress.'}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/student/learn/${courseId}?contentId=${nextLesson.id}`)}
+                      style={{
+                        background: '#5A70D3',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '11px 22px',
+                        fontWeight: 800,
+                        fontSize: '0.92rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(90, 112, 211, 0.4)',
+                        transition: 'all 0.18s ease'
+                      }}
+                    >
+                      <i className="fa-solid fa-play"></i>
+                      <span>Play Video Lesson</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Course Live Session Attendance Log (Strictly for THIS COURSE) */}
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-calendar-check" style={{ color: '#10b981' }}></i>
+                        <span>Live Class Attendance Records</span>
+                      </h3>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        Attendance telemetry for this separate course only
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('attendance')}
+                      style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Full Details →
+                    </button>
+                  </div>
+
+                  {(!attendance?.sessions || attendance.sessions.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '28px 12px', color: '#64748b', fontSize: '0.86rem' }}>
+                      <i className="fa-regular fa-calendar" style={{ fontSize: '2rem', color: '#cbd5e1', marginBottom: '8px', display: 'block' }}></i>
+                      No live class sessions held yet for this course.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {attendance.sessions.slice(0, 5).map((s, idx) => {
+                        const isPresent = s.attendanceStatus === 'PRESENT';
+                        const isUpcoming = s.attendanceStatus === 'UPCOMING';
+                        return (
+                          <div key={s.sessionId || idx} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            background: '#f8fafc',
+                            border: '1px solid #edf2f7',
+                            gap: '10px',
+                            flexWrap: 'wrap'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: isPresent ? 'rgba(16, 185, 129, 0.12)' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
+                                color: isPresent ? '#10b981' : (isUpcoming ? '#0284c7' : '#ef4444'),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.8rem',
+                                flexShrink: 0
+                              }}>
+                                <i className={`fa-solid ${isPresent ? 'fa-check' : (isUpcoming ? 'fa-clock' : 'fa-xmark')}`}></i>
+                              </span>
+                              <div>
+                                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>{s.sessionTitle}</div>
+                                <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                                  {s.scheduledAt ? new Date(s.scheduledAt).toLocaleString() : '—'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                padding: '3px 8px',
+                                borderRadius: '9999px',
+                                background: isPresent ? 'rgba(16, 185, 129, 0.12)' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
+                                color: isPresent ? '#10b981' : (isUpcoming ? '#0284c7' : '#ef4444')
+                              }}>
+                                {isPresent ? 'Present' : (isUpcoming ? 'Upcoming' : 'Absent')}
+                              </span>
+                              {isUpcoming ? (
+                                <Link
+                                  to={`/student/live-classroom/${s.sessionId}`}
+                                  style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, textDecoration: 'none' }}
+                                >
+                                  Join →
+                                </Link>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveTab('recordings')}
+                                  style={{ background: 'none', border: 'none', fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, cursor: 'pointer' }}
+                                >
+                                  Replay →
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recorded Replays Teaser */}
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '0.94rem', color: '#0f172a' }}>
+                      <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
+                      <span>Course Video Replays</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('recordings')}
+                      style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Watch &amp; Rate ({recordingSessions.length}) →
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+                    Stream full replays of live classes for this course anytime and rate each recording class.
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         )}
 
         {/* ===================================================================
-            TAB 3: ATTENDANCE
+            TAB 3: ATTENDANCE (Comprehensive History & Verification)
             =================================================================== */}
         {activeTab === 'attendance' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
@@ -1193,28 +1608,28 @@ export default function StudentCourseDashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
               <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Overall Attendance</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: (attendance?.attendancePercentage ?? 100) >= 75 ? '#10b981' : '#ef4444' }}>
-                  {attendance?.attendancePercentage ?? 100}%
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: attendancePercentage >= 75 ? '#10b981' : '#ef4444' }}>
+                  {attendancePercentage}%
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
-                  {(attendance?.attendancePercentage ?? 100) >= 75 ? '🟢 Meets eligibility criteria' : '⚠️ Below 75% target'}
+                  {attendancePercentage >= 75 ? '🟢 Meets eligibility criteria' : '⚠️ Below 75% target'}
                 </div>
               </div>
 
               <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Held</div>
                 <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a' }}>
-                  {attendance?.totalSessions ?? 0}
+                  {totalHeldSessions}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
-                  Total scheduled live sessions
+                  Total scheduled live sessions held
                 </div>
               </div>
 
               <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Attended</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#5A70D3' }}>
-                  {attendance?.attendedSessions ?? 0}
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Days Present</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#10b981' }}>
+                  {daysPresent}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#10b981', marginTop: '4px' }}>
                   Verified presence recorded
@@ -1222,9 +1637,9 @@ export default function StudentCourseDashboardPage() {
               </div>
 
               <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Missed</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#ef4444' }}>
-                  {attendance?.missedSessions ?? 0}
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Days Absent</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: daysAbsent > 0 ? '#ef4444' : '#64748b' }}>
+                  {daysAbsent}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
                   Replays available in Recordings
@@ -1240,7 +1655,7 @@ export default function StudentCourseDashboardPage() {
                     Live Session Attendance Records
                   </h3>
                   <p style={{ fontSize: '0.86rem', color: '#64748b', margin: 0 }}>
-                    Attendance is automatically recorded whenever you enter a live session classroom.
+                    Attendance is automatically recorded whenever you enter a live session classroom for this course.
                   </p>
                 </div>
 
