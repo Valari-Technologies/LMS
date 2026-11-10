@@ -1109,10 +1109,14 @@ export default function StudentCourseDashboardPage() {
           
           {/* Active Course Title Only */}
           {!sidebarCollapsed && (
-            <div className="ot-course-card-widget">
+            <div style={{
+              padding: '6px 8px 14px 8px',
+              borderBottom: '1px solid #f1f5f9',
+              marginBottom: '4px'
+            }}>
               <div
                 style={{
-                  fontSize: '0.94rem',
+                  fontSize: '0.98rem',
                   fontWeight: 800,
                   color: '#0f172a',
                   lineHeight: 1.35,
@@ -1264,82 +1268,6 @@ export default function StudentCourseDashboardPage() {
             </Link>
           </div>
 
-        </div>
-
-        {/* 3. Sidebar Footer: Resume Learning Action + User Profile */}
-        <div className="ot-course-sidebar-footer">
-          {/* Big Resume Learning Button */}
-          <button
-            type="button"
-            onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
-            style={{
-              width: '100%',
-              padding: sidebarCollapsed ? '10px 0' : '10px 14px',
-              borderRadius: '10px',
-              background: '#5A70D3',
-              color: '#ffffff',
-              fontSize: '0.86rem',
-              fontWeight: 800,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(90, 112, 211, 0.3)',
-              transition: 'all 0.18s ease'
-            }}
-            title="Resume Learning"
-          >
-            <i className="fa-solid fa-play" style={{ fontSize: '0.8rem' }}></i>
-            {!sidebarCollapsed && <span>Resume Learning</span>}
-          </button>
-
-          {/* User Profile Mini Strip */}
-          {user && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '6px 8px',
-                borderRadius: '10px',
-                background: '#f8fafc',
-                cursor: 'pointer'
-              }}
-              onClick={() => navigate('/student/profile')}
-              title="View Student Profile"
-            >
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: '#0f172a',
-                color: '#ffffff',
-                fontWeight: 800,
-                fontSize: '0.78rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-                flexShrink: 0
-              }}>
-                {user.avatar ? (
-                  <img src={resolveMediaUrl(user.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  (user.name || user.email || 'S').charAt(0).toUpperCase()
-                )}
-              </div>
-              {!sidebarCollapsed && (
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {user.name || user.email}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Student</div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </aside>
 
