@@ -11397,3 +11397,247 @@ h6,
     gap: 5px;
   }
 }
+
+/* ==========================================================================
+   STUDENT COURSE DASHBOARD DEDICATED SIDEBAR LAYOUT
+   ========================================================================== */
+.ot-course-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafc;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.ot-course-sidebar {
+  width: 270px;
+  min-width: 270px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  left: 0;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: width 0.25s ease, transform 0.25s ease;
+  box-shadow: 2px 0 12px rgba(15, 23, 42, 0.03);
+}
+
+.ot-course-sidebar.collapsed {
+  width: 78px;
+  min-width: 78px;
+}
+
+.ot-course-sidebar-header {
+  height: 68px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.ot-course-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ot-course-sidebar-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ot-course-sidebar-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.ot-course-card-widget {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.ot-course-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ot-course-section-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  padding: 0 8px 4px 8px;
+}
+
+.ot-course-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  text-align: left;
+  font-family: inherit;
+}
+
+.ot-course-nav-link:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ot-course-nav-link.active {
+  background: rgba(90, 112, 211, 0.1);
+  color: #5A70D3;
+  font-weight: 800;
+}
+
+.ot-course-nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3.5px;
+  background: #5A70D3;
+  border-radius: 0 4px 4px 0;
+}
+
+.ot-course-nav-icon {
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.ot-course-sidebar.collapsed .ot-course-nav-link {
+  justify-content: center;
+  padding: 10px;
+}
+
+.ot-course-sidebar.collapsed .ot-course-nav-text,
+.ot-course-sidebar.collapsed .ot-course-badge,
+.ot-course-sidebar.collapsed .ot-course-card-widget,
+.ot-course-sidebar.collapsed .ot-course-section-label {
+  display: none !important;
+}
+
+.ot-course-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.ot-course-badge.active {
+  background: #5A70D3;
+  color: #ffffff;
+}
+
+.ot-course-badge.live-pulse {
+  background: #ef4444;
+  color: #ffffff;
+  animation: otPulse 1.8s infinite;
+}
+
+@keyframes otPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.ot-course-sidebar-footer {
+  border-top: 1px solid #f1f5f9;
+  padding: 12px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ot-course-main-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.ot-course-topbar {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.ot-course-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .ot-course-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -290px;
+    width: 275px;
+    min-width: 275px;
+    z-index: 2100;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .ot-course-sidebar.mobile-open {
+    transform: translateX(290px);
+  }
+
+  .ot-course-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 2050;
+  }
+}

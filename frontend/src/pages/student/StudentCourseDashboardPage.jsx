@@ -65,6 +65,10 @@ export default function StudentCourseDashboardPage() {
   const [videoPlayerTab, setVideoPlayerTab] = useState('overview'); // 'overview' | 'curriculum' | 'notes' | 'community' | 'resources'
   const [expandedSections, setExpandedSections] = useState({});
 
+  // Sidebar responsive & collapse state for inside course card pages
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   // Rating modal state for recording classes
   const [ratingModalRecording, setRatingModalRecording] = useState(null);
   const [modalRating, setModalRating] = useState(5);
@@ -1012,260 +1016,484 @@ export default function StudentCourseDashboardPage() {
 
 
   // =========================================================================
-  // VIEW MODE 2: MAIN COURSE DASHBOARD SPACE (POS Style Single Navbar)
-  // Arrow mark removed; Home button links to index page; Home tab setup removed.
+  // VIEW MODE 2: MAIN COURSE WORKSPACE (Dedicated Course Sidebar Layout)
+  // Left Sidebar: Brand, Course Identity, Course Spaces, Connect, Shortcuts,
+  //               Resume Button & Student Profile.
+  // Right Main:   Topbar with Breadcrumb, Telemetry Tag, Resume Action, and
+  //               Tab Workspace Content.
   // =========================================================================
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
-      
-      {/* ===================================================================
-          1. SINGLE DEDICATED POS-STYLE COURSE NAVBAR (Sticky Top)
-          - Left arrow mark REMOVED.
-          - Home button redirects to index page ('/').
-          - Internal home page setup REMOVED.
-          =================================================================== */}
-      <header style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        background: '#ffffff',
-        borderBottom: '1px solid #cbd5e1',
-        boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
-        padding: '0 20px',
-        height: '66px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '14px'
-      }}>
-        {/* Left: Brand Logo + Home (Moves to index page) + Divider + Course Name & Batch Tag */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }} title="OneTutor Home">
-            <img src={oneTutorBrandImg} alt="OneTutor" style={{ height: '32px', objectFit: 'contain' }} />
-          </Link>
+    <div className="ot-course-shell">
+      {/* Mobile Backdrop Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="ot-course-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-          {/* Click Home button moves to index page */}
-          <Link
-            to="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '9px',
-              background: '#f8fafc',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              fontSize: '0.86rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              transition: 'all 0.15s ease',
-              flexShrink: 0
-            }}
-            title="Go to Index / Home Page"
-            onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#334155'; }}
-          >
-            <i className="fa-solid fa-house" style={{ fontSize: '0.82rem', color: '#5A70D3' }}></i>
-            <span>Home</span>
-          </Link>
-
-          <div style={{ width: '1px', height: '24px', background: '#cbd5e1', flexShrink: 0 }} />
-
-          {/* Course Name & Batch Tag */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-            <span
-              style={{
+      {/* Modern Dedicated Course Workspace Sidebar */}
+      <aside className={`ot-course-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+        
+        {/* 1. Sidebar Header: Brand + Title + Collapse/Close Toggle */}
+        <div className="ot-course-sidebar-header">
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }} title="OneTutor Home">
+            <span className="ot-brand-logo-wrap">
+              <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '30px' }} />
+            </span>
+            {!sidebarCollapsed && (
+              <span style={{
+                fontSize: '0.68rem',
                 fontWeight: 800,
-                fontSize: '0.96rem',
-                color: '#0f172a',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '280px'
-              }}
-              title={course?.name || course?.title}
-            >
-              {course?.name || course?.title || 'Course Dashboard'}
-            </span>
-            <span style={{
-              background: 'rgba(90, 112, 211, 0.12)',
-              color: '#5A70D3',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              padding: '2px 8px',
-              borderRadius: '9999px',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
-            }}>
-              {batchLabel}
-            </span>
-          </div>
-        </div>
+                background: 'rgba(90, 112, 211, 0.12)',
+                color: '#5A70D3',
+                padding: '3px 8px',
+                borderRadius: '9999px',
+                letterSpacing: '0.5px'
+              }}>
+                COURSE SPACE
+              </span>
+            )}
+          </Link>
 
-        {/* Center: POS Segmented Navigation Tabs:
-            [ Dashboard ] [ Attendance ] [ Live Classes ] [ Recordings ]
-            (Internal course home setup removed) */}
-        <nav style={{
-          display: 'flex',
-          alignItems: 'center',
-          background: '#f8fafc',
-          padding: '4px',
-          borderRadius: '12px',
-          border: '1px solid #cbd5e1',
-          overflowX: 'auto',
-          flexShrink: 0
-        }}>
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
-            { id: 'attendance', label: 'Attendance', icon: 'fa-solid fa-calendar-check', badge: attendance ? `${attendancePercentage}%` : null },
-            { id: 'live', label: 'Live Classes', icon: 'fa-solid fa-tower-broadcast', badge: isSessionLiveNow ? 'LIVE' : (upcomingLiveCount > 0 ? upcomingLiveCount : null), badgeColor: isSessionLiveNow ? '#ef4444' : null },
-            { id: 'recordings', label: 'Recordings', icon: 'fa-solid fa-video', badge: recordingSessions.length > 0 ? recordingSessions.length : null }
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  background: isActive ? '#0f172a' : 'transparent',
-                  color: isActive ? '#ffffff' : '#64748b',
-                  border: 'none',
-                  borderRadius: '9px',
-                  padding: '7px 16px',
-                  fontSize: '0.86rem',
-                  fontWeight: isActive ? 800 : 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  whiteSpace: 'nowrap',
-                  boxShadow: isActive ? '0 2px 6px rgba(15, 23, 42, 0.25)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = '#e2e8f0';
-                    e.currentTarget.style.color = '#0f172a';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = '#64748b';
-                  }
-                }}
-              >
-                <i className={tab.icon} style={{ fontSize: '0.82rem', color: isActive ? '#93c5fd' : '#94a3b8' }}></i>
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    padding: '1px 6px',
-                    borderRadius: '9999px',
-                    background: isActive
-                      ? (tab.badgeColor ? '#ef4444' : 'rgba(255, 255, 255, 0.2)')
-                      : (tab.badgeColor ? '#fee2e2' : '#e2e8f0'),
-                    color: isActive
-                      ? '#ffffff'
-                      : (tab.badgeColor ? '#ef4444' : '#0f172a')
-                  }}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Right: Community Chat + Resume CTA + User Avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          <Link
-            to={`/student/community/${courseId}`}
-            title="Course Community Chat"
+          {/* Desktop Collapse Button */}
+          <button
+            type="button"
+            className="desktop-only"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 12px',
-              borderRadius: '9px',
               background: '#f8fafc',
               border: '1px solid #cbd5e1',
-              color: '#475569',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              textDecoration: 'none',
+              borderRadius: '8px',
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b',
+              fontSize: '0.75rem',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#475569'; }}
           >
-            <i className="fa-solid fa-comments" style={{ color: '#5A70D3' }}></i>
-            <span style={{ display: 'inline' }}>Community</span>
-          </Link>
+            <i className={`fa-solid fa-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
+          </button>
 
+          {/* Mobile Close Button */}
+          <button
+            type="button"
+            className="mobile-only"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Close menu"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b'
+            }}
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        {/* 2. Sidebar Body */}
+        <div className="ot-course-sidebar-body">
+          
+          {/* Active Course Card Preview (Full when expanded) */}
+          {!sidebarCollapsed && (
+            <div className="ot-course-card-widget">
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  background: '#e2e8f0',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {thumbUrl ? (
+                    <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <i className="fa-solid fa-graduation-cap" style={{ color: '#5A70D3', fontSize: '1.2rem' }}></i>
+                  )}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    fontSize: '0.86rem',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    lineHeight: 1.3,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical'
+                  }} title={course?.name || course?.title}>
+                    {course?.name || course?.title || 'Enrolled Course'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#5A70D3', background: 'rgba(90, 112, 211, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                      {batchLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course Progress Mini Track */}
+              <div style={{ marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', fontWeight: 700, marginBottom: '4px' }}>
+                  <span>Syllabus Progress</span>
+                  <span style={{ color: '#5A70D3' }}>{progressPercent}%</span>
+                </div>
+                <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${progressPercent}%`, background: '#5A70D3', borderRadius: '9999px', transition: 'width 0.3s ease' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Nav Section 1: Course Dashboard Spaces */}
+          <div className="ot-course-nav-section">
+            <div className="ot-course-section-label">Course Spaces</div>
+
+            {/* Dashboard Link */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
+              title="Course Learning Dashboard"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-chart-pie"></i></span>
+              <span className="ot-course-nav-text">Dashboard</span>
+            </button>
+
+            {/* Attendance Link */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'attendance' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('attendance'); setMobileSidebarOpen(false); }}
+              title="Attendance Records"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-calendar-check"></i></span>
+              <span className="ot-course-nav-text">Attendance</span>
+              {attendance && (
+                <span className={`ot-course-badge ${activeTab === 'attendance' ? 'active' : ''}`}>
+                  {attendancePercentage}%
+                </span>
+              )}
+            </button>
+
+            {/* Live Classes Link */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'live' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('live'); setMobileSidebarOpen(false); }}
+              title="Live Online Classroom"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-tower-broadcast"></i></span>
+              <span className="ot-course-nav-text">Live Classes</span>
+              {isSessionLiveNow ? (
+                <span className="ot-course-badge live-pulse">LIVE</span>
+              ) : upcomingLiveCount > 0 ? (
+                <span className={`ot-course-badge ${activeTab === 'live' ? 'active' : ''}`}>
+                  {upcomingLiveCount}
+                </span>
+              ) : null}
+            </button>
+
+            {/* Recordings Link */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'recordings' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('recordings'); setMobileSidebarOpen(false); }}
+              title="Recorded Sessions"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-video"></i></span>
+              <span className="ot-course-nav-text">Recordings</span>
+              {recordingSessions.length > 0 && (
+                <span className={`ot-course-badge ${activeTab === 'recordings' ? 'active' : ''}`}>
+                  {recordingSessions.length}
+                </span>
+              )}
+            </button>
+
+            {/* Curriculum Syllabus Link */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'curriculum' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('curriculum'); setMobileSidebarOpen(false); }}
+              title="Full Curriculum Syllabus"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-book-open"></i></span>
+              <span className="ot-course-nav-text">Curriculum</span>
+              {totalLessons > 0 && (
+                <span className={`ot-course-badge ${activeTab === 'curriculum' ? 'active' : ''}`}>
+                  {completedLessons}/{totalLessons}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Nav Section 2: Collaboration & Learning */}
+          <div className="ot-course-nav-section">
+            <div className="ot-course-section-label">Connect & Study</div>
+
+            {/* Course Community Chat */}
+            <Link
+              to={`/student/community/${courseId}`}
+              className="ot-course-nav-link"
+              title="Course Community & Discussion"
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-comments"></i></span>
+              <span className="ot-course-nav-text">Community Chat</span>
+            </Link>
+
+            {/* Full Video Learning Classroom */}
+            <button
+              type="button"
+              className="ot-course-nav-link"
+              onClick={() => {
+                setMobileSidebarOpen(false);
+                navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`);
+              }}
+              title="Video Lecture Classroom"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-play"></i></span>
+              <span className="ot-course-nav-text">Lecture Classroom</span>
+            </button>
+          </div>
+
+          {/* Nav Section 3: Shortcuts & Global Links */}
+          <div className="ot-course-nav-section">
+            <div className="ot-course-section-label">Navigation</div>
+
+            {/* My Learning Space */}
+            <Link
+              to="/student/my-courses"
+              className="ot-course-nav-link"
+              title="Return to My Learning Space"
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-arrow-left"></i></span>
+              <span className="ot-course-nav-text">My Learning</span>
+            </Link>
+
+            {/* Home / Index Page */}
+            <Link
+              to="/"
+              className="ot-course-nav-link"
+              title="Go to OneTutor Home"
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-house"></i></span>
+              <span className="ot-course-nav-text">Home Page</span>
+            </Link>
+          </div>
+
+        </div>
+
+        {/* 3. Sidebar Footer: Resume Learning Action + User Profile */}
+        <div className="ot-course-sidebar-footer">
+          {/* Big Resume Learning Button */}
           <button
             type="button"
             onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              padding: '8px 16px',
-              borderRadius: '9px',
+              width: '100%',
+              padding: sidebarCollapsed ? '10px 0' : '10px 14px',
+              borderRadius: '10px',
               background: '#5A70D3',
               color: '#ffffff',
-              fontSize: '0.84rem',
+              fontSize: '0.86rem',
               fontWeight: 800,
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 12px rgba(90, 112, 211, 0.3)',
               transition: 'all 0.18s ease'
             }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+            title="Resume Learning"
           >
-            <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
-            <span>Resume</span>
+            <i className="fa-solid fa-play" style={{ fontSize: '0.8rem' }}></i>
+            {!sidebarCollapsed && <span>Resume Learning</span>}
           </button>
 
-          {/* User profile avatar */}
+          {/* User Profile Mini Strip */}
           {user && (
             <div
-              title={`${user.name || user.email} (${user.role})`}
               style={{
-                width: '36px',
-                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '6px 8px',
+                borderRadius: '10px',
+                background: '#f8fafc',
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate('/student/profile')}
+              title="View Student Profile"
+            >
+              <div style={{
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
                 background: '#0f172a',
                 color: '#ffffff',
                 fontWeight: 800,
-                fontSize: '0.82rem',
+                fontSize: '0.78rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '2px solid #e2e8f0',
-                cursor: 'pointer',
+                overflow: 'hidden',
                 flexShrink: 0
-              }}
-              onClick={() => navigate('/student/profile')}
-            >
-              {user.avatar ? (
-                <img src={resolveMediaUrl(user.avatar)} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-              ) : (
-                (user.name || user.email || 'S').charAt(0).toUpperCase()
+              }}>
+                {user.avatar ? (
+                  <img src={resolveMediaUrl(user.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  (user.name || user.email || 'S').charAt(0).toUpperCase()
+                )}
+              </div>
+              {!sidebarCollapsed && (
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user.name || user.email}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Student</div>
+                </div>
               )}
             </div>
           )}
         </div>
-      </header>
+      </aside>
 
-      {/* ===================================================================
-          2. MAIN POS WORKSPACE CONTENT
-          =================================================================== */}
-      <main style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
+      {/* Right Main Area */}
+      <div className="ot-course-main-wrap">
+        
+        {/* Top Header Bar */}
+        <header className="ot-course-topbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            {/* Mobile Hamburger Toggle Button */}
+            <button
+              type="button"
+              className="mobile-only"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open Course Menu"
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#0f172a',
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              <i className="fa-solid fa-bars"></i>
+            </button>
+
+            {/* Desktop Collapse Toggle Button */}
+            <button
+              type="button"
+              className="desktop-only"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                width: '34px',
+                height: '34px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              <i className={`fa-solid fa-${sidebarCollapsed ? 'indent' : 'outdent'}`}></i>
+            </button>
+
+            {/* Breadcrumb Path */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#64748b', minWidth: 0 }}>
+              <Link to="/student/my-courses" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }} className="desktop-only">
+                My Learning
+              </Link>
+              <span className="desktop-only" style={{ color: '#cbd5e1' }}>/</span>
+              <span style={{ color: '#0f172a', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }} title={course?.name || course?.title}>
+                {course?.name || course?.title}
+              </span>
+              <span style={{ color: '#cbd5e1' }}>/</span>
+              <span style={{ color: '#5A70D3', fontWeight: 800, textTransform: 'capitalize' }}>
+                {activeTab === 'live' ? 'Live Classes' : activeTab}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Telemetry Scope Tag + Community + Resume Button + Avatar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <span style={{
+              fontSize: '0.74rem',
+              background: '#E8EBFA',
+              color: '#5A70D3',
+              border: '1px solid rgba(90, 112, 211, 0.25)',
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              fontWeight: 800,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <i className="fa-solid fa-shield-halved"></i>
+              <span className="desktop-only">{course?.name || course?.title} Telemetry</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '8px 16px',
+                borderRadius: '9px',
+                background: '#5A70D3',
+                color: '#ffffff',
+                fontSize: '0.84rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
+                transition: 'all 0.18s ease'
+              }}
+            >
+              <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
+              <span>Resume</span>
+            </button>
+          </div>
+        </header>
+
+
+        <main style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
         
         {/* ===================================================================
             TAB 1: DASHBOARD (Comprehensive Learning & Attendance Telemetry)
@@ -2342,7 +2570,143 @@ export default function StudentCourseDashboardPage() {
             )}
           </div>
         )}
+
+        {/* ===================================================================
+            TAB 5: CURRICULUM SYLLABUS
+            =================================================================== */}
+        {activeTab === 'curriculum' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+            <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-book-open" style={{ color: '#5A70D3' }}></i>
+                    <span>Course Curriculum Syllabus</span>
+                  </h2>
+                  <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
+                    {course?.sections?.length || 0} modules • {totalLessons} lessons • {completedLessons} completed ({progressPercent}%)
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
+                  style={{
+                    background: '#5A70D3',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    fontSize: '0.86rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)'
+                  }}
+                >
+                  <i className="fa-solid fa-play"></i>
+                  <span>Resume Learning</span>
+                </button>
+              </div>
+
+              {/* Progress Bar */}
+              <div style={{ marginBottom: '22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', fontWeight: 700, marginBottom: '6px' }}>
+                  <span>Overall Curriculum Progress</span>
+                  <span style={{ color: '#5A70D3', fontWeight: 800 }}>{progressPercent}%</span>
+                </div>
+                <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${progressPercent}%`, background: '#5A70D3', borderRadius: '9999px', transition: 'width 0.4s ease' }}></div>
+                </div>
+              </div>
+
+              {/* Sections list */}
+              {(!course?.sections || course.sections.length === 0) ? (
+                <div style={{ textAlign: 'center', padding: '40px 16px', color: '#64748b' }}>
+                  <i className="fa-solid fa-book" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '10px', display: 'block' }}></i>
+                  No curriculum modules uploaded yet for this course.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {course.sections.map((sec, secIdx) => {
+                    const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
+                    const secTotal = sec.contents?.length || 0;
+                    return (
+                      <div key={sec.id || secIdx} style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '16px 18px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '8px',
+                              background: '#5A70D3',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              fontSize: '0.82rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {secIdx + 1}
+                            </span>
+                            <span style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>
+                              {sec.title}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 800, background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
+                            {secCompleted} / {secTotal} completed
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {sec.contents?.map((c, cIdx) => {
+                            const isDone = progress?.completedContentIds?.includes(c.id);
+                            return (
+                              <div
+                                key={c.id || cIdx}
+                                onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '10px 14px',
+                                  borderRadius: '8px',
+                                  background: isDone ? 'rgba(16, 185, 129, 0.05)' : '#ffffff',
+                                  border: '1px solid #edf2f7',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
+                                onMouseLeave={e => e.currentTarget.style.background = isDone ? 'rgba(16, 185, 129, 0.05)' : '#ffffff'}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDone ? '#059669' : '#1e293b', fontWeight: isDone ? 700 : 600, fontSize: '0.9rem' }}>
+                                  <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ color: isDone ? '#10b981' : '#5A70D3', fontSize: '0.92rem' }}></i>
+                                  <span>{c.title}</span>
+                                </span>
+                                <span style={{ fontSize: '0.74rem', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                                  {c.contentType || 'VIDEO'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
+      </div>
 
       {/* ===================================================================
           3. RECORDING RATING MODAL DIALOG
