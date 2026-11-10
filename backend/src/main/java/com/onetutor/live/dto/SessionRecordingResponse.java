@@ -14,10 +14,18 @@ public record SessionRecordingResponse(
         String subtitleStatus,
         String subtitleLanguage,
         Integer subtitleProgress,
+        Double averageRating,
+        Integer totalRatings,
+        Integer userRating,
+        String userComment,
         Instant createdAt,
         Instant updatedAt
 ) {
     public static SessionRecordingResponse from(SessionRecording r) {
+        return from(r, null, 0, null, null);
+    }
+
+    public static SessionRecordingResponse from(SessionRecording r, Double averageRating, Integer totalRatings, Integer userRating, String userComment) {
         String finalUrl = r.getUrl();
         if (r.getMediaAsset() != null) {
             String assetStorage = r.getMediaAsset().getStoragePath();
@@ -37,9 +45,12 @@ public record SessionRecordingResponse(
                 r.getSubtitleStatus() != null ? r.getSubtitleStatus() : "PENDING",
                 r.getSubtitleLanguage() != null ? r.getSubtitleLanguage() : "en",
                 r.getSubtitleProgress() != null ? r.getSubtitleProgress() : 0,
+                averageRating,
+                totalRatings != null ? totalRatings : 0,
+                userRating,
+                userComment,
                 r.getCreatedAt(),
                 r.getUpdatedAt()
         );
     }
 }
-

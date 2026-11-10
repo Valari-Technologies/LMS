@@ -18,6 +18,7 @@ import StudentDashboard from '../pages/student/StudentDashboard';
 import CourseCatalogPage from '../pages/student/CourseCatalogPage';
 import CourseDetailsPage from '../pages/student/CourseDetailsPage';
 import MyCoursesPage from '../pages/student/MyCoursesPage';
+import StudentCourseDashboardPage from '../pages/student/StudentCourseDashboardPage';
 import LearningPage from '../pages/student/LearningPage';
 import StudentLiveClassesPage from '../pages/student/StudentLiveClassesPage';
 import StudentNotificationsPage from '../pages/student/StudentNotificationsPage';
@@ -121,6 +122,8 @@ export default function App() {
                 <Route path="/student/profile" element={<StudentProfilePage />} />
                 <Route path="/student/community" element={<StudentCommunityPage />} />
                 <Route path="/student/community/:courseId" element={<StudentCommunityPage />} />
+                <Route path="/student/courses/:courseId/dashboard" element={<StudentCourseDashboardPage />} />
+                <Route path="/student/learn/:courseId/dashboard" element={<StudentCourseDashboardPage />} />
                 <Route path="/student/learn/:courseId" element={<LearningPage />} />
               </Route>
             </Route>

@@ -501,7 +501,12 @@ export default function MyCoursesPage() {
                   className="ot-learning-card"
                 >
                   {/* Thumbnail / Media Container */}
-                  <div className="ot-card-thumb-wrap">
+                  <div
+                    className="ot-card-thumb-wrap"
+                    onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
+                    style={{ cursor: 'pointer' }}
+                    title="Open Course Space"
+                  >
                     {c.courseThumbnail ? (
                       <>
                         <img
@@ -761,7 +766,12 @@ export default function MyCoursesPage() {
                     {/* Top Row: Title + Mobile More Button */}
                     <div>
                       <div className="ot-card-title-row">
-                        <h3 className="ot-card-title" title={c.courseName}>
+                        <h3
+                          className="ot-card-title"
+                          title={c.courseName}
+                          onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
+                          style={{ cursor: 'pointer' }}
+                        >
                           {c.courseName}
                         </h3>
 
@@ -845,9 +855,9 @@ export default function MyCoursesPage() {
 
                     {/* Action Buttons Row */}
                     <div className="ot-card-actions-row">
-                      {/* Primary Button */}
+                      {/* Primary Button: Opens Course Dashboard */}
                       <button
-                        onClick={() => navigate(`/student/learn/${c.courseId}`)}
+                        onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
                         className="ot-card-primary-btn"
                         style={{
                           flex: 1,
@@ -914,13 +924,59 @@ export default function MyCoursesPage() {
                             boxShadow: '0 8px 24px rgba(11, 31, 58, 0.15)',
                             border: '1px solid #e2e8f0',
                             zIndex: 40,
-                            minWidth: '180px',
+                            minWidth: '190px',
                             padding: '6px',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '2px',
                           }}
                         >
+                          <button
+                            onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              textAlign: 'left',
+                              fontSize: '0.86rem',
+                              fontWeight: 600,
+                              color: '#0b1f3a',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#E8EBFA')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <i className="fa-solid fa-chart-pie" style={{ color: '#5A70D3' }}></i>
+                            <span>Course Dashboard</span>
+                          </button>
+
+                          <button
+                            onClick={() => navigate(`/student/learn/${c.courseId}`)}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              textAlign: 'left',
+                              fontSize: '0.86rem',
+                              fontWeight: 600,
+                              color: '#0b1f3a',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#E8EBFA')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <i className="fa-solid fa-play" style={{ color: '#5A70D3' }}></i>
+                            <span>Lesson Video Player</span>
+                          </button>
+
                           <button
                             onClick={() => navigate(`/student/community/${c.courseId}`)}
                             style={{

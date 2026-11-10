@@ -15,7 +15,11 @@ import com.onetutor.live.dto.*;
 import com.onetutor.live.entity.LiveSession;
 import com.onetutor.live.entity.LiveSessionStatus;
 import com.onetutor.live.entity.SessionRecording;
+import com.onetutor.live.entity.LiveSessionAttendance;
+import com.onetutor.live.entity.SessionRecordingRating;
+import com.onetutor.live.repository.LiveSessionAttendanceRepository;
 import com.onetutor.live.repository.LiveSessionRepository;
+import com.onetutor.live.repository.SessionRecordingRatingRepository;
 import com.onetutor.live.repository.SessionRecordingRepository;
 import com.onetutor.sections.repository.SectionRepository;
 import com.onetutor.users.entity.User;
@@ -30,7 +34,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -49,6 +54,8 @@ public class LiveSessionService {
     private final com.onetutor.batches.repository.BatchRepository batchRepository;
     private final com.onetutor.notifications.service.NotificationService notificationService;
     private final com.onetutor.subtitles.service.SubtitleService subtitleService;
+    private final SessionRecordingRatingRepository sessionRecordingRatingRepository;
+    private final LiveSessionAttendanceRepository liveSessionAttendanceRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
@@ -61,7 +68,9 @@ public class LiveSessionService {
                               AuditService auditService,
                               com.onetutor.batches.repository.BatchRepository batchRepository,
                               com.onetutor.notifications.service.NotificationService notificationService,
-                              @org.springframework.context.annotation.Lazy com.onetutor.subtitles.service.SubtitleService subtitleService) {
+                              @org.springframework.context.annotation.Lazy com.onetutor.subtitles.service.SubtitleService subtitleService,
+                              SessionRecordingRatingRepository sessionRecordingRatingRepository,
+                              LiveSessionAttendanceRepository liveSessionAttendanceRepository) {
         this.liveSessionRepository = liveSessionRepository;
         this.sessionRecordingRepository = sessionRecordingRepository;
         this.courseRepository = courseRepository;
@@ -73,6 +82,24 @@ public class LiveSessionService {
         this.batchRepository = batchRepository;
         this.notificationService = notificationService;
         this.subtitleService = subtitleService;
+        this.sessionRecordingRatingRepository = sessionRecordingRatingRepository;
+        this.liveSessionAttendanceRepository = liveSessionAttendanceRepository;
+    }
+
+    public LiveSessionService(LiveSessionRepository liveSessionRepository,
+                              SessionRecordingRepository sessionRecordingRepository,
+                              CourseRepository courseRepository,
+                              SectionRepository sectionRepository,
+                              EnrollmentRepository enrollmentRepository,
+                              com.onetutor.media.repository.MediaAssetRepository mediaAssetRepository,
+                              LiveMeetingProvider meetingProvider,
+                              AuditService auditService,
+                              com.onetutor.batches.repository.BatchRepository batchRepository,
+                              com.onetutor.notifications.service.NotificationService notificationService,
+                              com.onetutor.subtitles.service.SubtitleService subtitleService) {
+        this(liveSessionRepository, sessionRecordingRepository, courseRepository, sectionRepository,
+                enrollmentRepository, mediaAssetRepository, meetingProvider, auditService, batchRepository,
+                notificationService, subtitleService, null, null);
     }
 
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
@@ -87,7 +114,7 @@ public class LiveSessionService {
                               com.onetutor.notifications.service.NotificationService notificationService) {
         this(liveSessionRepository, sessionRecordingRepository, courseRepository, sectionRepository,
                 enrollmentRepository, mediaAssetRepository, meetingProvider, auditService, batchRepository,
-                notificationService, null);
+                notificationService, null, null, null);
     }
 
     @Transactional
@@ -463,13 +490,63 @@ public class LiveSessionService {
                 .map(s -> {
                     boolean courseEnrolled = enrolledCourseIds.contains(s.getCourse().getId());
                     boolean canJoin = (s.getBatch() == null) ? courseEnrolled : true;
-                    return LiveSessionResponse.from(
+                    return toSessionResponseWithRatings(
                             s,
                             meetingProvider.getJoinUrl(s.getMeetingUrl()),
-                            canJoin
+                            canJoin,
+                            student
                     );
                 })
                 .toList();
+    }
+
+    public LiveSessionResponse toSessionResponseWithRatings(LiveSession s, String joinUrl, Boolean enrolled, User student) {
+        List<SessionRecordingResponse> recordingsWithRatings = List.of();
+        if (s.getRecordings() != null && !s.getRecordings().isEmpty()) {
+            recordingsWithRatings = s.getRecordings().stream().map(r -> {
+                Double avg = null;
+                long count = 0;
+                Integer userRating = null;
+                String userComment = null;
+                if (sessionRecordingRatingRepository != null) {
+                    try {
+                        avg = sessionRecordingRatingRepository.getAverageRatingForRecording(r.getId());
+                        if (avg != null) {
+                            avg = Math.round(avg * 10.0) / 10.0;
+                        }
+                        count = sessionRecordingRatingRepository.countByRecordingId(r.getId());
+                        if (student != null) {
+                            var userRatingOpt = sessionRecordingRatingRepository.findByRecordingIdAndStudentId(r.getId(), student.getId());
+                            if (userRatingOpt.isPresent()) {
+                                userRating = userRatingOpt.get().getRating();
+                                userComment = userRatingOpt.get().getComment();
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+                return SessionRecordingResponse.from(r, avg, (int) count, userRating, userComment);
+            }).toList();
+        }
+
+        return new LiveSessionResponse(
+                s.getId(),
+                s.getCourse().getId(),
+                s.getCourse().getName(),
+                s.getBatch() != null ? s.getBatch().getId() : null,
+                s.getBatch() != null ? s.getBatch().getName() : null,
+                s.getBatch() != null ? s.getBatch().getCode() : null,
+                s.getSection() != null ? s.getSection().getId() : null,
+                s.getSection() != null ? s.getSection().getTitle() : null,
+                s.getTitle(),
+                s.getDescription(),
+                s.getScheduledAt(),
+                s.getEndTime(),
+                joinUrl != null ? joinUrl : s.getMeetingUrl(),
+                s.getStatus().name(),
+                recordingsWithRatings,
+                s.getCreatedAt(),
+                enrolled != null ? enrolled : false
+        );
     }
 
     @Transactional
@@ -519,6 +596,27 @@ public class LiveSessionService {
                             "Access restricted. This live session is scheduled exclusively for " + session.getBatch().getName() +
                             ". You are enrolled in " + enrolledBatchName + ".");
                 }
+            }
+
+            // Automatically record / mark attendance for student
+            try {
+                if (liveSessionAttendanceRepository != null) {
+                    var attOpt = liveSessionAttendanceRepository.findBySessionIdAndStudentId(session.getId(), actor.getId());
+                    if (attOpt.isEmpty()) {
+                        LiveSessionAttendance att = new LiveSessionAttendance();
+                        att.setSession(session);
+                        att.setStudent(actor);
+                        att.setCourse(session.getCourse());
+                        att.setBatch(session.getBatch());
+                        att.setStatus("PRESENT");
+                        att.setAttendedAt(Instant.now());
+                        att.setJoinTime(Instant.now());
+                        liveSessionAttendanceRepository.save(att);
+                        log.info("[LiveSessionService] Automatically recorded attendance for student #{} in session #{}", actor.getId(), session.getId());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[LiveSessionService] Failed to auto-record attendance for student #{}: {}", actor.getId(), e.getMessage());
             }
         }
 
@@ -586,6 +684,134 @@ public class LiveSessionService {
             }
         } catch (Exception ignored) {}
         return url;
+    }
+
+    @Transactional
+    public SessionRecordingRatingResponse rateRecording(Long recordingId, SessionRecordingRatingRequest req, User student) {
+        if (student == null) {
+            throw new UnauthorizedException("UNAUTHORIZED", "Authentication required to rate recordings");
+        }
+        SessionRecording recording = sessionRecordingRepository.findById(recordingId)
+                .orElseThrow(() -> new NotFoundException("RECORDING_NOT_FOUND", "Recording not found with ID: " + recordingId));
+
+        SessionRecordingRating rating = sessionRecordingRatingRepository
+                .findByRecordingIdAndStudentId(recordingId, student.getId())
+                .orElseGet(() -> {
+                    SessionRecordingRating newRating = new SessionRecordingRating();
+                    newRating.setRecording(recording);
+                    newRating.setStudent(student);
+                    return newRating;
+                });
+
+        rating.setRating(req.rating());
+        rating.setComment(req.comment() != null ? req.comment().trim() : null);
+        sessionRecordingRatingRepository.save(rating);
+
+        auditService.log(student, "RATE_SESSION_RECORDING", "SessionRecording", recording.getId(),
+                "Student rated recording #" + recordingId + " with " + req.rating() + " stars");
+
+        return SessionRecordingRatingResponse.from(rating);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionRecordingRatingResponse> getRecordingRatings(Long recordingId) {
+        return sessionRecordingRatingRepository.findByRecordingId(recordingId).stream()
+                .map(SessionRecordingRatingResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public void checkInAttendance(Long sessionId, User student) {
+        if (student == null) {
+            throw new UnauthorizedException("UNAUTHORIZED", "Authentication required");
+        }
+        LiveSession session = liveSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("SESSION_NOT_FOUND", "Live session not found"));
+
+        var attOpt = liveSessionAttendanceRepository.findBySessionIdAndStudentId(sessionId, student.getId());
+        if (attOpt.isEmpty()) {
+            LiveSessionAttendance att = new LiveSessionAttendance();
+            att.setSession(session);
+            att.setStudent(student);
+            att.setCourse(session.getCourse());
+            att.setBatch(session.getBatch());
+            att.setStatus("PRESENT");
+            att.setAttendedAt(Instant.now());
+            att.setJoinTime(Instant.now());
+            liveSessionAttendanceRepository.save(att);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public CourseAttendanceSummaryResponse getCourseAttendance(Long courseId, User student) {
+        if (student == null) {
+            throw new UnauthorizedException("UNAUTHORIZED", "Authentication required");
+        }
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("COURSE_NOT_FOUND", "Course not found"));
+
+        Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseIdAndStatus(student.getId(), courseId, EnrollmentStatus.active)
+                .orElse(null);
+
+        Long batchId = (enrollment != null && enrollment.getBatch() != null) ? enrollment.getBatch().getId() : null;
+        String batchName = (enrollment != null && enrollment.getBatch() != null) ? enrollment.getBatch().getName() : null;
+
+        List<LiveSession> allSessions = liveSessionRepository.findAllForStudent().stream()
+                .filter(s -> s.getCourse().getId().equals(courseId))
+                .filter(s -> {
+                    if (s.getBatch() != null) {
+                        return batchId != null && batchId.equals(s.getBatch().getId());
+                    }
+                    return true;
+                })
+                .sorted(Comparator.comparing(LiveSession::getScheduledAt).reversed())
+                .toList();
+
+        List<LiveSessionAttendance> attendances = liveSessionAttendanceRepository.findByCourseIdAndStudentId(courseId, student.getId());
+        Map<Long, LiveSessionAttendance> attendanceMap = attendances.stream()
+                .collect(Collectors.toMap(a -> a.getSession().getId(), a -> a, (k1, k2) -> k1));
+
+        List<CourseAttendanceSummaryResponse.SessionAttendanceItem> items = new ArrayList<>();
+        int attendedCount = 0;
+        int totalHeld = 0;
+
+        Instant now = Instant.now();
+        for (LiveSession s : allSessions) {
+            boolean isHeld = s.getStatus() == LiveSessionStatus.completed || (s.getScheduledAt() != null && s.getScheduledAt().isBefore(now));
+            if (isHeld) {
+                totalHeld++;
+            }
+            LiveSessionAttendance att = attendanceMap.get(s.getId());
+            boolean attended = att != null && "PRESENT".equalsIgnoreCase(att.getStatus());
+            if (attended) {
+                attendedCount++;
+            }
+            String attStatus = attended ? "PRESENT" : (isHeld ? "ABSENT" : "UPCOMING");
+            items.add(new CourseAttendanceSummaryResponse.SessionAttendanceItem(
+                    s.getId(),
+                    s.getTitle(),
+                    s.getScheduledAt(),
+                    s.getEndTime(),
+                    s.getStatus().name(),
+                    attStatus,
+                    att != null ? att.getAttendedAt() : null
+            ));
+        }
+
+        int missedCount = Math.max(0, totalHeld - attendedCount);
+        double percentage = totalHeld > 0 ? Math.round((attendedCount * 100.0 / totalHeld) * 10.0) / 10.0 : 100.0;
+
+        return new CourseAttendanceSummaryResponse(
+                course.getId(),
+                course.getName(),
+                batchId,
+                batchName,
+                totalHeld,
+                attendedCount,
+                missedCount,
+                percentage,
+                items
+        );
     }
 }
 

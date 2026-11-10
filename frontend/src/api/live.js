@@ -81,3 +81,24 @@ export async function generateRecordingSubtitles(sessionId, recordingId) {
   emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
   return res.data.data;
 }
+
+export async function rateRecording(recordingId, { rating, comment }) {
+  const res = await api.post(`/live-sessions/recordings/${recordingId}/rate`, { rating, comment });
+  emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+  return res.data.data;
+}
+
+export async function getRecordingRatings(recordingId) {
+  const res = await api.get(`/live-sessions/recordings/${recordingId}/ratings`);
+  return res.data.data;
+}
+
+export async function getCourseAttendance(courseId) {
+  const res = await api.get(`/live-sessions/courses/${courseId}/attendance`);
+  return res.data.data;
+}
+
+export async function checkInAttendance(sessionId) {
+  const res = await api.post(`/live-sessions/${sessionId}/attendance/check-in`);
+  return res.data.data;
+}

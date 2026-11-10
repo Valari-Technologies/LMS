@@ -1,9 +1,13 @@
 package com.onetutor.live.controller;
 
 import com.onetutor.common.ApiResponse;
+import com.onetutor.live.dto.CourseAttendanceSummaryResponse;
 import com.onetutor.live.dto.LiveSessionResponse;
+import com.onetutor.live.dto.SessionRecordingRatingRequest;
+import com.onetutor.live.dto.SessionRecordingRatingResponse;
 import com.onetutor.live.service.LiveSessionService;
 import com.onetutor.users.entity.User;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +37,34 @@ public class LiveSessionController {
     public ApiResponse<com.onetutor.live.dto.LiveClassroomJoinInfo> getJoinInfo(@PathVariable Long id,
                                                                                 @AuthenticationPrincipal User user) {
         return ApiResponse.ok(liveSessionService.getJoinInfo(id, user));
+    }
+
+    @PostMapping("/recordings/{recordingId}/rate")
+    public ApiResponse<SessionRecordingRatingResponse> rateRecording(
+            @PathVariable Long recordingId,
+            @Valid @RequestBody SessionRecordingRatingRequest req,
+            @AuthenticationPrincipal User student) {
+        return ApiResponse.ok("Rating saved successfully", liveSessionService.rateRecording(recordingId, req, student));
+    }
+
+    @GetMapping("/recordings/{recordingId}/ratings")
+    public ApiResponse<List<SessionRecordingRatingResponse>> getRecordingRatings(@PathVariable Long recordingId) {
+        return ApiResponse.ok(liveSessionService.getRecordingRatings(recordingId));
+    }
+
+    @GetMapping("/courses/{courseId}/attendance")
+    public ApiResponse<CourseAttendanceSummaryResponse> getCourseAttendance(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal User student) {
+        return ApiResponse.ok(liveSessionService.getCourseAttendance(courseId, student));
+    }
+
+    @PostMapping("/{sessionId}/attendance/check-in")
+    public ApiResponse<Void> checkInAttendance(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal User student) {
+        liveSessionService.checkInAttendance(sessionId, student);
+        return ApiResponse.ok("Attendance checked in successfully", null);
     }
 }
 

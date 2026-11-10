@@ -511,15 +511,19 @@ export default function StudentDashboard() {
 
               <div className="ot-continue-actions">
                 <Link
-                  to={`/student/learn/${activeContinueCourse?.courseId || activeContinueCourse?.id}`}
+                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard`}
                   className="ot-continue-resume-btn"
                 >
-                  <span>Resume Lesson</span>
+                  <span>Course Space &amp; Dashboard</span>
                   <i className="fa-solid fa-arrow-right"></i>
                 </Link>
-                <Link to="/student/my-courses" className="ot-continue-mylearning-link">
-                  <span>Go to My Learning</span>
-                  <i className="fa-solid fa-arrow-right"></i>
+                <Link
+                  to={`/student/learn/${activeContinueCourse?.courseId || activeContinueCourse?.id}`}
+                  className="ot-continue-mylearning-link"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
+                  <span>Direct Lesson Player</span>
                 </Link>
               </div>
             </div>
