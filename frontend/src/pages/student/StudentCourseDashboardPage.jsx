@@ -1274,113 +1274,15 @@ export default function StudentCourseDashboardPage() {
       {/* Right Main Area */}
       <div className="ot-course-main-wrap">
         
-        {/* Top Header Bar */}
-        <header className="ot-course-topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-            {/* Mobile Hamburger Toggle Button */}
-            <button
-              type="button"
-              className="mobile-only"
-              onClick={() => setMobileSidebarOpen(true)}
-              aria-label="Open Course Menu"
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#0f172a',
-                fontSize: '1rem',
-                cursor: 'pointer'
-              }}
-            >
-              <i className="fa-solid fa-bars"></i>
-            </button>
-
-            {/* Desktop Collapse Toggle Button */}
-            <button
-              type="button"
-              className="desktop-only"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                width: '34px',
-                height: '34px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748b',
-                fontSize: '0.85rem',
-                cursor: 'pointer'
-              }}
-            >
-              <i className={`fa-solid fa-${sidebarCollapsed ? 'indent' : 'outdent'}`}></i>
-            </button>
-
-            {/* Breadcrumb Path */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#64748b', minWidth: 0 }}>
-              <Link to="/student/my-courses" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }} className="desktop-only">
-                My Learning
-              </Link>
-              <span className="desktop-only" style={{ color: '#cbd5e1' }}>/</span>
-              <span style={{ color: '#0f172a', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }} title={course?.name || course?.title}>
-                {course?.name || course?.title}
-              </span>
-              <span style={{ color: '#cbd5e1' }}>/</span>
-              <span style={{ color: '#5A70D3', fontWeight: 800, textTransform: 'capitalize' }}>
-                {activeTab === 'live' ? 'Live Classes' : activeTab}
-              </span>
-            </div>
-          </div>
-
-          {/* Right: Telemetry Scope Tag + Community + Resume Button + Avatar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            <span style={{
-              fontSize: '0.74rem',
-              background: '#E8EBFA',
-              color: '#5A70D3',
-              border: '1px solid rgba(90, 112, 211, 0.25)',
-              padding: '4px 10px',
-              borderRadius: '9999px',
-              fontWeight: 800,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <i className="fa-solid fa-shield-halved"></i>
-              <span className="desktop-only">{course?.name || course?.title} Telemetry</span>
-            </span>
-
-            <button
-              type="button"
-              onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '7px',
-                padding: '8px 16px',
-                borderRadius: '9px',
-                background: '#5A70D3',
-                color: '#ffffff',
-                fontSize: '0.84rem',
-                fontWeight: 800,
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
-                transition: 'all 0.18s ease'
-              }}
-            >
-              <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
-              <span>Resume</span>
-            </button>
-          </div>
-        </header>
+        {/* Mobile Sidebar Trigger (only on screens <= 1024px) */}
+        <button
+          type="button"
+          className="mobile-only ot-course-mobile-trigger"
+          onClick={() => setMobileSidebarOpen(true)}
+          aria-label="Open Course Menu"
+        >
+          <i className="fa-solid fa-bars"></i>
+        </button>
 
 
         <main style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
