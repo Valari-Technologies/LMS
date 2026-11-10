@@ -52,3 +52,4 @@ public class SessionRecordingRating {
         this.updatedAt = Instant.now();
     }
 }
+

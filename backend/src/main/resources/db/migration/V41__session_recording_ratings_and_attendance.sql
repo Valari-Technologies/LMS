@@ -36,3 +36,4 @@ CREATE TABLE IF NOT EXISTS live_session_attendance (
 CREATE INDEX IF NOT EXISTS idx_session_att_session_id ON live_session_attendance(session_id);
 CREATE INDEX IF NOT EXISTS idx_session_att_student_id ON live_session_attendance(student_id);
 CREATE INDEX IF NOT EXISTS idx_session_att_course_id ON live_session_attendance(course_id);
+

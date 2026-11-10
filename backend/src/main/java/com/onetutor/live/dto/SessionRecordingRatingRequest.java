@@ -11,3 +11,4 @@ public record SessionRecordingRatingRequest(
         Integer rating,
         String comment
 ) {}
+

@@ -77,3 +77,4 @@ public class LiveSessionAttendance {
         this.updatedAt = Instant.now();
     }
 }
+

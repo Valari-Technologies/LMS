@@ -24,3 +24,4 @@ public interface SessionRecordingRatingRepository extends JpaRepository<SessionR
     @Query("SELECT r FROM SessionRecordingRating r WHERE r.recording.id IN :recordingIds")
     List<SessionRecordingRating> findByRecordingIdIn(@Param("recordingIds") List<Long> recordingIds);
 }
+

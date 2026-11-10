@@ -277,6 +277,7 @@ export default function StudentLayout() {
     : (isStaff ? 'ADMIN' : 'STUDENT');
   const isCommunityPage = location.pathname.startsWith('/student/community');
   const isLearningPage = location.pathname.startsWith('/student/learn');
+  const isCourseDashboardPage = location.pathname.includes('/dashboard');
 
   return (
     <div className="ud-shell">
@@ -288,8 +289,10 @@ export default function StudentLayout() {
           TOP NAVBAR:
           Desktop: Menu, Brand, Categories, SearchBox, Links, Bell, Avatar
           Small Screen (Mobile): ONLY Menu, Brand, Search Icon, Profile Avatar
+          (Hidden on dedicated Course Dashboard/Space to prevent dual navbars)
           ==================================================================== */}
-      <header className="ud-header">
+      {!isCourseDashboardPage && (
+        <header className="ud-header">
         <div className="ud-header-left">
           {/* Mobile hamburger menu button */}
           <button
@@ -1092,6 +1095,7 @@ export default function StudentLayout() {
           )}
         </div>
       </header>
+      )}
 
       {/* ====================================================================
           AMAZON-STYLE MOBILE SEARCH MODAL OVERLAY
@@ -1331,9 +1335,9 @@ export default function StudentLayout() {
       {user && <CommunityToastNotifier role="student" />}
 
       {/* ====================================================================
-          ONETUTOR FOOTER (Hidden on community chat and course learning page)
+          ONETUTOR FOOTER (Hidden on community chat, course learning page, and course dashboard)
           ==================================================================== */}
-      {!isCommunityPage && !isLearningPage && (
+      {!isCommunityPage && !isLearningPage && !isCourseDashboardPage && (
         <footer className="ud-footer">
           <div className="ud-footer-inner">
             <div style={{ paddingBottom: '24px', borderBottom: '1px solid #3e4143', marginBottom: '28px' }}>

@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { getCourse } from '../../api/courses';
 import { myCourses } from '../../api/enrollment';
 import { getCourseProgress } from '../../api/progress';
-import { getLiveSessions, getCourseAttendance, rateRecording, checkInAttendance } from '../../api/live';
+import { getLiveSessions, getCourseAttendance, rateRecording } from '../../api/live';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
+import { useAuth } from '../../auth/AuthContext';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
+import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
 
 function getLiveEffectiveStatus(session) {
   if (!session) return 'upcoming';
@@ -43,8 +45,9 @@ export default function StudentCourseDashboardPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
 
-  const activeTab = searchParams.get('tab') || 'dashboard';
+  const activeTab = searchParams.get('tab') || 'home';
   const setActiveTab = (tab) => {
     setSearchParams({ tab });
   };
@@ -128,7 +131,7 @@ export default function StudentCourseDashboardPage() {
     };
   }, [courseId]);
 
-  // Filter sessions specifically for this course and batch
+  // Filter sessions specifically for this course
   const courseSessions = liveSessions.filter(s => String(s.courseId) === String(courseId));
 
   const upcomingSessions = courseSessions.filter(s => {
@@ -136,6 +139,7 @@ export default function StudentCourseDashboardPage() {
     return eff === 'upcoming' || eff === 'live';
   });
 
+  const liveActiveSessions = courseSessions.filter(s => getLiveEffectiveStatus(s) === 'live');
   const recordingSessions = courseSessions.filter(s => s.recordings && s.recordings.length > 0);
 
   // Calculate syllabus stats
@@ -145,11 +149,13 @@ export default function StudentCourseDashboardPage() {
 
   // Find next up lesson to resume
   let nextLesson = null;
+  let nextSectionTitle = '';
   if (course?.sections) {
     for (const sec of course.sections) {
       for (const c of (sec.contents || [])) {
         if (!progress?.completedContentIds?.includes(c.id)) {
           nextLesson = c;
+          nextSectionTitle = sec.title;
           break;
         }
       }
@@ -157,6 +163,7 @@ export default function StudentCourseDashboardPage() {
     }
     if (!nextLesson && course.sections[0]?.contents?.[0]) {
       nextLesson = course.sections[0].contents[0];
+      nextSectionTitle = course.sections[0].title;
     }
   }
 
@@ -191,9 +198,9 @@ export default function StudentCourseDashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: '#64748b' }}>
+      <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', background: '#0f172a', color: '#94a3b8' }}>
         <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2.4rem', color: '#5A70D3' }}></i>
-        <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#0b1f3a' }}>Loading Course Space...</div>
+        <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#f8fafc', letterSpacing: '0.5px' }}>CONNECTING COURSE TERMINAL...</div>
       </div>
     );
   }
@@ -203,198 +210,160 @@ export default function StudentCourseDashboardPage() {
     ? `${enrollment.batchName}${enrollment.batchCode ? ` • ${enrollment.batchCode}` : ''}`
     : 'Regular Batch';
 
+  const nextSession = upcomingSessions[0] || null;
+  const isSessionLiveNow = liveActiveSessions.length > 0;
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', paddingBottom: '60px' }}>
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
       {/* ===================================================================
-          1. TOP NAVIGATION & BREADCRUMB
+          1. SINGLE DEDICATED POS-STYLE COURSE NAVBAR (Sticky Top)
+          No duplicate global navbar above, no duplicate breadcrumb below!
           =================================================================== */}
-      <div style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '14px 24px' }}>
-        <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem' }}>
-            <Link to="/student/my-courses" style={{ color: '#5A70D3', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <i className="fa-solid fa-arrow-left" style={{ fontSize: '0.82rem' }}></i>
-              <span>My Learning</span>
-            </Link>
-            <span style={{ color: '#cbd5e1' }}>/</span>
-            <span style={{ color: '#64748b', fontWeight: 600 }}>{course?.name || course?.title || 'Course Dashboard'}</span>
-            <span style={{ color: '#cbd5e1' }}>/</span>
-            <span style={{ color: '#0b1f3a', fontWeight: 700, textTransform: 'capitalize' }}>{activeTab}</span>
-          </div>
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        background: '#ffffff',
+        borderBottom: '1px solid #cbd5e1',
+        boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+        padding: '0 20px',
+        height: '66px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '14px'
+      }}>
+        {/* Left: Back button + Brand Logo + Course Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+          <button
+            type="button"
+            onClick={() => navigate('/student/my-courses')}
+            title="Return to My Learning"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              transition: 'all 0.15s ease',
+              flexShrink: 0
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#334155'; }}
+          >
+            <i className="fa-solid fa-arrow-left"></i>
+          </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Link
-              to={`/student/community/${courseId}`}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }} title="OneTutor Home">
+            <img src={oneTutorBrandImg} alt="OneTutor" style={{ height: '30px', objectFit: 'contain' }} />
+          </Link>
+
+          <div style={{ width: '1px', height: '24px', background: '#cbd5e1', flexShrink: 0 }} />
+
+          {/* Course Name & Batch Tag */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <span
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '8px',
-                background: 'rgba(90, 112, 211, 0.08)',
-                color: '#5A70D3',
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <i className="fa-solid fa-comments"></i>
-              <span>Community Chat</span>
-            </Link>
-
-            <button
-              onClick={() => navigate(`/student/learn/${courseId}`)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 16px',
-                borderRadius: '8px',
-                background: '#5A70D3',
-                color: '#ffffff',
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(90, 112, 211, 0.25)',
-                transition: 'all 0.18s ease'
-              }}
-            >
-              <i className="fa-solid fa-play" style={{ fontSize: '0.72rem' }}></i>
-              <span>Resume Learning</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '24px 20px 0 20px' }}>
-        {/* ===================================================================
-            2. COURSE HERO / HEADER SUMMARY CARD
-            =================================================================== */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '20px',
-          padding: '24px',
-          boxShadow: '0 4px 20px rgba(11, 31, 58, 0.04)',
-          border: '1px solid #e2e8f0',
-          marginBottom: '24px',
-          display: 'flex',
-          gap: '24px',
-          alignItems: 'center',
-          flexWrap: 'wrap'
-        }}>
-          {thumbUrl && (
-            <div style={{
-              width: '160px',
-              height: '100px',
-              borderRadius: '14px',
-              overflow: 'hidden',
-              flexShrink: 0,
-              background: '#0b1f3a',
-              boxShadow: '0 4px 12px rgba(11, 31, 58, 0.12)'
-            }}>
-              <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          )}
-
-          <div style={{ flex: 1, minWidth: '260px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-              <span style={{
-                background: '#E8EBFA',
-                color: '#5A70D3',
-                fontSize: '0.74rem',
                 fontWeight: 800,
-                padding: '3px 10px',
-                borderRadius: '9999px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}>
-                <i className="fa-solid fa-users" style={{ fontSize: '0.66rem' }}></i>
-                {batchLabel}
-              </span>
-
-              {course?.category?.name && (
-                <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.74rem', fontWeight: 700, padding: '3px 9px', borderRadius: '9999px' }}>
-                  {course.category.name}
-                </span>
-              )}
-
-              <span style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <i className="fa-solid fa-circle-check"></i> Enrolled
-              </span>
-            </div>
-
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0b1f3a', margin: '0 0 6px 0', lineHeight: 1.25 }}>
-              {course?.name || course?.title}
-            </h1>
-
-            <p style={{ fontSize: '0.88rem', color: '#64748b', margin: '0 0 14px 0', lineHeight: 1.4, maxWidth: '780px' }}>
-              {course?.subtitle || course?.description?.substring(0, 140) || 'Master practical skills with instructor-led sessions, curriculum videos, and hands-on projects.'}
-            </p>
-
-            {/* Overall Progress Bar */}
-            <div style={{ maxWidth: '420px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: '#0b1f3a', marginBottom: '5px' }}>
-                <span>Course Progress</span>
-                <span style={{ color: '#5A70D3' }}>{progressPercent}% completed</span>
-              </div>
-              <div style={{ height: '7px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #5A70D3, #788ced)', borderRadius: '9999px', transition: 'width 0.3s ease' }} />
-              </div>
-            </div>
+                fontSize: '0.96rem',
+                color: '#0f172a',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '240px'
+              }}
+              title={course?.name || course?.title}
+            >
+              {course?.name || course?.title || 'Course Dashboard'}
+            </span>
+            <span style={{
+              background: 'rgba(90, 112, 211, 0.12)',
+              color: '#5A70D3',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}>
+              {batchLabel}
+            </span>
           </div>
         </div>
 
-        {/* ===================================================================
-            3. MAIN NAVIGATION TABS (DASHBOARD, ATTENDANCE, LIVE CLASSES, RECORDINGS)
-            =================================================================== */}
-        <div style={{
+        {/* Center: POS Segmented Navigation Tabs (Home, Dashboard, Attendance, Live Classes, Recordings) */}
+        <nav style={{
           display: 'flex',
-          gap: '8px',
-          borderBottom: '2px solid #e2e8f0',
-          marginBottom: '24px',
+          alignItems: 'center',
+          background: '#f8fafc',
+          padding: '4px',
+          borderRadius: '12px',
+          border: '1px solid #cbd5e1',
           overflowX: 'auto',
-          paddingBottom: '2px'
+          flexShrink: 0
         }}>
           {[
+            { id: 'home', label: 'Home', icon: 'fa-solid fa-house' },
             { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
             { id: 'attendance', label: 'Attendance', icon: 'fa-solid fa-calendar-check', badge: attendance ? `${attendance.attendancePercentage}%` : null },
-            { id: 'live', label: 'Live Classes', icon: 'fa-solid fa-tower-broadcast', badge: upcomingSessions.length > 0 ? upcomingSessions.length : null, badgeColor: '#ef4444' },
+            { id: 'live', label: 'Live Classes', icon: 'fa-solid fa-tower-broadcast', badge: isSessionLiveNow ? 'LIVE' : (upcomingSessions.length > 0 ? upcomingSessions.length : null), badgeColor: isSessionLiveNow ? '#ef4444' : null },
             { id: 'recordings', label: 'Recordings', icon: 'fa-solid fa-video', badge: recordingSessions.length > 0 ? recordingSessions.length : null }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  background: 'none',
+                  background: isActive ? '#0f172a' : 'transparent',
+                  color: isActive ? '#ffffff' : '#64748b',
                   border: 'none',
-                  borderBottom: isActive ? '3px solid #5A70D3' : '3px solid transparent',
-                  padding: '12px 18px',
-                  color: isActive ? '#5A70D3' : '#64748b',
+                  borderRadius: '9px',
+                  padding: '7px 15px',
+                  fontSize: '0.86rem',
                   fontWeight: isActive ? 800 : 600,
-                  fontSize: '0.96rem',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '7px',
                   whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease',
-                  marginBottom: '-2px'
+                  boxShadow: isActive ? '0 2px 6px rgba(15, 23, 42, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = '#e2e8f0';
+                    e.currentTarget.style.color = '#0f172a';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = '#64748b';
+                  }
                 }}
               >
-                <i className={tab.icon} style={{ fontSize: '0.9rem', color: isActive ? '#5A70D3' : '#94a3b8' }}></i>
+                <i className={tab.icon} style={{ fontSize: '0.82rem', color: isActive ? '#93c5fd' : '#94a3b8' }}></i>
                 <span>{tab.label}</span>
                 {tab.badge && (
                   <span style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    padding: '2px 7px',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    padding: '1px 6px',
                     borderRadius: '9999px',
-                    background: tab.badgeColor ? '#fee2e2' : 'rgba(90, 112, 211, 0.12)',
-                    color: tab.badgeColor ? '#ef4444' : '#5A70D3'
+                    background: isActive
+                      ? (tab.badgeColor ? '#ef4444' : 'rgba(255, 255, 255, 0.2)')
+                      : (tab.badgeColor ? '#fee2e2' : '#e2e8f0'),
+                    color: isActive
+                      ? '#ffffff'
+                      : (tab.badgeColor ? '#ef4444' : '#0f172a')
                   }}>
                     {tab.badge}
                   </span>
@@ -402,38 +371,748 @@ export default function StudentCourseDashboardPage() {
               </button>
             );
           })}
+        </nav>
+
+        {/* Right: Community Chat + Resume CTA + User Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <Link
+            to={`/student/community/${courseId}`}
+            title="Course Community Chat"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 12px',
+              borderRadius: '9px',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              color: '#475569',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#475569'; }}
+          >
+            <i className="fa-solid fa-comments" style={{ color: '#5A70D3' }}></i>
+            <span style={{ display: 'inline' }}>Community</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '8px 16px',
+              borderRadius: '9px',
+              background: '#5A70D3',
+              color: '#ffffff',
+              fontSize: '0.84rem',
+              fontWeight: 800,
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
+              transition: 'all 0.18s ease'
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+          >
+            <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
+            <span>Resume</span>
+          </button>
+
+          {/* User profile avatar */}
+          {user && (
+            <div
+              title={`${user.name || user.email} (${user.role})`}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: '#0f172a',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #e2e8f0',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              onClick={() => navigate('/student/profile')}
+            >
+              {user.avatar ? (
+                <img src={resolveMediaUrl(user.avatar)} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              ) : (
+                (user.name || user.email || 'S').charAt(0).toUpperCase()
+              )}
+            </div>
+          )}
         </div>
+      </header>
+
+      {/* ===================================================================
+          2. MAIN POS WORKSPACE CONTENT
+          =================================================================== */}
+      <main style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
+        
+        {/* ===================================================================
+            TAB 1: HOME (POS Terminal Command Center)
+            =================================================================== */}
+        {activeTab === 'home' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+            
+            {/* POS Hero Header Banner */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              padding: '24px',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '24px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: '300px' }}>
+                {thumbUrl && (
+                  <div style={{
+                    width: '130px',
+                    height: '84px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: '#0f172a',
+                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.1)',
+                    border: '1px solid #cbd5e1'
+                  }}>
+                    <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      color: '#10b981',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      padding: '2px 9px',
+                      borderRadius: '9999px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <i className="fa-solid fa-circle-check"></i> Enrolled
+                    </span>
+
+                    <span style={{ background: '#0f172a', color: '#ffffff', fontSize: '0.72rem', fontWeight: 800, padding: '2px 9px', borderRadius: '9999px' }}>
+                      {batchLabel}
+                    </span>
+
+                    {course?.category?.name && (
+                      <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: 700, padding: '2px 9px', borderRadius: '9999px' }}>
+                        {course.category.name}
+                      </span>
+                    )}
+                  </div>
+
+                  <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0', lineHeight: 1.25 }}>
+                    {course?.name || course?.title}
+                  </h1>
+
+                  <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    <span><i className="fa-regular fa-folder-open" style={{ marginRight: '5px', color: '#5A70D3' }}></i> {course?.sections?.length || 0} Modules</span>
+                    <span><i className="fa-regular fa-circle-play" style={{ marginRight: '5px', color: '#5A70D3' }}></i> {totalLessons} Lessons</span>
+                    <span><i className="fa-solid fa-tower-broadcast" style={{ marginRight: '5px', color: '#ef4444' }}></i> {courseSessions.length} Live Sessions</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course Progress Terminal Box */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '14px',
+                padding: '16px 20px',
+                minWidth: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
+                  <span>Syllabus Progress</span>
+                  <span style={{ color: '#5A70D3', fontSize: '1rem' }}>{progressPercent}%</span>
+                </div>
+                <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #5A70D3, #788ced)', borderRadius: '9999px', transition: 'width 0.3s ease' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748b' }}>
+                  <span>{completedLessons} of {totalLessons} completed</span>
+                  <span style={{ fontWeight: 700, color: progressPercent === 100 ? '#10b981' : '#5A70D3' }}>
+                    {progressPercent === 100 ? 'Certified' : 'In Progress'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 POS KPI Terminal Metric Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              {/* Tile 1: Course Progress */}
+              <div
+                onClick={() => setActiveTab('dashboard')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Course Progress
+                  </span>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-chart-pie" style={{ fontSize: '0.86rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {progressPercent}%
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{completedLessons} / {totalLessons} lessons done</span>
+                  <span style={{ color: '#5A70D3', fontWeight: 700 }}>Open Syllabus →</span>
+                </div>
+              </div>
+
+              {/* Tile 2: Live Attendance */}
+              <div
+                onClick={() => setActiveTab('attendance')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#10b981'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Attendance Rate
+                  </span>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-user-check" style={{ fontSize: '0.86rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: (attendance?.attendancePercentage ?? 100) >= 75 ? '#10b981' : '#ef4444', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {attendance?.attendancePercentage ?? 100}%
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{attendance?.attendedSessions ?? 0} of {attendance?.totalSessions ?? 0} attended</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>Records →</span>
+                </div>
+              </div>
+
+              {/* Tile 3: Live Classes */}
+              <div
+                onClick={() => setActiveTab('live')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                  boxShadow: isSessionLiveNow ? '0 4px 18px rgba(239, 68, 68, 0.15)' : '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Live Classroom
+                  </span>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: isSessionLiveNow ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.86rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: isSessionLiveNow ? '#ef4444' : '#0f172a', lineHeight: 1.2, marginBottom: '4px' }}>
+                  {isSessionLiveNow ? '🔴 LIVE NOW' : (upcomingSessions.length > 0 ? `${upcomingSessions.length} Scheduled` : 'Up to Date')}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{nextSession ? new Date(nextSession.scheduledAt).toLocaleDateString() : 'No pending classes'}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>Enter Class →</span>
+                </div>
+              </div>
+
+              {/* Tile 4: Recorded Classes */}
+              <div
+                onClick={() => setActiveTab('recordings')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Class Recordings
+                  </span>
+                  <span style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.12)', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-film" style={{ fontSize: '0.86rem' }}></i>
+                  </span>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {recordingSessions.length} <span style={{ fontSize: '1rem', fontWeight: 700, color: '#64748b' }}>Replays</span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Rate &amp; stream video</span>
+                  <span style={{ color: '#ca8a04', fontWeight: 700 }}>Watch Archive →</span>
+                </div>
+              </div>
+            </div>
+
+            {/* POS Dual Workstation Terminal (Next Up in Curriculum + Live Classroom Terminal) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+              
+              {/* Terminal Card 1: Next Lesson in Curriculum */}
+              <div style={{
+                background: '#0f172a',
+                color: '#ffffff',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: '1px solid #1e293b'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      color: '#93c5fd',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <i className="fa-solid fa-play"></i> NEXT UP IN CURRICULUM
+                    </span>
+                    {nextSectionTitle && (
+                      <span style={{ fontSize: '0.74rem', color: '#94a3b8', background: 'rgba(255, 255, 255, 0.08)', padding: '2px 8px', borderRadius: '6px' }}>
+                        {nextSectionTitle}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: '0 0 8px 0', lineHeight: 1.3 }}>
+                    {nextLesson ? nextLesson.title : 'All Lessons Completed!'}
+                  </h3>
+
+                  <p style={{ fontSize: '0.86rem', color: '#94a3b8', margin: '0 0 20px 0', lineHeight: 1.45 }}>
+                    {nextLesson?.description || 'Pick up right where you left off. Every completed lesson updates your attendance and certificate progress.'}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
+                    style={{
+                      background: '#5A70D3',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px 24px',
+                      fontWeight: 800,
+                      fontSize: '0.92rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(90, 112, 211, 0.4)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                  >
+                    <i className="fa-solid fa-circle-play"></i>
+                    <span>{nextLesson ? 'Start Video Lesson' : 'Replay Syllabus'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('dashboard')}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: '#e2e8f0',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      borderRadius: '10px',
+                      padding: '12px 18px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <i className="fa-solid fa-list-check"></i>
+                    <span>View Syllabus</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Terminal Card 2: Live Classroom Command Station */}
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+                border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      color: isSessionLiveNow ? '#ef4444' : '#5A70D3',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <i className="fa-solid fa-tower-broadcast"></i>
+                      {isSessionLiveNow ? 'LIVE CLASSROOM IN SESSION' : 'NEXT SCHEDULED LIVE CLASS'}
+                    </span>
+
+                    {nextSession?.batchName && (
+                      <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                        {nextSession.batchName}
+                      </span>
+                    )}
+                  </div>
+
+                  {nextSession ? (
+                    <>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', lineHeight: 1.3 }}>
+                        {nextSession.title}
+                      </h3>
+                      <p style={{ fontSize: '0.86rem', color: '#64748b', margin: '0 0 16px 0', lineHeight: 1.45 }}>
+                        {nextSession.description || 'Interactive live session with your instructor and batchmates. Enter classroom to mark attendance.'}
+                      </p>
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '0.82rem', color: '#334155' }}>
+                        <i className="fa-regular fa-clock" style={{ marginRight: '6px', color: '#5A70D3' }}></i>
+                        <strong>Scheduled:</strong> {new Date(nextSession.scheduledAt).toLocaleString()}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b' }}>
+                      <i className="fa-solid fa-calendar-check" style={{ fontSize: '2rem', color: '#cbd5e1', marginBottom: '8px', display: 'block' }}></i>
+                      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>All Live Classes Caught Up</div>
+                      <div style={{ fontSize: '0.84rem' }}>No pending live sessions for this batch right now.</div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {nextSession ? (
+                    <Link
+                      to={`/student/live-classroom/${nextSession.id}`}
+                      style={{
+                        flex: 1,
+                        background: isSessionLiveNow ? '#ef4444' : '#0f172a',
+                        color: '#ffffff',
+                        borderRadius: '10px',
+                        padding: '12px 18px',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: isSessionLiveNow ? '0 4px 14px rgba(239, 68, 68, 0.4)' : '0 2px 8px rgba(15, 23, 42, 0.2)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <i className={`fa-solid ${isSessionLiveNow ? 'fa-bolt' : 'fa-video'}`}></i>
+                      <span>{isSessionLiveNow ? 'Join Live Now' : 'Enter Classroom'}</span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('recordings')}
+                      style={{
+                        flex: 1,
+                        background: '#5A70D3',
+                        color: '#ffffff',
+                        borderRadius: '10px',
+                        padding: '12px 18px',
+                        fontWeight: 800,
+                        fontSize: '0.9rem',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <i className="fa-solid fa-film"></i>
+                      <span>Watch Replays</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('live')}
+                    style={{
+                      background: '#f8fafc',
+                      color: '#475569',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '10px',
+                      padding: '12px 16px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Full Schedule
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* POS Tactical Quick Jump Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+              <div
+                onClick={() => setActiveTab('dashboard')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#5A70D3'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#E8EBFA', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  <i className="fa-solid fa-list-ol"></i>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.94rem' }}>Curriculum Syllabus</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Browse all modules and lessons</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('attendance')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  <i className="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.94rem' }}>Attendance Records</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Check-in history and standing</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('live')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  <i className="fa-solid fa-tower-broadcast"></i>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.94rem' }}>Live Class Calendar</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Upcoming session schedules</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('recordings')}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '18px',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#ca8a04'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  <i className="fa-solid fa-star"></i>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.94rem' }}>Replays &amp; Ratings</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Rate recording classes &amp; stream</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
 
         {/* ===================================================================
-            4. TAB CONTENT 1: DASHBOARD (OVERVIEW)
+            TAB 2: DASHBOARD (Curriculum Syllabus & Progress)
             =================================================================== */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-            {/* Left Column: Continue Learning Card & Curriculum Breakdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Continue / Next Lesson Card */}
+            {/* Left Column: Curriculum Syllabus Breakdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-list-check" style={{ color: '#5A70D3' }}></i>
+                    <span>Curriculum Syllabus</span>
+                  </h3>
+                  <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 700, background: '#f8fafc', padding: '4px 12px', borderRadius: '9999px', border: '1px solid #e2e8f0' }}>
+                    {completedLessons} / {totalLessons} lessons completed
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {(course?.sections || []).map((sec, sIdx) => {
+                    const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
+                    const secTotal = sec.contents?.length || 0;
+                    return (
+                      <div key={sec.id || sIdx} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
+                            {sIdx + 1}. {sec.title}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 800, background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
+                            {secCompleted}/{secTotal} done
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {sec.contents?.map((c, cIdx) => {
+                            const isDone = progress?.completedContentIds?.includes(c.id);
+                            return (
+                              <div
+                                key={c.id || cIdx}
+                                onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '8px 10px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.15s ease',
+                                  background: isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
+                                onMouseLeave={e => e.currentTarget.style.background = isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDone ? '#059669' : '#334155', fontWeight: isDone ? 700 : 500, fontSize: '0.88rem' }}>
+                                  <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ fontSize: '0.86rem', color: isDone ? '#10b981' : '#5A70D3' }}></i>
+                                  <span>{c.title}</span>
+                                </span>
+                                <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'capitalize' }}>
+                                  {c.contentType || 'video'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Next Lesson & Quick Links */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {nextLesson && (
                 <div style={{
-                  background: 'linear-gradient(135deg, #0b1f3a 0%, #1e3a8a 100%)',
-                  borderRadius: '18px',
+                  background: '#0f172a',
+                  borderRadius: '16px',
                   padding: '24px',
                   color: '#ffffff',
-                  boxShadow: '0 8px 24px rgba(11, 31, 58, 0.15)'
+                  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+                  border: '1px solid #1e293b'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
                     <i className="fa-solid fa-play"></i>
-                    <span>Next Video Lesson</span>
+                    <span>Resume Learning</span>
                   </div>
 
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', color: '#ffffff' }}>
                     {nextLesson.title}
                   </h3>
 
-                  <p style={{ fontSize: '0.88rem', color: '#cbd5e1', margin: '0 0 18px 0', lineHeight: 1.4 }}>
-                    {nextLesson.description || 'Pick up right where you left off. Complete lessons to unlock milestones and certificates.'}
+                  <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '0 0 18px 0', lineHeight: 1.45 }}>
+                    {nextLesson.description || 'Watch the next curriculum video lesson to keep making progress.'}
                   </p>
 
                   <button
+                    type="button"
                     onClick={() => navigate(`/student/learn/${courseId}?contentId=${nextLesson.id}`)}
                     style={{
                       background: '#5A70D3',
@@ -457,88 +1136,26 @@ export default function StudentCourseDashboardPage() {
                 </div>
               )}
 
-              {/* Course Curriculum Summary */}
-              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(11, 31, 58, 0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0b1f3a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fa-solid fa-list-check" style={{ color: '#5A70D3' }}></i>
-                    <span>Curriculum Syllabus</span>
-                  </h3>
-                  <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
-                    {completedLessons} / {totalLessons} lessons completed
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {(course?.sections || []).map((sec, sIdx) => {
-                    const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
-                    const secTotal = sec.contents?.length || 0;
-                    return (
-                      <div key={sec.id || sIdx} style={{ background: '#f8fafc', border: '1px solid #edf2f7', borderRadius: '12px', padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0b1f3a' }}>
-                            {sIdx + 1}. {sec.title}
-                          </span>
-                          <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, background: 'rgba(90, 112, 211, 0.08)', padding: '2px 8px', borderRadius: '9999px' }}>
-                            {secCompleted}/{secTotal} done
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                          {sec.contents?.map((c, cIdx) => {
-                            const isDone = progress?.completedContentIds?.includes(c.id);
-                            return (
-                              <div
-                                key={c.id || cIdx}
-                                onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '6px 8px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  transition: 'background 0.15s ease'
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                              >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isDone ? '#10b981' : '#334155', fontWeight: isDone ? 600 : 500 }}>
-                                  <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ fontSize: '0.82rem' }}></i>
-                                  <span>{c.title}</span>
-                                </span>
-                                <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>{c.contentType}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Attendance Stat Cards & Quick Links */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Quick Attendance Snapshot */}
-              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '22px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(11, 31, 58, 0.03)' }}>
+              {/* Attendance Quick Insight */}
+              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0b1f3a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <i className="fa-solid fa-user-check" style={{ color: '#10b981' }}></i>
                     <span>Live Class Attendance</span>
                   </h3>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('attendance')}
                     style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    View Details →
+                    Details →
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #edf2f7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #cbd5e1' }}>
                   <div style={{
-                    width: '64px',
-                    height: '64px',
+                    width: '60px',
+                    height: '60px',
                     borderRadius: '50%',
                     background: 'rgba(16, 185, 129, 0.12)',
                     color: '#10b981',
@@ -546,123 +1163,37 @@ export default function StudentCourseDashboardPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.25rem',
-                    fontWeight: 800,
+                    fontWeight: 900,
                     flexShrink: 0
                   }}>
                     {attendance?.attendancePercentage ?? 100}%
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0b1f3a', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
                       {attendance?.attendedSessions ?? 0} of {attendance?.totalSessions ?? 0} Sessions Attended
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                       {(attendance?.attendancePercentage ?? 100) >= 75
-                        ? '🟢 Excellent standing! Keep attending live classes.'
-                        : '⚠️ Attendance is below 75%. Try attending upcoming classes.'}
+                        ? '🟢 Meets 75% eligibility for batch certificate.'
+                        : '⚠️ Below 75%. Try attending upcoming classes.'}
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Next Live Session Teaser */}
-              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '22px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(11, 31, 58, 0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0b1f3a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fa-solid fa-tower-broadcast" style={{ color: '#ef4444' }}></i>
-                    <span>Live Class Schedule</span>
-                  </h3>
-                  <button
-                    onClick={() => setActiveTab('live')}
-                    style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    View Schedule →
-                  </button>
-                </div>
-
-                {upcomingSessions.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '24px 12px', color: '#64748b', fontSize: '0.88rem' }}>
-                    <i className="fa-regular fa-calendar-xmark" style={{ fontSize: '1.8rem', color: '#cbd5e1', marginBottom: '8px', display: 'block' }}></i>
-                    No upcoming live classes right now for this batch.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {upcomingSessions.slice(0, 2).map(s => {
-                      const eff = getLiveEffectiveStatus(s);
-                      return (
-                        <div key={s.id} style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0b1f3a' }}>{s.title}</span>
-                            {eff === 'live' ? (
-                              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ef4444', background: '#fee2e2', padding: '2px 8px', borderRadius: '9999px' }}>
-                                🔴 LIVE NOW
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5A70D3', background: '#E8EBFA', padding: '2px 8px', borderRadius: '9999px' }}>
-                                Upcoming
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '8px' }}>
-                            <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
-                            {new Date(s.scheduledAt).toLocaleString()}
-                          </div>
-                          <Link
-                            to={`/student/live-classroom/${s.id}`}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '5px 12px',
-                              borderRadius: '6px',
-                              background: eff === 'live' ? '#ef4444' : '#5A70D3',
-                              color: '#ffffff',
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                              textDecoration: 'none'
-                            }}
-                          >
-                            <i className="fa-solid fa-video"></i>
-                            <span>{eff === 'live' ? 'Join Now' : 'Enter Classroom'}</span>
-                          </Link>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Recorded Archive Quick Access */}
-              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '22px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(11, 31, 58, 0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0b1f3a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
-                    <span>Recorded Replays</span>
-                  </h3>
-                  <button
-                    onClick={() => setActiveTab('recordings')}
-                    style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    View All ({recordingSessions.length}) →
-                  </button>
-                </div>
-                <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>
-                  Missed any live class? Stream all recorded lectures on demand and rate each recording class.
-                </p>
               </div>
             </div>
           </div>
         )}
 
         {/* ===================================================================
-            5. TAB CONTENT 2: ATTENDANCE
+            TAB 3: ATTENDANCE
             =================================================================== */}
         {activeTab === 'attendance' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
             {/* Top Metric Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(11, 31, 58, 0.02)' }}>
-                <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, marginBottom: '6px' }}>Overall Attendance</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#10b981' }}>
+              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Overall Attendance</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: (attendance?.attendancePercentage ?? 100) >= 75 ? '#10b981' : '#ef4444' }}>
                   {attendance?.attendancePercentage ?? 100}%
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
@@ -670,9 +1201,9 @@ export default function StudentCourseDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(11, 31, 58, 0.02)' }}>
-                <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, marginBottom: '6px' }}>Classes Held</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0b1f3a' }}>
+              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Held</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a' }}>
                   {attendance?.totalSessions ?? 0}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
@@ -680,9 +1211,9 @@ export default function StudentCourseDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(11, 31, 58, 0.02)' }}>
-                <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, marginBottom: '6px' }}>Classes Attended</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#5A70D3' }}>
+              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Attended</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#5A70D3' }}>
                   {attendance?.attendedSessions ?? 0}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#10b981', marginTop: '4px' }}>
@@ -690,9 +1221,9 @@ export default function StudentCourseDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(11, 31, 58, 0.02)' }}>
-                <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, marginBottom: '6px' }}>Classes Missed</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ef4444' }}>
+              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Missed</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#ef4444' }}>
                   {attendance?.missedSessions ?? 0}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
@@ -702,10 +1233,10 @@ export default function StudentCourseDashboardPage() {
             </div>
 
             {/* Attendance History Table */}
-            <div style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(11, 31, 58, 0.03)' }}>
+            <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0b1f3a', margin: '0 0 4px 0' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
                     Live Session Attendance Records
                   </h3>
                   <p style={{ fontSize: '0.86rem', color: '#64748b', margin: 0 }}>
@@ -726,14 +1257,14 @@ export default function StudentCourseDashboardPage() {
               {(!attendance?.sessions || attendance.sessions.length === 0) ? (
                 <div style={{ textAlign: 'center', padding: '48px 16px', color: '#64748b' }}>
                   <i className="fa-regular fa-calendar-check" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', color: '#0b1f3a', fontWeight: 800 }}>No live class records yet</h4>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>No live class records yet</h4>
                   <p style={{ margin: 0, fontSize: '0.88rem' }}>Live class sessions for this batch will appear here once held.</p>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                     <thead>
-                      <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.82rem', textTransform: 'uppercase' }}>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.8rem', textTransform: 'uppercase' }}>
                         <th style={{ padding: '12px 14px' }}>Session Topic</th>
                         <th style={{ padding: '12px 14px' }}>Date &amp; Time</th>
                         <th style={{ padding: '12px 14px' }}>Status</th>
@@ -747,7 +1278,7 @@ export default function StudentCourseDashboardPage() {
                         const isUpcoming = s.attendanceStatus === 'UPCOMING';
                         return (
                           <tr key={s.sessionId || idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }}>
-                            <td style={{ padding: '14px', fontWeight: 700, color: '#0b1f3a' }}>
+                            <td style={{ padding: '14px', fontWeight: 700, color: '#0f172a' }}>
                               {s.sessionTitle}
                             </td>
                             <td style={{ padding: '14px', color: '#64748b' }}>
@@ -808,6 +1339,7 @@ export default function StudentCourseDashboardPage() {
                                 </Link>
                               ) : (
                                 <button
+                                  type="button"
                                   onClick={() => setActiveTab('recordings')}
                                   style={{ background: 'none', border: 'none', color: '#5A70D3', fontWeight: 700, cursor: 'pointer' }}
                                 >
@@ -827,13 +1359,13 @@ export default function StudentCourseDashboardPage() {
         )}
 
         {/* ===================================================================
-            6. TAB CONTENT 3: LIVE CLASSES
+            TAB 4: LIVE CLASSES
             =================================================================== */}
         {activeTab === 'live' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0b1f3a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <i className="fa-solid fa-tower-broadcast" style={{ color: '#ef4444' }}></i>
                   <span>Live &amp; Upcoming Classes</span>
                 </h2>
@@ -844,9 +1376,9 @@ export default function StudentCourseDashboardPage() {
             </div>
 
             {upcomingSessions.length === 0 ? (
-              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '48px 24px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '48px 24px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
                 <i className="fa-solid fa-calendar-xmark" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
-                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0b1f3a' }}>No live classes currently scheduled</h3>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>No live classes currently scheduled</h3>
                 <p style={{ margin: 0, fontSize: '0.9rem' }}>Check back soon! Tutors post live classroom sessions before each scheduled module.</p>
               </div>
             ) : (
@@ -859,10 +1391,10 @@ export default function StudentCourseDashboardPage() {
                       key={s.id}
                       style={{
                         background: '#ffffff',
-                        borderRadius: '18px',
+                        borderRadius: '16px',
                         padding: '24px',
-                        border: isLive ? '2px solid #ef4444' : '1px solid #e2e8f0',
-                        boxShadow: isLive ? '0 8px 30px rgba(239, 68, 68, 0.15)' : '0 4px 16px rgba(11, 31, 58, 0.03)',
+                        border: isLive ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                        boxShadow: isLive ? '0 8px 30px rgba(239, 68, 68, 0.15)' : '0 4px 16px rgba(15, 23, 42, 0.03)',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between'
@@ -887,7 +1419,7 @@ export default function StudentCourseDashboardPage() {
                           )}
                         </div>
 
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0b1f3a', marginBottom: '8px', lineHeight: 1.3 }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3 }}>
                           {s.title}
                         </h3>
 
@@ -897,7 +1429,7 @@ export default function StudentCourseDashboardPage() {
                           </p>
                         )}
 
-                        <div style={{ background: '#f8fafc', border: '1px solid #edf2f7', borderRadius: '12px', padding: '12px 14px', marginBottom: '20px', fontSize: '0.84rem', color: '#334155' }}>
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px', marginBottom: '20px', fontSize: '0.84rem', color: '#334155' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <i className="fa-regular fa-calendar" style={{ color: '#5A70D3' }}></i>
                             <span><strong>Scheduled:</strong> {new Date(s.scheduledAt).toLocaleString()}</span>
@@ -942,13 +1474,13 @@ export default function StudentCourseDashboardPage() {
         )}
 
         {/* ===================================================================
-            7. TAB CONTENT 4: RECORDINGS (WITH CLASS RATING FEATURE!)
+            TAB 5: RECORDINGS (WITH 5-STAR RECORDING CLASS RATING FEATURE)
             =================================================================== */}
         {activeTab === 'recordings' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0b1f3a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
                   <span>Recorded Session Classes</span>
                 </h2>
@@ -959,9 +1491,9 @@ export default function StudentCourseDashboardPage() {
             </div>
 
             {recordingSessions.length === 0 ? (
-              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '48px 24px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '48px 24px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
                 <i className="fa-solid fa-film" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
-                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0b1f3a' }}>No session recordings available yet</h3>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>No session recordings available yet</h3>
                 <p style={{ margin: 0, fontSize: '0.9rem' }}>Recordings are processed and uploaded here after live classes conclude.</p>
               </div>
             ) : (
@@ -972,10 +1504,10 @@ export default function StudentCourseDashboardPage() {
                       key={s.id}
                       style={{
                         background: '#ffffff',
-                        borderRadius: '18px',
+                        borderRadius: '16px',
                         padding: '24px',
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 4px 16px rgba(11, 31, 58, 0.03)',
+                        border: '1px solid #cbd5e1',
+                        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between'
@@ -996,7 +1528,7 @@ export default function StudentCourseDashboardPage() {
                           )}
                         </div>
 
-                        <h3 style={{ fontSize: '1.22rem', fontWeight: 800, color: '#0b1f3a', marginBottom: '8px', lineHeight: 1.3 }}>
+                        <h3 style={{ fontSize: '1.22rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3 }}>
                           {s.title}
                         </h3>
 
@@ -1020,7 +1552,7 @@ export default function StudentCourseDashboardPage() {
                               key={r.id || rIdx}
                               style={{
                                 background: '#f8fafc',
-                                border: '1px solid #edf2f7',
+                                border: '1px solid #cbd5e1',
                                 borderRadius: '14px',
                                 padding: '14px',
                                 display: 'flex',
@@ -1030,7 +1562,7 @@ export default function StudentCourseDashboardPage() {
                             >
                               {/* Recording Title / Meta Row */}
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0b1f3a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <i className="fa-solid fa-circle-play" style={{ color: '#5A70D3' }}></i>
                                   <span>Recording {s.recordings.length > 1 ? `#${rIdx + 1}` : 'Class'}</span>
                                   {r.duration ? <span style={{ color: '#64748b', fontWeight: 500, fontSize: '0.8rem' }}>({Math.round(r.duration / 60)} mins)</span> : null}
@@ -1059,7 +1591,7 @@ export default function StudentCourseDashboardPage() {
                                   <div style={{ display: 'flex', gap: '3px', fontSize: '0.88rem' }}>
                                     {renderStars(avgRating)}
                                   </div>
-                                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0b1f3a' }}>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                                     {avgRating.toFixed(1)}
                                   </span>
                                   <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
@@ -1131,17 +1663,17 @@ export default function StudentCourseDashboardPage() {
             )}
           </div>
         )}
-      </div>
+      </main>
 
       {/* ===================================================================
-          8. RECORDING RATING MODAL DIALOG
+          3. RECORDING RATING MODAL DIALOG
           =================================================================== */}
       {ratingModalRecording && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(11, 31, 58, 0.75)',
+            background: 'rgba(15, 23, 42, 0.75)',
             backdropFilter: 'blur(6px)',
             zIndex: 1600,
             display: 'flex',
@@ -1158,8 +1690,8 @@ export default function StudentCourseDashboardPage() {
               maxWidth: '480px',
               width: '100%',
               padding: '28px',
-              boxShadow: '0 25px 60px rgba(11, 31, 58, 0.25)',
-              border: '1px solid #e2e8f0'
+              boxShadow: '0 25px 60px rgba(15, 23, 42, 0.25)',
+              border: '1px solid #cbd5e1'
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -1169,7 +1701,7 @@ export default function StudentCourseDashboardPage() {
                   <i className="fa-solid fa-star"></i>
                 </span>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0b1f3a', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                     Rate Recording Class
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
@@ -1296,14 +1828,14 @@ export default function StudentCourseDashboardPage() {
       )}
 
       {/* ===================================================================
-          9. VIDEO PLAYBACK MODAL FOR RECORDING
+          4. VIDEO PLAYBACK MODAL FOR RECORDING
           =================================================================== */}
       {selectedRecording && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(11, 31, 58, 0.75)',
+            background: 'rgba(15, 23, 42, 0.8)',
             backdropFilter: 'blur(8px)',
             zIndex: 1500,
             display: 'flex',
@@ -1320,20 +1852,20 @@ export default function StudentCourseDashboardPage() {
               maxWidth: '960px',
               borderRadius: '20px',
               overflow: 'hidden',
-              boxShadow: '0 25px 60px rgba(11, 31, 58, 0.25)',
-              border: '1px solid #e2e8f0',
+              boxShadow: '0 25px 60px rgba(15, 23, 42, 0.3)',
+              border: '1px solid #cbd5e1',
               display: 'flex',
               flexDirection: 'column'
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '1px solid #eef4f0', background: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(90, 112, 211, 0.08)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem' }}>
                   <i className="fa-solid fa-play"></i>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.18rem', fontWeight: 800, margin: '0 0 2px 0', color: '#0b1f3a' }}>
+                  <h3 style={{ fontSize: '1.18rem', fontWeight: 800, margin: '0 0 2px 0', color: '#0f172a' }}>
                     {selectedRecording.sessionTitle}
                   </h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1378,7 +1910,7 @@ export default function StudentCourseDashboardPage() {
               />
             </div>
 
-            <div style={{ padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', borderTop: '1px solid #eef4f0' }}>
+            <div style={{ padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
               <button
                 type="button"
                 onClick={() => {

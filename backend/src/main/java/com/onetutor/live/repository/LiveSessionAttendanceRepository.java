@@ -23,3 +23,4 @@ public interface LiveSessionAttendanceRepository extends JpaRepository<LiveSessi
     @Query("SELECT a FROM LiveSessionAttendance a WHERE a.session.id IN :sessionIds AND a.student.id = :studentId")
     List<LiveSessionAttendance> findBySessionIdInAndStudentId(@Param("sessionIds") List<Long> sessionIds, @Param("studentId") Long studentId);
 }
+
