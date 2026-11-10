@@ -25,10 +25,11 @@ public class AdminLiveSessionController {
     @GetMapping
     public ApiResponse<PageResponse<LiveSessionResponse>> list(
             @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) Long batchId,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(liveSessionService.adminList(courseId, status, PageRequest.of(page, size)));
+        return ApiResponse.ok(liveSessionService.adminList(courseId, batchId, status, PageRequest.of(page, size)));
     }
 
     @GetMapping("/upcoming-count")

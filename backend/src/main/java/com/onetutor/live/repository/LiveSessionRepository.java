@@ -50,8 +50,10 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, Long> 
     int revertFutureLiveSessions(@Param("now") Instant now);
 
     @Query("SELECT s FROM LiveSession s WHERE (:courseId IS NULL OR s.course.id = :courseId) " +
+           "AND (:batchId IS NULL OR s.batch.id = :batchId) " +
            "AND (:status IS NULL OR s.status = :status) ORDER BY s.scheduledAt DESC")
     Page<LiveSession> filterSessions(@Param("courseId") Long courseId,
+                                     @Param("batchId") Long batchId,
                                      @Param("status") LiveSessionStatus status,
                                      Pageable pageable);
 

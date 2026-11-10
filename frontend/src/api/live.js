@@ -17,9 +17,10 @@ export async function getLiveClassroomJoinInfo(sessionId) {
 }
 
 
-export async function getAdminLiveSessions({ courseId, status, page = 0, size = 20 } = {}) {
+export async function getAdminLiveSessions({ courseId, batchId, status, page = 0, size = 20 } = {}) {
   const params = { page, size };
-  if (courseId) params.courseId = courseId;
+  if (courseId && courseId !== 'ALL') params.courseId = courseId;
+  if (batchId && batchId !== 'ALL') params.batchId = batchId;
   if (status && status !== 'ALL') params.status = status;
   const res = await api.get('/admin/live-sessions', { params });
   return res.data.data;

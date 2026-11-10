@@ -13,7 +13,7 @@ import {
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
-import { getCourseBatches } from '../../api/batches';
+import { getCourseBatches, getAdminBatches } from '../../api/batches';
 import { useNotification } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
@@ -88,6 +88,9 @@ export default function AdminLiveSessionsPage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('ALL');
+  const [selectedCourseId, setSelectedCourseId] = useState('ALL');
+  const [selectedBatchId, setSelectedBatchId] = useState('ALL');
+  const [filterBatches, setFilterBatches] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   // Track sessions admin manually completed today (so we respect their action even for today's sessions)
@@ -153,6 +156,19 @@ export default function AdminLiveSessionsPage() {
       .catch(() => {});
   }, []);
 
+  // Load batches for course/batch filter
+  useEffect(() => {
+    if (selectedCourseId && selectedCourseId !== 'ALL') {
+      getCourseBatches(selectedCourseId)
+        .then((data) => setFilterBatches(data || []))
+        .catch(() => setFilterBatches([]));
+    } else {
+      getAdminBatches({ size: 200 })
+        .then((data) => setFilterBatches(data?.content || []))
+        .catch(() => setFilterBatches([]));
+    }
+  }, [selectedCourseId]);
+
   useEffect(() => {
     if (createForm.courseId) {
       getCourseBatches(createForm.courseId)
@@ -175,12 +191,18 @@ export default function AdminLiveSessionsPage() {
 
   useEffect(() => {
     loadSessions();
-  }, [status, page]);
+  }, [status, selectedCourseId, selectedBatchId, page]);
 
   async function loadSessions(showSpinner = true) {
     if (showSpinner) setLoading(true);
     try {
-      const res = await getAdminLiveSessions({ status, page, size: 10 });
+      const res = await getAdminLiveSessions({
+        courseId: selectedCourseId !== 'ALL' ? selectedCourseId : undefined,
+        batchId: selectedBatchId !== 'ALL' ? selectedBatchId : undefined,
+        status,
+        page,
+        size: 100
+      });
       setSessions(res?.content || []);
       setTotalPages(res?.totalPages || 1);
     } catch (e) {
@@ -225,7 +247,7 @@ export default function AdminLiveSessionsPage() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [status, page]);
+  }, [status, selectedCourseId, selectedBatchId, page]);
 
     async function handleCreate(e) {
     e.preventDefault();
@@ -507,6 +529,16 @@ export default function AdminLiveSessionsPage() {
     }
   }
 
+  const displayedSessions = sessions.filter((s) => {
+    if (selectedCourseId !== 'ALL' && String(s.courseId) !== String(selectedCourseId)) {
+      return false;
+    }
+    if (selectedBatchId !== 'ALL' && String(s.batchId) !== String(selectedBatchId)) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="page">
       <div className="page-header">
@@ -522,8 +554,8 @@ export default function AdminLiveSessionsPage() {
       </div>
 
       <div className="table-card">
-        <div className="table-toolbar">
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="table-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {['ALL', 'UPCOMING', 'LIVE', 'COMPLETED', 'CANCELLED'].map((st) => (
               <button
                 key={st}
@@ -533,6 +565,113 @@ export default function AdminLiveSessionsPage() {
                 {st === 'ALL' ? 'All Sessions' : st.charAt(0) + st.slice(1).toLowerCase()}
               </button>
             ))}
+          </div>
+
+          {/* Course & Batch Filter Controls */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Course Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fa-solid fa-graduation-cap" style={{ color: '#5A70D3' }}></i>
+                Course:
+              </span>
+              <select
+                className="form-control"
+                value={selectedCourseId}
+                onChange={(e) => {
+                  setSelectedCourseId(e.target.value);
+                  setSelectedBatchId('ALL');
+                  setPage(0);
+                }}
+                style={{
+                  fontSize: '0.84rem',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  minWidth: '200px',
+                  maxWidth: '280px',
+                  height: '36px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+                title="Filter by Course"
+              >
+                <option value="ALL">All Courses ({courses.length})</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title || c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Batch Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fa-solid fa-layer-group" style={{ color: '#5A70D3' }}></i>
+                Batch:
+              </span>
+              <select
+                className="form-control"
+                value={selectedBatchId}
+                onChange={(e) => {
+                  setSelectedBatchId(e.target.value);
+                  setPage(0);
+                }}
+                style={{
+                  fontSize: '0.84rem',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  minWidth: '180px',
+                  maxWidth: '240px',
+                  height: '36px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+                title="Filter by Batch"
+              >
+                <option value="ALL">All Batches</option>
+                {filterBatches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} {b.code ? `(${b.code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Reset Filters Button */}
+            {(selectedCourseId !== 'ALL' || selectedBatchId !== 'ALL') && (
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                onClick={() => {
+                  setSelectedCourseId('ALL');
+                  setSelectedBatchId('ALL');
+                  setPage(0);
+                }}
+                title="Reset Course & Batch filters"
+                style={{
+                  height: '36px',
+                  padding: '0 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  color: '#ef4444',
+                  borderColor: '#fca5a5',
+                  background: 'rgba(239, 68, 68, 0.05)'
+                }}
+              >
+                <i className="fa-solid fa-xmark"></i>
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -554,12 +693,16 @@ export default function AdminLiveSessionsPage() {
                 <tr>
                   <td colSpan="7" className="table-empty">Loading live classes…</td>
                 </tr>
-              ) : sessions.length === 0 ? (
+              ) : displayedSessions.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="table-empty">No live classes found.</td>
+                  <td colSpan="7" className="table-empty">
+                    {selectedCourseId !== 'ALL' || selectedBatchId !== 'ALL'
+                      ? 'No live classes found for the selected course/batch.'
+                      : 'No live classes found.'}
+                  </td>
                 </tr>
               ) : (
-                sessions.map((s) => {
+                displayedSessions.map((s) => {
                   const effectiveStatus = getEffectiveStatus(s);
                   return (
                     <tr key={s.id}>

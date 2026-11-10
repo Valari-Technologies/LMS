@@ -429,6 +429,11 @@ public class LiveSessionService {
 
     @Transactional
     public PageResponse<LiveSessionResponse> adminList(Long courseId, String statusStr, Pageable pageable) {
+        return adminList(courseId, null, statusStr, pageable);
+    }
+
+    @Transactional
+    public PageResponse<LiveSessionResponse> adminList(Long courseId, Long batchId, String statusStr, Pageable pageable) {
         try {
             Instant now = Instant.now();
             liveSessionRepository.markCompletedSessions(now, startOfToday());
@@ -442,7 +447,7 @@ public class LiveSessionService {
                 status = LiveSessionStatus.valueOf(statusStr.toLowerCase());
             } catch (IllegalArgumentException ignored) {}
         }
-        Page<LiveSession> page = liveSessionRepository.filterSessions(courseId, status, pageable);
+        Page<LiveSession> page = liveSessionRepository.filterSessions(courseId, batchId, status, pageable);
         return PageResponse.from(page.map(s -> LiveSessionResponse.from(s, meetingProvider.getJoinUrl(s.getMeetingUrl()))));
     }
 
