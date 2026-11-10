@@ -60,9 +60,10 @@ export default function StudentCourseDashboardPage() {
   const [liveSessions, setLiveSessions] = useState([]);
   const [attendance, setAttendance] = useState(null);
 
-  // Video playback state for recordings (full video classes style)
+  // Video playback state for recordings (full video classes style matching LearningPage)
   const [selectedRecording, setSelectedRecording] = useState(null);
-  const [videoPlayerTab, setVideoPlayerTab] = useState('overview'); // 'overview' | 'rating'
+  const [videoPlayerTab, setVideoPlayerTab] = useState('overview'); // 'overview' | 'curriculum' | 'notes' | 'community' | 'resources'
+  const [expandedSections, setExpandedSections] = useState({});
 
   // Rating modal state for recording classes
   const [ratingModalRecording, setRatingModalRecording] = useState(null);
@@ -273,9 +274,9 @@ export default function StudentCourseDashboardPage() {
   const isSessionLiveNow = liveActiveSessions.length > 0;
 
   // =========================================================================
-  // VIEW MODE 1: DEDICATED FULL-WINDOW VIDEO CLASSES STYLE RECORDING PLAYER
-  // When a student clicks to watch any recording replay, it opens the full
-  // cinema video classroom layout matching the video classes style!
+  // VIEW MODE 1: DEDICATED VIDEO CLASSES STYLE RECORDING PLAYER
+  // Matches LearningPage.jsx (.ot-learn-page, .ot-learn-container, .ot-learn-layout,
+  // .ot-video-card, .ot-learn-action-bar, .ot-learn-tabs, .ot-course-content-sidebar)
   // =========================================================================
   if (selectedRecording) {
     const curAvgRating = selectedRecording.averageRating ? Number(selectedRecording.averageRating) : 5.0;
@@ -283,415 +284,732 @@ export default function StudentCourseDashboardPage() {
     const curUserRating = selectedRecording.userRating;
 
     return (
-      <div style={{ minHeight: '100vh', background: '#0b1329', color: '#ffffff', display: 'flex', flexDirection: 'column' }}>
-        {/* Top Video Classroom Header Bar */}
-        <header style={{
-          height: '64px',
-          background: '#0f172a',
-          borderBottom: '1px solid #1e293b',
-          padding: '0 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-          flexShrink: 0,
-          zIndex: 100
-        }}>
-          {/* Left: Back to Dashboard CTA + Brand + Course & Session Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-            <button
-              type="button"
-              onClick={() => setSelectedRecording(null)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#e2e8f0',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                fontWeight: 700,
-                fontSize: '0.84rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)'; e.currentTarget.style.color = '#ffffff'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#e2e8f0'; }}
-            >
-              <i className="fa-solid fa-arrow-left"></i>
-              <span>Exit to Dashboard</span>
-            </button>
-
-            <Link to="/" title="Home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-              <img src={oneTutorBrandImg} alt="OneTutor" style={{ height: '28px', objectFit: 'contain' }} />
-            </Link>
-
-            <div style={{ width: '1px', height: '22px', background: '#334155' }} />
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-              <span style={{ fontSize: '0.84rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {course?.name || course?.title}
-              </span>
-              <span style={{ color: '#475569' }}>/</span>
-              <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '320px' }}>
-                {selectedRecording.sessionTitle}
-              </span>
-              <span style={{ fontSize: '0.7rem', background: '#E8EBFA', color: '#5A70D3', padding: '2px 8px', borderRadius: '9999px', fontWeight: 800 }}>
-                Recording Class
-              </span>
-            </div>
-          </div>
-
-          {/* Right: Rate Recording CTA + Subtitles Badge + Close Player */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            {selectedRecording.subtitleUrl && (
-              <span style={{ fontSize: '0.74rem', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '3px 9px', borderRadius: '9999px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <i className="fa-solid fa-closed-captioning"></i>
-                <span>Subtitles Ready</span>
-              </span>
-            )}
-
-            <button
-              type="button"
-              onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '8px',
-                background: 'rgba(234, 179, 8, 0.15)',
-                color: '#facc15',
-                border: '1px solid rgba(234, 179, 8, 0.35)',
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                cursor: 'pointer'
-              }}
-            >
-              <i className="fa-solid fa-star"></i>
-              <span>{curUserRating ? `Rated ${curUserRating}★` : 'Rate Class'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedRecording(null)}
-              title="Close Video Classroom"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#cbd5e1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        </header>
-
-        {/* Video Classroom Main Workspace (Split Stage & Playlist) */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          
-          {/* Cinema Stage (Video Player + Controls + Session Details) */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#0b1329' }}>
+      <div className="ot-learn-page">
+        <div className="ot-learn-container" style={{ paddingTop: '20px' }}>
+          {/* 2-Column Responsive Grid Layout matching LearningPage */}
+          <div className="ot-learn-layout">
             
-            {/* Main Video Screen */}
-            <div style={{ background: '#000000', width: '100%', position: 'relative' }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto', aspectRatio: '16/9', maxHeight: '72vh', background: '#000000' }}>
-                <RecordingVideoPlayer
-                  url={selectedRecording.url}
-                  title={selectedRecording.sessionTitle}
-                  courseName={selectedRecording.courseName}
-                  subtitleUrl={selectedRecording.subtitleUrl}
-                  autoPlay={true}
-                  onClose={() => setSelectedRecording(null)}
-                />
-              </div>
-            </div>
+            {/* ================================================================
+                LEFT MAIN COLUMN: Video + Actions + Tabs + Tab Content
+                ================================================================ */}
+            <main className="ot-learn-main">
+              {/* Video Viewport Card matching LearningPage style */}
+              <RecordingVideoPlayer
+                url={selectedRecording.url}
+                title={selectedRecording.sessionTitle}
+                courseName={course?.name || course?.title}
+                subtitleUrl={selectedRecording.subtitleUrl}
+                autoPlay={true}
+                onClose={() => setSelectedRecording(null)}
+                onPrev={hasPrevRecording ? playPrevRecording : undefined}
+                onNext={hasNextRecording ? playNextRecording : undefined}
+              />
 
-            {/* Below Video: Navigation Bar & Metadata Strip */}
-            <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto', padding: '20px 24px', boxSizing: 'border-box' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingBottom: '16px',
-                borderBottom: '1px solid #1e293b',
-                marginBottom: '20px',
-                flexWrap: 'wrap',
-                gap: '14px'
-              }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '0.74rem', background: 'rgba(90, 112, 211, 0.2)', color: '#93c5fd', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                      Session Recording #{currentRecordingIndex + 1}
+              {/* Action Bar below video */}
+              <div className="ot-learn-action-bar">
+                <div className="ot-learn-action-info">
+                  <div className="ot-learn-action-top-row">
+                    <span className="ot-lecture-section-pill">
+                      <i className="fa-solid fa-layer-group" style={{ fontSize: '0.7rem', marginRight: '5px' }}></i>
+                      {selectedRecording.batchName || batchLabel}
                     </span>
+                    <span className="ot-now-playing-pill">
+                      <i className="fa-solid fa-play" style={{ fontSize: '0.62rem', marginRight: '4px' }}></i>
+                      Recording Replay
+                    </span>
+                  </div>
+                  <h2 className="ot-learn-lecture-title" title={selectedRecording.sessionTitle}>
+                    {selectedRecording.sessionTitle}
+                  </h2>
+                  <div className="ot-learn-section-subtitle">
+                    Lecture {currentRecordingIndex + 1} of {allRecordings.length}
                     {selectedRecording.scheduledAt && (
-                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                        <i className="fa-regular fa-calendar" style={{ marginRight: '5px' }}></i>
-                        {new Date(selectedRecording.scheduledAt).toLocaleDateString()}
+                      <span style={{ marginLeft: '10px' }}>
+                        • {new Date(selectedRecording.scheduledAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                    {curAvgRating && (
+                      <span style={{ marginLeft: '10px', color: '#ca8a04', fontWeight: 700 }}>
+                        • ★ {curAvgRating.toFixed(1)} ({curTotalRatings})
                       </span>
                     )}
                   </div>
-
-                  <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
-                    {selectedRecording.sessionTitle}
-                  </h1>
                 </div>
 
-                {/* Playlist Prev / Next Navigation Controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="ot-learn-action-controls">
                   <button
                     type="button"
-                    onClick={playPrevRecording}
-                    disabled={!hasPrevRecording}
+                    onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
+                    className={`ot-completed-btn ${curUserRating ? 'is-completed' : 'is-incomplete'}`}
                     style={{
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      background: hasPrevRecording ? '#1e293b' : 'rgba(30, 41, 59, 0.5)',
-                      color: hasPrevRecording ? '#ffffff' : '#475569',
-                      border: '1px solid #334155',
-                      fontWeight: 700,
-                      fontSize: '0.82rem',
-                      cursor: hasPrevRecording ? 'pointer' : 'not-allowed',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
+                      background: curUserRating ? 'rgba(234, 179, 8, 0.15)' : 'rgba(90, 112, 211, 0.1)',
+                      borderColor: curUserRating ? 'rgba(234, 179, 8, 0.5)' : 'rgba(90, 112, 211, 0.3)',
+                      color: curUserRating ? '#ca8a04' : '#5A70D3'
                     }}
                   >
-                    <i className="fa-solid fa-backward-step"></i>
-                    <span>Prev Replay</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={playNextRecording}
-                    disabled={!hasNextRecording}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      background: hasNextRecording ? '#5A70D3' : 'rgba(90, 112, 211, 0.3)',
-                      color: '#ffffff',
-                      border: 'none',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                      cursor: hasNextRecording ? 'pointer' : 'not-allowed',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>Next Replay</span>
-                    <i className="fa-solid fa-forward-step"></i>
+                    <i className="fa-solid fa-star"></i>
+                    <span>{curUserRating ? `Rated ${curUserRating}★` : 'Rate Recording'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* Sub-Tabs: Overview vs Rating & Feedback */}
-              <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid #1e293b', marginBottom: '18px' }}>
+              {/* Tabs Bar below Video */}
+              <div className="ot-learn-tabs">
                 <button
                   type="button"
+                  className={`ot-learn-tab ${videoPlayerTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setVideoPlayerTab('overview')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: videoPlayerTab === 'overview' ? '2px solid #5A70D3' : '2px solid transparent',
-                    color: videoPlayerTab === 'overview' ? '#ffffff' : '#94a3b8',
-                    fontWeight: 800,
-                    fontSize: '0.94rem',
-                    padding: '8px 4px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
                 >
-                  <i className="fa-solid fa-circle-info"></i>
-                  <span>Session Overview</span>
+                  <i className="fa-regular fa-file-lines"></i>
+                  <span>Overview</span>
                 </button>
-
                 <button
                   type="button"
-                  onClick={() => setVideoPlayerTab('rating')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: videoPlayerTab === 'rating' ? '2px solid #eab308' : '2px solid transparent',
-                    color: videoPlayerTab === 'rating' ? '#facc15' : '#94a3b8',
-                    fontWeight: 800,
-                    fontSize: '0.94rem',
-                    padding: '8px 4px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  className={`ot-learn-tab ${videoPlayerTab === 'curriculum' ? 'active' : ''}`}
+                  onClick={() => setVideoPlayerTab('curriculum')}
                 >
-                  <i className="fa-solid fa-star"></i>
-                  <span>Rating &amp; Reviews ({curAvgRating.toFixed(1)}★)</span>
+                  <i className="fa-solid fa-list"></i>
+                  <span>Curriculum</span>
+                  <span className="ot-tab-badge">{allRecordings.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ot-learn-tab ${videoPlayerTab === 'notes' ? 'active' : ''}`}
+                  onClick={() => setVideoPlayerTab('notes')}
+                >
+                  <i className="fa-regular fa-note-sticky"></i>
+                  <span>Notes</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ot-learn-tab ${videoPlayerTab === 'community' ? 'active' : ''}`}
+                  onClick={() => setVideoPlayerTab('community')}
+                >
+                  <i className="fa-solid fa-user-group"></i>
+                  <span>Community</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ot-learn-tab ${videoPlayerTab === 'resources' ? 'active' : ''}`}
+                  onClick={() => setVideoPlayerTab('resources')}
+                >
+                  <i className="fa-solid fa-paperclip"></i>
+                  <span>Resources</span>
+                  {selectedRecording.subtitleUrl && <span className="ot-tab-badge">CC</span>}
                 </button>
               </div>
 
-              {/* Tab 1: Overview */}
-              {videoPlayerTab === 'overview' && (
-                <div style={{ background: '#111827', borderRadius: '12px', padding: '20px', border: '1px solid #1f2937' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f9fafb', margin: '0 0 10px 0' }}>
-                    About this Live Class Session
-                  </h3>
-                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.6, margin: '0 0 16px 0' }}>
-                    {selectedRecording.description || selectedRecording.sessionDescription || 'Full live class replay covering hands-on demonstrations, architecture patterns, and student Q&A.'}
-                  </p>
-                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.82rem', color: '#9ca3af' }}>
-                    <span><i className="fa-solid fa-users" style={{ color: '#5A70D3', marginRight: '6px' }}></i> Batch: {selectedRecording.batchName || batchLabel}</span>
-                    <span><i className="fa-regular fa-clock" style={{ color: '#5A70D3', marginRight: '6px' }}></i> {selectedRecording.duration ? `${Math.round(selectedRecording.duration / 60)} minutes` : 'Full Length'}</span>
-                    <span><i className="fa-solid fa-video" style={{ color: '#5A70D3', marginRight: '6px' }}></i> HD 1080p Stream</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: Rating & Reviews */}
-              {videoPlayerTab === 'rating' && (
-                <div style={{ background: '#111827', borderRadius: '12px', padding: '20px', border: '1px solid #1f2937' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              {/* Tab Content Panel */}
+              <div className="ot-learn-tab-content-wrap">
+                {videoPlayerTab === 'overview' && (
+                  <div className="ot-curriculum-panel-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#facc15', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>{curAvgRating.toFixed(1)}</span>
-                        <div style={{ display: 'flex', gap: '3px', fontSize: '1.1rem' }}>
-                          {renderStars(curAvgRating)}
+                      <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
+                        About this Live Recording
+                      </h3>
+                      <p style={{ color: '#475569', fontSize: '0.94rem', lineHeight: 1.6, margin: 0 }}>
+                        {selectedRecording.description || selectedRecording.sessionDescription || 'Join this recorded session replay to reinforce your concepts. This is an on-demand video recording of the live interactive classroom session conducted for this course.'}
+                      </p>
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '12px',
+                      padding: '16px',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1px solid #eef2f6'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="fa-regular fa-calendar" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
+                        <div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Date Held</div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                            {selectedRecording.scheduledAt ? new Date(selectedRecording.scheduledAt).toLocaleDateString() : 'Recorded Session'}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: '#9ca3af', marginTop: '4px' }}>
-                        Based on {curTotalRatings} {curTotalRatings === 1 ? 'student rating' : 'student ratings'}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="fa-solid fa-users" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
+                        <div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Batch</div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                            {selectedRecording.batchName || batchLabel}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="fa-regular fa-clock" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
+                        <div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Duration</div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                            {selectedRecording.duration ? `${Math.round(selectedRecording.duration / 60)} minutes` : 'Full Replay'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="fa-solid fa-closed-captioning" style={{ color: selectedRecording.subtitleUrl ? '#10b981' : '#94a3b8', fontSize: '1.1rem' }}></i>
+                        <div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Subtitles (CC)</div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                            {selectedRecording.subtitleUrl ? 'English WebVTT' : 'Available on Player'}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
-                      style={{
-                        padding: '10px 18px',
-                        borderRadius: '8px',
-                        background: '#facc15',
-                        color: '#0f172a',
-                        fontWeight: 800,
-                        fontSize: '0.88rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <i className="fa-solid fa-star"></i>
-                      <span>{curUserRating ? 'Edit Your Rating' : 'Rate this Recording Class'}</span>
-                    </button>
-                  </div>
+                    {/* Rating Summary Card inside Overview */}
+                    <div style={{
+                      padding: '16px 20px',
+                      background: 'rgba(234, 179, 8, 0.06)',
+                      border: '1px solid rgba(234, 179, 8, 0.25)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '14px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 900, color: '#ca8a04', lineHeight: 1 }}>
+                          {curAvgRating.toFixed(1)}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', gap: '3px', fontSize: '1rem', marginBottom: '4px' }}>
+                            {renderStars(curAvgRating)}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                            {curTotalRatings} {curTotalRatings === 1 ? 'student rating' : 'student ratings'}
+                            {curUserRating && (
+                              <span style={{ marginLeft: '8px', color: '#ca8a04', fontWeight: 700 }}>
+                                • Your rating: {curUserRating}★
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-                  {curUserRating && (
-                    <div style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.25)', borderRadius: '10px', padding: '12px 16px', color: '#fef08a', fontSize: '0.86rem' }}>
-                      <i className="fa-solid fa-circle-check" style={{ marginRight: '6px', color: '#facc15' }}></i>
-                      Your recorded rating for this class is <strong>{curUserRating}★</strong>.
+                      <button
+                        type="button"
+                        onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
+                        style={{
+                          padding: '9px 18px',
+                          borderRadius: '8px',
+                          background: '#eab308',
+                          color: '#0f172a',
+                          fontWeight: 800,
+                          fontSize: '0.86rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <i className="fa-solid fa-star"></i>
+                        <span>{curUserRating ? 'Edit Rating' : 'Rate this Recording'}</span>
+                      </button>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-            </div>
-          </div>
-
-          {/* Right Sidebar: Recording Classes Playlist (Video Classes Style) */}
-          <aside style={{
-            width: '340px',
-            background: '#0f172a',
-            borderLeft: '1px solid #1e293b',
-            display: 'flex',
-            flexDirection: 'column',
-            flexShrink: 0
-          }}>
-            <div style={{ padding: '18px 20px', borderBottom: '1px solid #1e293b' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fa-solid fa-list-ol" style={{ color: '#5A70D3' }}></i>
-                <span>Course Recordings</span>
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
-                {allRecordings.length} {allRecordings.length === 1 ? 'recorded replay' : 'recorded replays'} in this course
-              </div>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-              {allRecordings.map((rec, idx) => {
-                const isCurrent = String(rec.id) === String(selectedRecording?.id);
-                const recRating = rec.averageRating ? Number(rec.averageRating) : 5.0;
-
-                return (
-                  <div
-                    key={rec.id || idx}
-                    onClick={() => {
-                      setSelectedRecording({
-                        ...rec,
-                        url: rec.url,
-                        sessionTitle: rec.sessionTitle,
-                        courseName: course?.name || course?.title,
-                        description: rec.sessionDescription,
-                        subtitleUrl: rec.subtitleUrl || null
-                      });
-                    }}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      marginBottom: '8px',
-                      cursor: 'pointer',
-                      background: isCurrent ? 'rgba(90, 112, 211, 0.2)' : '#1e293b',
-                      border: isCurrent ? '1px solid #5A70D3' : '1px solid transparent',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={e => {
-                      if (!isCurrent) e.currentTarget.style.background = '#27354f';
-                    }}
-                    onMouseLeave={e => {
-                      if (!isCurrent) e.currentTarget.style.background = '#1e293b';
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: isCurrent ? '#93c5fd' : '#94a3b8', textTransform: 'uppercase' }}>
-                        Replay #{idx + 1}
+                {videoPlayerTab === 'curriculum' && (
+                  <div className="ot-curriculum-panel-card">
+                    <div className="ot-curriculum-panel-header" style={{ marginBottom: '16px' }}>
+                      <div>
+                        <h3 className="ot-curriculum-panel-title">Recorded Class Curriculum</h3>
+                        <p className="ot-curriculum-panel-subtitle">All interactive live sessions recorded for {course?.name || course?.title}</p>
+                      </div>
+                      <span className="ot-progress-badge">
+                        <i className="fa-solid fa-video"></i>
+                        <span>{allRecordings.length} Replays</span>
                       </span>
-                      {isCurrent && (
-                        <span style={{ fontSize: '0.68rem', background: '#5A70D3', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                          NOW PLAYING
-                        </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {allRecordings.map((rec, rIdx) => {
+                        const isCurrent = String(rec.id) === String(selectedRecording?.id);
+                        return (
+                          <div
+                            key={rec.id || rIdx}
+                            onClick={() => {
+                              setSelectedRecording({
+                                ...rec,
+                                url: rec.url,
+                                sessionTitle: rec.sessionTitle,
+                                courseName: course?.name || course?.title,
+                                description: rec.sessionDescription,
+                                subtitleUrl: rec.subtitleUrl || null
+                              });
+                            }}
+                            style={{
+                              padding: '14px 18px',
+                              borderRadius: '12px',
+                              border: isCurrent ? '1.5px solid #5A70D3' : '1px solid #e2e8f0',
+                              background: isCurrent ? 'rgba(90, 112, 211, 0.05)' : '#ffffff',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                              <span style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: isCurrent ? '#5A70D3' : '#f1f5f9',
+                                color: isCurrent ? '#ffffff' : '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '0.82rem',
+                                flexShrink: 0
+                              }}>
+                                {rIdx + 1}
+                              </span>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '0.94rem', fontWeight: 700, color: isCurrent ? '#5A70D3' : '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {rec.sessionTitle}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                                  {rec.scheduledAt ? new Date(rec.scheduledAt).toLocaleDateString() : 'Live Class'}
+                                  {rec.duration ? ` • ${Math.round(rec.duration / 60)} mins` : ''}
+                                  {rec.averageRating && ` • ★ ${Number(rec.averageRating).toFixed(1)}`}
+                                </div>
+                              </div>
+                            </div>
+
+                            <span style={{
+                              fontSize: '0.8rem',
+                              fontWeight: 700,
+                              color: isCurrent ? '#5A70D3' : '#64748b',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <i className={`fa-solid ${isCurrent ? 'fa-play' : 'fa-circle-play'}`}></i>
+                              <span>{isCurrent ? 'Now Playing' : 'Watch Replay'}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {videoPlayerTab === 'notes' && (
+                  <div className="ot-curriculum-panel-card">
+                    <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
+                      Session Notes & Personal Notebook
+                    </h3>
+                    <p className="ot-curriculum-panel-subtitle" style={{ marginBottom: '16px' }}>
+                      Take quick notes while watching this recording class. Your notes are saved automatically in your browser.
+                    </p>
+                    <textarea
+                      rows={6}
+                      placeholder="Type your lecture notes, important timestamps, or key formulas here..."
+                      defaultValue={localStorage.getItem(`onetutor_notes_${selectedRecording.id}`) || ''}
+                      onChange={(e) => {
+                        localStorage.setItem(`onetutor_notes_${selectedRecording.id}`, e.target.value);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: '12px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.92rem',
+                        lineHeight: 1.6,
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fa-solid fa-circle-check"></i>
+                      <span>Notes auto-save as you type.</span>
+                    </div>
+                  </div>
+                )}
+
+                {videoPlayerTab === 'community' && (
+                  <div className="ot-curriculum-panel-card" style={{ textAlign: 'center', padding: '36px 20px' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', margin: '0 auto 14px auto' }}>
+                      <i className="fa-solid fa-comments"></i>
+                    </div>
+                    <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
+                      Course Discussion Community
+                    </h3>
+                    <p style={{ color: '#64748b', fontSize: '0.92rem', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+                      Have questions about topics covered in this recording? Join the discussion forum to chat with peers and instructors.
+                    </p>
+                    <Link
+                      to={`/student/community/${courseId}`}
+                      className="ot-completed-btn is-completed"
+                      style={{ textDecoration: 'none', display: 'inline-flex' }}
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                      <span>Open Course Community</span>
+                    </Link>
+                  </div>
+                )}
+
+                {videoPlayerTab === 'resources' && (
+                  <div className="ot-curriculum-panel-card">
+                    <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
+                      Session Resources & Materials
+                    </h3>
+                    <p className="ot-curriculum-panel-subtitle" style={{ marginBottom: '16px' }}>
+                      Downloadable files, WebVTT subtitle files, and attachments associated with this recording class.
+                    </p>
+                    {selectedRecording.subtitleUrl ? (
+                      <div style={{ padding: '14px 18px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <i className="fa-solid fa-closed-captioning" style={{ color: '#5A70D3', fontSize: '1.2rem' }}></i>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>English Subtitles (WebVTT)</div>
+                            <div style={{ fontSize: '0.76rem', color: '#64748b' }}>vtt subtitle stream file</div>
+                          </div>
+                        </div>
+                        <a
+                          href={resolveMediaUrl(selectedRecording.subtitleUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          download
+                          style={{
+                            padding: '7px 14px',
+                            borderRadius: '8px',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            color: '#5A70D3',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <i className="fa-solid fa-download"></i>
+                          <span>Download VTT</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <div style={{ color: '#64748b', fontSize: '0.88rem', fontStyle: 'italic' }}>
+                        No external file attachments for this recording class.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </main>
+
+            {/* ================================================================
+                RIGHT COLUMN: Floating "Course content" Card
+                Matching LearningPage.jsx (.ot-course-content-sidebar)
+                ================================================================ */}
+            <aside className="ot-course-content-sidebar">
+              <div className="ot-sidebar-header">
+                <h3 className="ot-sidebar-title">Course content</h3>
+                <span className="ot-sidebar-meta">
+                  {recordingSessions.length} sections • {allRecordings.length} lectures
+                </span>
+              </div>
+
+              {/* Sections Stack */}
+              <div className="ot-sidebar-sections-stack">
+                {recordingSessions.map((session, sIdx) => {
+                  const isExpanded = expandedSections[session.id] !== false;
+                  const isCurrentSession = (session.recordings || []).some(r => String(r.id) === String(selectedRecording?.id));
+                  const sessionRecs = session.recordings || [];
+
+                  return (
+                    <div key={session.id} className={`ot-sidebar-section-card ${isCurrentSession ? 'is-active-section' : ''}`}>
+                      <button
+                        type="button"
+                        className="ot-sidebar-section-btn"
+                        onClick={() => setExpandedSections(prev => ({ ...prev, [session.id]: !isExpanded }))}
+                      >
+                        <div className="ot-sidebar-section-btn-left">
+                          <div className={`ot-section-num-circle ${isCurrentSession ? 'active' : ''}`}>
+                            {sIdx + 1}
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div className="ot-sidebar-sec-title">{session.title}</div>
+                            <div className="ot-sidebar-sec-subtitle">
+                              {sessionRecs.length} / {sessionRecs.length} lectures
+                              {session.scheduledAt ? ` • ${new Date(session.scheduledAt).toLocaleDateString()}` : ''}
+                            </div>
+                          </div>
+                        </div>
+                        <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} ot-sidebar-chevron ${isCurrentSession ? 'active' : ''}`}></i>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="ot-sidebar-lectures-list">
+                          {sessionRecs.map((rec, rIdx) => {
+                            const isCurrent = String(rec.id) === String(selectedRecording?.id);
+                            const isRated = Boolean(rec.userRating);
+
+                            return (
+                              <div
+                                key={rec.id || rIdx}
+                                className={`ot-sidebar-lecture-item ${isCurrent ? 'active' : ''}`}
+                                onClick={() => {
+                                  setSelectedRecording({
+                                    ...rec,
+                                    url: rec.url || rec.recordingUrl,
+                                    sessionTitle: session.title,
+                                    courseName: course?.name || course?.title,
+                                    description: session.description,
+                                    subtitleUrl: rec.subtitleUrl || null,
+                                    scheduledAt: session.scheduledAt,
+                                    batchName: session.batchName
+                                  });
+                                }}
+                              >
+                                <div className="ot-sidebar-lecture-left">
+                                  <div className={`ot-sidebar-check-box ${isCurrent || isRated ? 'checked' : ''}`}>
+                                    {(isCurrent || isRated) && <i className="fa-solid fa-check"></i>}
+                                  </div>
+                                  <div className="ot-sidebar-lecture-info">
+                                    <div className="ot-sidebar-lecture-name">
+                                      {session.title}{sessionRecs.length > 1 ? ` - Part ${rIdx + 1}` : ''}
+                                    </div>
+                                    <div className="ot-sidebar-lecture-meta">
+                                      <i className="fa-solid fa-play" style={{ fontSize: '9px', color: isCurrent ? '#5A70D3' : '#94a3b8' }}></i>
+                                      <span>VIDEO</span>
+                                      {rec.duration && (
+                                        <>
+                                          <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
+                                          <span className="ot-sidebar-lecture-duration">
+                                            {Math.round(rec.duration / 60)}m
+                                          </span>
+                                        </>
+                                      )}
+                                      {rec.averageRating && (
+                                        <>
+                                          <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
+                                          <span style={{ color: '#ca8a04', fontWeight: 700 }}>
+                                            ★ {Number(rec.averageRating).toFixed(1)}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="ot-sidebar-more-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenRatingModal(rec, session.title);
+                                  }}
+                                  title="Rate recording"
+                                >
+                                  <i className="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
 
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: isCurrent ? '#ffffff' : '#e2e8f0', marginBottom: '6px', lineHeight: 1.3 }}>
-                      {rec.sessionTitle}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', color: '#94a3b8' }}>
-                      <span>
-                        <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
-                        {rec.duration ? `${Math.round(rec.duration / 60)}m` : 'Replay'}
-                      </span>
-                      <span style={{ color: '#facc15', fontWeight: 700 }}>
-                        ★ {recRating.toFixed(1)}
-                      </span>
-                    </div>
+              {/* Bottom: Course Progress Card */}
+              <div className="ot-sidebar-bottom-actions">
+                <div className="ot-sidebar-progress-card">
+                  <div className="ot-sidebar-progress-top">
+                    <span className="ot-sidebar-progress-label">Course Progress</span>
+                    <span className="ot-sidebar-progress-val">{progressPercent}%</span>
                   </div>
-                );
-              })}
-            </div>
-          </aside>
+                  <div className="ot-sidebar-progress-bar">
+                    <div className="ot-sidebar-progress-fill" style={{ width: `${progressPercent}%` }}></div>
+                  </div>
+                  <div className="ot-sidebar-progress-stats">
+                    <span>{completedLessons} of {totalLessons} completed</span>
+                    <span>{Math.max(0, totalLessons - completedLessons)} remaining</span>
+                  </div>
+                </div>
+              </div>
+            </aside>
 
+          </div>
         </div>
+
+        {/* Rating Modal also rendered here so it pops up cleanly when watching video */}
+        {ratingModalRecording && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.7)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px'
+            }}
+            onClick={() => setRatingModalRecording(null)}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '20px',
+                maxWidth: '480px',
+                width: '100%',
+                padding: '28px',
+                boxShadow: '0 25px 60px rgba(15, 23, 42, 0.25)',
+                border: '1px solid #cbd5e1'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+                    <i className="fa-solid fa-star"></i>
+                  </span>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      Rate Recording Class
+                    </h3>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      {ratingModalRecording.sessionTitle}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setRatingModalRecording(null)}
+                  style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitRating}>
+                <div style={{ textAlign: 'center', margin: '20px 0 16px 0' }}>
+                  <div style={{ fontSize: '0.86rem', color: '#475569', fontWeight: 600, marginBottom: '8px' }}>
+                    How would you rate this recorded class session?
+                  </div>
+                  <div style={{ display: 'inline-flex', gap: '8px', fontSize: '2rem' }}>
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const isFilled = star <= (hoverRating || modalRating);
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setModalRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', outline: 'none', transition: 'transform 0.12s ease' }}
+                        >
+                          <i className={`fa-${isFilled ? 'solid' : 'regular'} fa-star`} style={{ color: isFilled ? '#eab308' : '#cbd5e1' }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontWeight: 800, color: '#ca8a04', marginTop: '6px', fontSize: '0.92rem' }}>
+                    {modalRating === 5 ? '⭐⭐⭐⭐⭐ Exceptional (5 / 5)' :
+                     modalRating === 4 ? '⭐⭐⭐⭐ Very Good (4 / 5)' :
+                     modalRating === 3 ? '⭐⭐⭐ Good (3 / 5)' :
+                     modalRating === 2 ? '⭐⭐ Fair (2 / 5)' : '⭐ Needs Improvement (1 / 5)'}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Feedback / Notes for the Instructor (Optional):
+                  </label>
+                  <textarea
+                    value={modalComment}
+                    onChange={e => setModalComment(e.target.value)}
+                    placeholder="Share what you found helpful in this session, or topics you would like revisited..."
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.88rem',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setRatingModalRecording(null)}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '8px',
+                      background: '#f1f5f9',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      color: '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={submittingRating}
+                    style={{
+                      padding: '9px 24px',
+                      borderRadius: '8px',
+                      background: '#5A70D3',
+                      border: 'none',
+                      fontWeight: 800,
+                      fontSize: '0.88rem',
+                      color: '#ffffff',
+                      cursor: submittingRating ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    {submittingRating ? (
+                      <>
+                        <i className="fa-solid fa-spinner fa-spin"></i>
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-check"></i>
+                        <span>Submit Rating</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
+
 
   // =========================================================================
   // VIEW MODE 2: MAIN COURSE DASHBOARD SPACE (POS Style Single Navbar)
