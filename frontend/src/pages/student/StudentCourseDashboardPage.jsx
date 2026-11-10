@@ -1107,58 +1107,20 @@ export default function StudentCourseDashboardPage() {
         {/* 2. Sidebar Body */}
         <div className="ot-course-sidebar-body">
           
-          {/* Active Course Card Preview (Full when expanded) */}
+          {/* Active Course Title Only */}
           {!sidebarCollapsed && (
             <div className="ot-course-card-widget">
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                  background: '#e2e8f0',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {thumbUrl ? (
-                    <img src={thumbUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <i className="fa-solid fa-graduation-cap" style={{ color: '#5A70D3', fontSize: '1.2rem' }}></i>
-                  )}
-                </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{
-                    fontSize: '0.86rem',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    lineHeight: 1.3,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical'
-                  }} title={course?.name || course?.title}>
-                    {course?.name || course?.title || 'Enrolled Course'}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#5A70D3', background: 'rgba(90, 112, 211, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                      {batchLabel}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Course Progress Mini Track */}
-              <div style={{ marginTop: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', fontWeight: 700, marginBottom: '4px' }}>
-                  <span>Syllabus Progress</span>
-                  <span style={{ color: '#5A70D3' }}>{progressPercent}%</span>
-                </div>
-                <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${progressPercent}%`, background: '#5A70D3', borderRadius: '9999px', transition: 'width 0.3s ease' }}></div>
-                </div>
+              <div
+                style={{
+                  fontSize: '0.94rem',
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  lineHeight: 1.35,
+                  wordBreak: 'break-word'
+                }}
+                title={course?.name || course?.title}
+              >
+                {course?.name || course?.title || 'Enrolled Course'}
               </div>
             </div>
           )}
