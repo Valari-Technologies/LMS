@@ -22,6 +22,13 @@ import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
+import AdminRecordingResourcesModal from '../../components/AdminRecordingResourcesModal';
+import {
+  getRecordingOverview,
+  setRecordingOverview,
+  getRecordingCustomTitle,
+  getRecordingResources
+} from '../../utils/recordingResources';
 
 const getDirectMediaUrl = (asset) => {
   if (!asset) return '';
@@ -162,8 +169,9 @@ export default function AdminLiveSessionsPage() {
   const [expandedReviewsRecordingId, setExpandedReviewsRecordingId] = useState(null);
   const [expandedVideoRecordingId, setExpandedVideoRecordingId] = useState(null);
   const [showEditRecordingModal, setShowEditRecordingModal] = useState(null); // { session, recording }
-  const [editRecordingForm, setEditRecordingForm] = useState({ url: '', duration: '', mediaAssetId: null });
+  const [editRecordingForm, setEditRecordingForm] = useState({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
   const [editRecordingTab, setEditRecordingTab] = useState('url'); // 'upload' | 'library' | 'url'
+  const [resourceModalRecording, setResourceModalRecording] = useState(null); // { recording, session }
 
   useEffect(() => {
     listAdminCourses({ size: 100 })
@@ -557,6 +565,8 @@ export default function AdminLiveSessionsPage() {
   function openEditRecordingModal(session, recording) {
     setShowEditRecordingModal({ session, recording });
     setEditRecordingForm({
+      title: getRecordingCustomTitle(recording.id, `Recording ${recording.id || 1}`),
+      overview: getRecordingOverview(recording.id, recording.description || session.description || ''),
       url: recording.url || recording.recordingUrl || '',
       duration: recording.duration || '',
       mediaAssetId: recording.mediaAssetId || null,
@@ -574,6 +584,13 @@ export default function AdminLiveSessionsPage() {
     }
     setSubmitting(true);
     try {
+      // Save rich overview and title for this recording
+      setRecordingOverview(
+        showEditRecordingModal.recording.id,
+        editRecordingForm.overview,
+        editRecordingForm.title
+      );
+
       const updated = await updateRecording(
         showEditRecordingModal.session.id,
         showEditRecordingModal.recording.id,
@@ -1708,7 +1725,7 @@ export default function AdminLiveSessionsPage() {
                     <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid var(--border-subtle, #f1f5f9)' }}>
                       <div>
                         <div style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                          Recording {idx + 1} {manageRecordingsModal.recordings.length > 1 ? `of ${manageRecordingsModal.recordings.length}` : ''}
+                          {getRecordingCustomTitle(r.id, `Recording ${idx + 1}`)} {manageRecordingsModal.recordings.length > 1 ? `(Part ${idx + 1})` : ''}
                         </div>
                         {r.duration && (
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -1716,6 +1733,17 @@ export default function AdminLiveSessionsPage() {
                             {Math.floor(r.duration / 3600) > 0 ? `${Math.floor(r.duration / 3600)}h ` : ''}{Math.round((r.duration % 3600) / 60)} min
                           </div>
                         )}
+                        {(() => {
+                          const ov = getRecordingOverview(r.id, '');
+                          if (!ov) return null;
+                          return (
+                            <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '4px', maxWidth: '420px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                              <i className="fa-regular fa-file-lines" style={{ marginRight: '4px', color: '#5A70D3' }}></i>
+                              {ov}
+                            </div>
+                          );
+                        })()}
+
                         {/* Subtitles Status Badge & Actions */}
                         <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {r.subtitleStatus === 'COMPLETED' ? (
@@ -1745,13 +1773,31 @@ export default function AdminLiveSessionsPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            color: '#5A70D3',
+                            fontWeight: 700,
+                            borderColor: 'rgba(90, 112, 211, 0.35)',
+                            background: 'rgba(90, 112, 211, 0.06)'
+                          }}
+                          onClick={() => setResourceModalRecording({ recording: r, session: manageRecordingsModal })}
+                          title="Attach or manage downloadable PDF, code, and slide resources for this recording"
+                        >
+                          <i className="fa-solid fa-paperclip"></i>
+                          <span>Resources ({getRecordingResources(r.id, r.subtitleUrl).length})</span>
+                        </button>
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => openEditRecordingModal(manageRecordingsModal, r)}
-                          title="Edit recording details"
+                          title="Edit recording overview, title, and video details"
                         >
-                          <i className="fa-solid fa-pen-to-square" style={{ marginRight: '4px' }}></i> Edit
+                          <i className="fa-solid fa-pen-to-square" style={{ marginRight: '4px' }}></i> Edit Overview
                         </button>
                         <button
                           className="btn btn-secondary btn-sm"
@@ -2016,6 +2062,35 @@ export default function AdminLiveSessionsPage() {
 
             <form onSubmit={handleUpdateRecording}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>Recording Title</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Recording 1: Full Stack Architecture Overview"
+                    value={editRecordingForm.title}
+                    onChange={(e) => setEditRecordingForm(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Title displayed in the student learning view and playlist sidebar.
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>Recording Overview & Notes</label>
+                  <textarea
+                    rows={4}
+                    className="form-control"
+                    placeholder="Write a rich summary of topics covered in this class replay, key takeaways, and notes for students..."
+                    value={editRecordingForm.overview}
+                    onChange={(e) => setEditRecordingForm(prev => ({ ...prev, overview: e.target.value }))}
+                    style={{ lineHeight: 1.5, resize: 'vertical' }}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Shown in the student player's Overview tab just like course videos.
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-card)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                   <button
                     type="button"
@@ -2183,6 +2258,16 @@ export default function AdminLiveSessionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Recording Resources Manager Modal */}
+      {resourceModalRecording && (
+        <AdminRecordingResourcesModal
+          recording={resourceModalRecording.recording}
+          session={resourceModalRecording.session}
+          onClose={() => setResourceModalRecording(null)}
+          onUpdated={() => loadSessions()}
+        />
       )}
     </div>
   );

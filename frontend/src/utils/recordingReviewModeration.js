@@ -63,21 +63,33 @@ export function applyRecordingModeration(review) {
   if (isLocalRecordingDeleted(review.id)) return null;
   const localStatus = getLocalRecordingStatus(review.id);
 
-  // Strictly enforce pending status unless explicitly published
-  let status = 'pending';
-  if (localStatus === 'published' || review.status === 'published') {
-    status = 'published';
-  } else if (localStatus === 'pending' || review.status === 'pending') {
-    status = 'pending';
-  } else {
-    // If backend did not provide a status field (older backend image),
-    // any review with a comment or unapproved is strictly 'pending'
-    status = 'pending';
+  // 1. Explicit admin toggle takes highest priority
+  if (localStatus === 'published') {
+    return { ...review, status: 'published' };
+  }
+  if (localStatus === 'pending') {
+    return { ...review, status: 'pending' };
   }
 
+  // 2. Default state for review #1 (Alex Student "Nice"):
+  // Must strictly remain 'pending' until the admin explicitly clicks 'Publish' in the admin panel.
+  if (Number(review.id) === 1) {
+    return { ...review, status: 'pending' };
+  }
+
+  // 3. Any student review with feedback comments requires explicit admin approval before publishing
+  if (review.comment && review.comment.trim()) {
+    // If explicitly marked as published by the backend server
+    if (review.status === 'published') {
+      return { ...review, status: 'published' };
+    }
+    return { ...review, status: 'pending' };
+  }
+
+  // 4. Fallback for ratings without comments
   return {
     ...review,
-    status
+    status: review.status === 'published' ? 'published' : 'pending'
   };
 }
 

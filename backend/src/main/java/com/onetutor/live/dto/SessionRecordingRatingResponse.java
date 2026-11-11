@@ -59,7 +59,7 @@ public record SessionRecordingRatingResponse(
                 u != null ? u.getAvatar() : null,
                 r.getRating(),
                 commentText,
-                r.getStatus() != null ? r.getStatus() : "published",
+                r.getStatus() != null ? r.getStatus() : "pending",
                 r.getCreatedAt(),
                 r.getUpdatedAt(),
                 canEdit

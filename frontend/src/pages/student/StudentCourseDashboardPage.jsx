@@ -5,6 +5,13 @@ import { myCourses } from '../../api/enrollment';
 import { getCourseProgress } from '../../api/progress';
 import { getLiveSessions, getCourseAttendance, rateRecording, getRecordingRatings } from '../../api/live';
 import { getRecordingRatingStats } from '../../utils/recordingReviewModeration';
+import {
+  getRecordingOverview,
+  getRecordingCustomTitle,
+  getRecordingResources,
+  getResourceVisual,
+  downloadResourceFile
+} from '../../utils/recordingResources';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
@@ -129,6 +136,14 @@ export default function StudentCourseDashboardPage() {
       });
     return () => { isMounted = false; };
   }, [selectedRecording?.id]);
+
+  const [, setResourcesVersion] = useState(0);
+
+  useEffect(() => {
+    const handleResourcesChanged = () => setResourcesVersion(v => v + 1);
+    window.addEventListener('recording-resources-changed', handleResourcesChanged);
+    return () => window.removeEventListener('recording-resources-changed', handleResourcesChanged);
+  }, []);
 
   // Auto-refresh tick for live statuses
   const [, setTick] = useState(0);
@@ -374,6 +389,11 @@ export default function StudentCourseDashboardPage() {
       : null;
     const curUserRating = myReview ? myReview.rating : selectedRecording.userRating;
 
+    // Overview & Resources for recording video matching course videos
+    const recOverview = getRecordingOverview(selectedRecording.id, selectedRecording.description || selectedRecording.sessionDescription || '');
+    const recCustomTitle = getRecordingCustomTitle(selectedRecording.id, selectedRecording.sessionTitle || 'Recording Replay');
+    const recResources = getRecordingResources(selectedRecording.id, selectedRecording.subtitleUrl);
+
     return (
       <div className="ot-learn-page">
         <div className="ot-learn-container" style={{ paddingTop: '20px' }}>
@@ -387,7 +407,7 @@ export default function StudentCourseDashboardPage() {
               {/* Video Viewport Card matching LearningPage style */}
               <RecordingVideoPlayer
                 url={selectedRecording.url}
-                title={selectedRecording.sessionTitle}
+                title={recCustomTitle || selectedRecording.sessionTitle}
                 courseName={course?.name || course?.title}
                 subtitleUrl={selectedRecording.subtitleUrl}
                 autoPlay={true}
@@ -409,8 +429,8 @@ export default function StudentCourseDashboardPage() {
                       Recording Replay
                     </span>
                   </div>
-                  <h2 className="ot-learn-lecture-title" title={selectedRecording.sessionTitle}>
-                    {selectedRecording.sessionTitle}
+                  <h2 className="ot-learn-lecture-title" title={recCustomTitle || selectedRecording.sessionTitle}>
+                    {recCustomTitle || selectedRecording.sessionTitle}
                   </h2>
                   <div className="ot-learn-section-subtitle">
                     Lecture {currentRecordingIndex + 1} of {allRecordings.length}
@@ -432,6 +452,38 @@ export default function StudentCourseDashboardPage() {
                 </div>
 
                 <div className="ot-learn-action-controls">
+                  {recResources.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (recResources.length === 1) {
+                          toast.success(`Downloading "${recResources[0].name}"...`);
+                          downloadResourceFile(recResources[0].url, recResources[0].name);
+                        } else {
+                          setVideoPlayerTab('resources');
+                        }
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        background: 'rgba(90, 112, 211, 0.08)',
+                        borderColor: 'rgba(90, 112, 211, 0.25)',
+                        color: '#5A70D3',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                      title={recResources.length === 1 ? `Download ${recResources[0].name}` : `View and download all ${recResources.length} lecture resources`}
+                    >
+                      <i className="fa-solid fa-paperclip"></i>
+                      <span>Resources ({recResources.length})</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
@@ -494,7 +546,7 @@ export default function StudentCourseDashboardPage() {
                 >
                   <i className="fa-solid fa-paperclip"></i>
                   <span>Resources</span>
-                  {selectedRecording.subtitleUrl && <span className="ot-tab-badge">CC</span>}
+                  {recResources.length > 0 && <span className="ot-tab-badge">{recResources.length}</span>}
                 </button>
               </div>
 
@@ -503,17 +555,31 @@ export default function StudentCourseDashboardPage() {
                 {videoPlayerTab === 'overview' && (
                   <div className="ot-curriculum-panel-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
-                        About this Live Recording
-                      </h3>
-                      <p style={{ color: '#475569', fontSize: '0.94rem', lineHeight: 1.6, margin: 0 }}>
-                        {selectedRecording.description || selectedRecording.sessionDescription || 'Join this recorded session replay to reinforce your concepts. This is an on-demand video recording of the live interactive classroom session conducted for this course.'}
-                      </p>
+                      <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+                        {recCustomTitle || selectedRecording.sessionTitle || 'Class Recording Replay'}
+                      </h2>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.84rem', color: '#64748b', marginBottom: '14px' }}>
+                        <span>Instructor: <strong style={{ color: '#0f172a' }}>OneTutor Academy</strong></span>
+                        <span>Course: <strong style={{ color: '#0f172a' }}>{course?.name || course?.title || 'Interactive Live Track'}</strong></span>
+                        <span>Batch: <strong style={{ color: '#5A70D3' }}>{selectedRecording.batchName || batchLabel}</strong></span>
+                      </div>
+                      <div style={{
+                        color: '#334155',
+                        fontSize: '0.94rem',
+                        lineHeight: 1.7,
+                        whiteSpace: 'pre-line',
+                        background: '#f8fafc',
+                        padding: '16px 20px',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        {recOverview || selectedRecording.description || selectedRecording.sessionDescription || 'Join this recorded session replay to reinforce your concepts. This is an on-demand video recording of the live interactive classroom session conducted for this course.'}
+                      </div>
                     </div>
 
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                       gap: '12px',
                       padding: '16px',
                       background: '#f8fafc',
@@ -546,6 +612,16 @@ export default function StudentCourseDashboardPage() {
                           <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Duration</div>
                           <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
                             {selectedRecording.duration ? `${Math.round(selectedRecording.duration / 60)} minutes` : 'Full Replay'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
+                        <div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Resources</div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                            {recResources.length > 0 ? `${recResources.length} Downloadable File${recResources.length > 1 ? 's' : ''}` : 'None Attached'}
                           </div>
                         </div>
                       </div>
@@ -935,47 +1011,213 @@ export default function StudentCourseDashboardPage() {
 
                 {videoPlayerTab === 'resources' && (
                   <div className="ot-curriculum-panel-card">
-                    <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
-                      Session Resources & Materials
-                    </h3>
-                    <p className="ot-curriculum-panel-subtitle" style={{ marginBottom: '16px' }}>
-                      Downloadable files, WebVTT subtitle files, and attachments associated with this recording class.
-                    </p>
-                    {selectedRecording.subtitleUrl ? (
-                      <div style={{ padding: '14px 18px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <i className="fa-solid fa-closed-captioning" style={{ color: '#5A70D3', fontSize: '1.2rem' }}></i>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>English Subtitles (WebVTT)</div>
-                            <div style={{ fontSize: '0.76rem', color: '#64748b' }}>vtt subtitle stream file</div>
-                          </div>
-                        </div>
-                        <a
-                          href={resolveMediaUrl(selectedRecording.subtitleUrl)}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3' }}></i>
+                          <span>Downloadable Class Resources & Materials</span>
+                        </h3>
+                        <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                          Lecture slides, source code archives, PDF guides, and reference materials for this recording
+                        </p>
+                      </div>
+
+                      {recResources.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toast.success(`Starting download of all ${recResources.length} files…`);
+                            recResources.forEach((res, i) => {
+                              setTimeout(() => {
+                                downloadResourceFile(res.url, res.name);
+                              }, i * 350);
+                            });
+                          }}
                           style={{
-                            padding: '7px 14px',
-                            borderRadius: '8px',
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            color: '#5A70D3',
-                            fontWeight: 700,
                             fontSize: '0.82rem',
-                            textDecoration: 'none',
+                            fontWeight: 700,
+                            color: '#5A70D3',
+                            background: 'rgba(90, 112, 211, 0.08)',
+                            border: '1px solid rgba(90, 112, 211, 0.25)',
+                            borderRadius: '8px',
+                            padding: '6px 14px',
+                            cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px'
                           }}
                         >
                           <i className="fa-solid fa-download"></i>
-                          <span>Download VTT</span>
-                        </a>
+                          <span>Download All ({recResources.length})</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {recResources.length === 0 && !selectedRecording.subtitleUrl ? (
+                      <div style={{
+                        padding: '36px 20px',
+                        textAlign: 'center',
+                        background: '#f8fafc',
+                        borderRadius: '12px',
+                        border: '1px dashed #cbd5e1'
+                      }}>
+                        <i className="fa-solid fa-folder-open" style={{ fontSize: '2rem', color: '#94a3b8', marginBottom: '10px', display: 'block' }}></i>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                          No Downloadable Resources Attached Yet
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b', maxWidth: '420px', margin: '0 auto' }}>
+                          The instructor has not uploaded supplementary PDFs, slide decks, or code repositories for this recorded class.
+                        </div>
                       </div>
                     ) : (
-                      <div style={{ color: '#64748b', fontSize: '0.88rem', fontStyle: 'italic' }}>
-                        No external file attachments for this recording class.
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {recResources.map((res) => {
+                          const visual = getResourceVisual(res.type);
+                          return (
+                            <div
+                              key={res.id}
+                              className="ud-player-resource-card"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '14px 18px',
+                                background: '#f8fafc',
+                                borderRadius: '12px',
+                                border: '1px solid #e2e8f0',
+                                gap: '12px',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                <div style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '10px',
+                                  background: visual.bg,
+                                  color: visual.color,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '1.05rem',
+                                  flexShrink: 0
+                                }}>
+                                  <i className={visual.icon}></i>
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {res.name}
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', fontSize: '0.74rem', color: '#64748b' }}>
+                                    <span style={{
+                                      background: visual.bg,
+                                      color: visual.color,
+                                      fontWeight: 700,
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '0.68rem'
+                                    }}>
+                                      {visual.label}
+                                    </span>
+                                    {res.size && <span>• {res.size}</span>}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  toast.success(`Downloading "${res.name}"...`);
+                                  downloadResourceFile(res.url, res.name);
+                                }}
+                                className="ud-player-resource-dl"
+                                style={{
+                                  background: '#5A70D3',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '7px 16px',
+                                  fontSize: '0.84rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  flexShrink: 0,
+                                  boxShadow: '0 2px 6px rgba(90, 112, 211, 0.25)'
+                                }}
+                              >
+                                <i className="fa-solid fa-download"></i>
+                                <span>Download</span>
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {/* Optional WebVTT Subtitle Track Download if available */}
+                        {selectedRecording.subtitleUrl && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '14px 18px',
+                              background: 'rgba(16, 185, 129, 0.04)',
+                              borderRadius: '12px',
+                              border: '1px solid rgba(16, 185, 129, 0.25)',
+                              gap: '12px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '10px',
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                color: '#10b981',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.05rem',
+                                flexShrink: 0
+                              }}>
+                                <i className="fa-solid fa-closed-captioning"></i>
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
+                                  English Subtitles (WebVTT Stream)
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                                  Synchronized closed-caption track for this class replay
+                                </div>
+                              </div>
+                            </div>
+
+                            <a
+                              href={resolveMediaUrl(selectedRecording.subtitleUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                              download
+                              style={{
+                                padding: '7px 16px',
+                                borderRadius: '8px',
+                                background: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                color: '#10b981',
+                                fontWeight: 700,
+                                fontSize: '0.84rem',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                flexShrink: 0
+                              }}
+                            >
+                              <i className="fa-solid fa-download"></i>
+                              <span>Download VTT</span>
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
