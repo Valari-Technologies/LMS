@@ -49,6 +49,12 @@ export function resolveMediaUrl(url) {
     return resolvePublicAsset(normalized);
   }
 
+  // Handle local storage paths like media/... or /media/... that must be served via /api/v1/media/file?path=...
+  if ((normalized.startsWith('media/') || normalized.startsWith('/media/')) && !normalized.includes('/api/v1/')) {
+    const cleanStorage = normalized.replace(/^\/+/, '');
+    return `${BACKEND_BASE}/api/v1/media/file?path=${encodeURIComponent(cleanStorage)}`;
+  }
+
   const cleanPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
   return `${BACKEND_BASE}${cleanPath}`;
 }

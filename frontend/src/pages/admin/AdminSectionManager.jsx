@@ -31,13 +31,22 @@ import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 const getDirectMediaUrl = (asset) => {
   if (!asset) return '';
-  if (asset.storagePath && (asset.storagePath.startsWith('http://') || asset.storagePath.startsWith('https://'))) {
-    return asset.storagePath;
-  }
+  if (typeof asset === 'string') return asset;
   if (asset.url && (asset.url.startsWith('http://') || asset.url.startsWith('https://'))) {
     return asset.url;
   }
-  return asset.storagePath || asset.url || asset.fileUrl || asset.filePath || '';
+  if (asset.storagePath && (asset.storagePath.startsWith('http://') || asset.storagePath.startsWith('https://'))) {
+    return asset.storagePath;
+  }
+  if (asset.id && !String(asset.id).startsWith('temp-')) {
+    return `/api/v1/media/files/${asset.id}`;
+  }
+  if (asset.storagePath) {
+    return asset.storagePath.startsWith('http')
+      ? asset.storagePath
+      : (asset.storagePath.startsWith('/') ? asset.storagePath : `/api/v1/media/file?path=${encodeURIComponent(asset.storagePath)}`);
+  }
+  return asset.url || asset.fileUrl || asset.filePath || '';
 };
 
 const CONTENT_TYPES = ['VIDEO', 'PDF', 'IMAGE'];
