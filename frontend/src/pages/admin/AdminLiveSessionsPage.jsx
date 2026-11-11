@@ -9,7 +9,8 @@ import {
   attachRecording,
   updateRecording,
   deleteRecording,
-  generateRecordingSubtitles
+  generateRecordingSubtitles,
+  getRecordingRatings
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
@@ -155,6 +156,8 @@ export default function AdminLiveSessionsPage() {
   const [selectedMediaAsset, setSelectedMediaAsset] = useState(null);
   const [previewRecordingModal, setPreviewRecordingModal] = useState(null);
   const [manageRecordingsModal, setManageRecordingsModal] = useState(null); // session object
+  const [recordingRatingsMap, setRecordingRatingsMap] = useState({}); // recordingId -> array of reviews
+  const [expandedReviewsRecordingId, setExpandedReviewsRecordingId] = useState(null);
   const [showEditRecordingModal, setShowEditRecordingModal] = useState(null); // { session, recording }
   const [editRecordingForm, setEditRecordingForm] = useState({ url: '', duration: '', mediaAssetId: null });
   const [editRecordingTab, setEditRecordingTab] = useState('url'); // 'upload' | 'library' | 'url'
@@ -212,8 +215,25 @@ export default function AdminLiveSessionsPage() {
         page,
         size: 100
       });
-      setSessions(res?.content || []);
+      const fetchedSessions = res?.content || [];
+      setSessions(fetchedSessions);
       setTotalPages(res?.totalPages || 1);
+
+      // Fetch real student ratings & reviews for all session recordings
+      const recIds = fetchedSessions
+        .flatMap(s => s.recordings || [])
+        .map(r => r.id)
+        .filter(Boolean);
+      if (recIds.length > 0) {
+        Promise.all(recIds.map(id => getRecordingRatings(id).then(ratings => ({ id, ratings })).catch(() => ({ id, ratings: [] }))))
+          .then(results => {
+            const map = {};
+            results.forEach(item => {
+              map[item.id] = item.ratings || [];
+            });
+            setRecordingRatingsMap(prev => ({ ...prev, ...map }));
+          });
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -257,6 +277,22 @@ export default function AdminLiveSessionsPage() {
       document.removeEventListener('visibilitychange', handleFocus);
     };
   }, [status, selectedCourseId, selectedBatchId, page]);
+
+  // Refresh recording ratings whenever manageRecordingsModal opens
+  useEffect(() => {
+    if (!manageRecordingsModal?.recordings) return;
+    const recIds = manageRecordingsModal.recordings.map(r => r.id).filter(Boolean);
+    if (recIds.length > 0) {
+      Promise.all(recIds.map(id => getRecordingRatings(id).then(ratings => ({ id, ratings })).catch(() => ({ id, ratings: [] }))))
+        .then(results => {
+          const map = {};
+          results.forEach(item => {
+            map[item.id] = item.ratings || [];
+          });
+          setRecordingRatingsMap(prev => ({ ...prev, ...map }));
+        });
+    }
+  }, [manageRecordingsModal]);
 
     async function handleCreate(e) {
     e.preventDefault();
@@ -781,23 +817,57 @@ export default function AdminLiveSessionsPage() {
                       </td>
                       <td>
                         {s.recordings && s.recordings.length > 0 ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => setManageRecordingsModal(s)}
-                              title={`View and manage ${s.recordings.length} recording${s.recordings.length !== 1 ? 's' : ''}`}
-                            >
-                              <i className="fa-solid fa-film" style={{ marginRight: '5px', color: 'var(--accent-primary)' }}></i>
-                              {s.recordings.length} Recording{s.recordings.length !== 1 ? 's' : ''}
-                            </button>
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => openRecordingModal(s)}
-                              title="Add another recording"
-                              aria-label="Add recording"
-                            >
-                              <i className="fa-solid fa-plus"></i>
-                            </button>
+                          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setManageRecordingsModal(s)}
+                                title={`View and manage ${s.recordings.length} recording${s.recordings.length !== 1 ? 's' : ''}`}
+                              >
+                                <i className="fa-solid fa-film" style={{ marginRight: '5px', color: 'var(--accent-primary)' }}></i>
+                                {s.recordings.length} Recording{s.recordings.length !== 1 ? 's' : ''}
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => openRecordingModal(s)}
+                                title="Add another recording"
+                                aria-label="Add recording"
+                              >
+                                <i className="fa-solid fa-plus"></i>
+                              </button>
+                            </div>
+                            {/* Real ratings & reviews pill */}
+                            {(() => {
+                              const recIds = s.recordings.map(r => r.id);
+                              const allRatings = recIds.flatMap(id => recordingRatingsMap[id] || []);
+                              if (allRatings.length > 0) {
+                                const avg = (allRatings.reduce((sum, x) => sum + (x.rating || 0), 0) / allRatings.length).toFixed(1);
+                                return (
+                                  <div
+                                    onClick={() => setManageRecordingsModal(s)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 800,
+                                      color: '#ca8a04',
+                                      background: 'rgba(234, 179, 8, 0.12)',
+                                      border: '1px solid rgba(234, 179, 8, 0.28)',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer'
+                                    }}
+                                    title="Click to view student reviews & feedback"
+                                  >
+                                    <i className="fa-solid fa-star" style={{ fontSize: '0.66rem' }}></i>
+                                    <span>{avg}</span>
+                                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({allRatings.length} review{allRatings.length > 1 ? 's' : ''})</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         ) : (
                           <button
@@ -1520,6 +1590,152 @@ export default function AdminLiveSessionsPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Real Student Ratings & Reviews Section */}
+                    {(() => {
+                      const ratingsList = recordingRatingsMap[r.id] || [];
+                      const reviewsCount = ratingsList.length;
+                      const avgRating = reviewsCount > 0
+                        ? (ratingsList.reduce((acc, x) => acc + (x.rating || 0), 0) / reviewsCount).toFixed(1)
+                        : null;
+                      const isExpanded = expandedReviewsRecordingId === r.id;
+
+                      return (
+                        <div style={{
+                          borderTop: '1px solid var(--border-subtle, #f1f5f9)',
+                          padding: '10px 16px',
+                          background: reviewsCount > 0 ? 'rgba(234, 179, 8, 0.04)' : 'transparent'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '8px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: reviewsCount > 0 ? 'rgba(234, 179, 8, 0.15)' : '#f1f5f9',
+                                color: reviewsCount > 0 ? '#b45309' : '#64748b',
+                                border: reviewsCount > 0 ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid #cbd5e1',
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                fontSize: '0.76rem',
+                                fontWeight: 800
+                              }}>
+                                <i className="fa-solid fa-star" style={{ color: reviewsCount > 0 ? '#eab308' : '#94a3b8' }}></i>
+                                <span>{avgRating ? `${avgRating} / 5.0` : 'Unrated'}</span>
+                              </div>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                                {reviewsCount > 0
+                                  ? `${reviewsCount} student review${reviewsCount > 1 ? 's' : ''}`
+                                  : 'No student reviews yet'}
+                              </span>
+                            </div>
+
+                            {reviewsCount > 0 && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                style={{
+                                  padding: '2px 8px',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  color: 'var(--accent-primary, #5A70D3)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                onClick={() => setExpandedReviewsRecordingId(prev => prev === r.id ? null : r.id)}
+                              >
+                                <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-comments'}`}></i>
+                                <span>{isExpanded ? 'Hide Feedback' : `Read Reviews (${reviewsCount})`}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Expanded Real Student Reviews list */}
+                          {isExpanded && (
+                            <div style={{
+                              marginTop: '10px',
+                              background: '#ffffff',
+                              border: '1px solid var(--border-subtle, #e2e8f0)',
+                              borderRadius: '8px',
+                              padding: '10px 12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '8px'
+                            }}>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <i className="fa-solid fa-user-check" style={{ color: '#10b981' }}></i>
+                                  Student Feedback & Ratings
+                                </span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                  Average: {avgRating}★ ({reviewsCount})
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                                {ratingsList.map(review => (
+                                  <div
+                                    key={review.id}
+                                    style={{
+                                      background: 'var(--bg-hover, #f8fafc)',
+                                      border: '1px solid #eef2f6',
+                                      borderRadius: '6px',
+                                      padding: '8px 10px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{
+                                          width: '22px',
+                                          height: '22px',
+                                          borderRadius: '50%',
+                                          background: '#5A70D3',
+                                          color: '#ffffff',
+                                          fontSize: '0.7rem',
+                                          fontWeight: 800,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}>
+                                          {(review.studentName || 'S').charAt(0).toUpperCase()}
+                                        </div>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                          {review.studentName || 'Student'}
+                                        </span>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ color: '#eab308', fontSize: '0.74rem' }}>
+                                          {'★'.repeat(review.rating || 5)}{'☆'.repeat(Math.max(0, 5 - (review.rating || 5)))}
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {review.comment ? (
+                                      <p style={{ margin: '3px 0 0 28px', fontSize: '0.8rem', color: '#334155', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                        "{review.comment}"
+                                      </p>
+                                    ) : (
+                                      <span style={{ margin: '3px 0 0 28px', fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic', display: 'block' }}>
+                                        (Rated {review.rating} stars without written comments)
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

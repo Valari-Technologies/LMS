@@ -448,7 +448,7 @@ public class LiveSessionService {
             } catch (IllegalArgumentException ignored) {}
         }
         Page<LiveSession> page = liveSessionRepository.filterSessions(courseId, batchId, status, pageable);
-        return PageResponse.from(page.map(s -> LiveSessionResponse.from(s, meetingProvider.getJoinUrl(s.getMeetingUrl()))));
+        return PageResponse.from(page.map(s -> toSessionResponseWithRatings(s, meetingProvider.getJoinUrl(s.getMeetingUrl()), true, null)));
     }
 
     @Transactional

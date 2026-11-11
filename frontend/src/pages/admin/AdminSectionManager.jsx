@@ -1,19 +1,19 @@
 import { useEffect, useState, useRef } from 'react';
-import { 
-  listSections, 
-  createSection, 
-  updateSection, 
-  archiveSection, 
-  deleteSectionPermanently, 
-  restoreSection 
+import {
+  listSections,
+  createSection,
+  updateSection,
+  archiveSection,
+  deleteSectionPermanently,
+  restoreSection
 } from '../../api/sections';
-import { 
-  listContents, 
-  createContent, 
-  updateContent, 
-  archiveContent, 
-  deleteContentPermanently, 
-  restoreContent, 
+import {
+  listContents,
+  createContent,
+  updateContent,
+  archiveContent,
+  deleteContentPermanently,
+  restoreContent,
   addResource,
   listResources,
   updateResource,
@@ -196,9 +196,9 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
     setCreatingSection(true);
     setActionError(null);
     try {
-      await createSection(courseId, { 
-        title: newSectionTitle.trim(), 
-        description: newSectionDesc.trim() || null 
+      await createSection(courseId, {
+        title: newSectionTitle.trim(),
+        description: newSectionDesc.trim() || null
       });
       setNewSectionTitle('');
       setNewSectionDesc('');
@@ -365,7 +365,7 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
           if (directUrl && directUrl.startsWith('http')) {
             setEditingContentMedia(directUrl);
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
     setEditingContentMedia(mediaRef);
@@ -1752,7 +1752,7 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
 
             {/* Modal Body with Scroll */}
             <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
+
               {/* Section 1: Attached Resources List */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -2188,8 +2188,8 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
 
             <div style={{ borderRadius: '12px', overflow: 'hidden', background: '#000000', minHeight: '360px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {String(previewLessonModal.contentType || '').toUpperCase() === 'VIDEO' ||
-              /\.(mp4|webm|mov|mkv|m4v)(\?.*)?$/i.test(previewLessonModal.mediaReference || '') ||
-              (previewLessonModal.mediaReference && (previewLessonModal.mediaReference.includes('youtube.com') || previewLessonModal.mediaReference.includes('youtu.be') || previewLessonModal.mediaReference.includes('/video/upload') || previewLessonModal.mediaReference.includes('/media/files/'))) ? (
+                /\.(mp4|webm|mov|mkv|m4v)(\?.*)?$/i.test(previewLessonModal.mediaReference || '') ||
+                (previewLessonModal.mediaReference && (previewLessonModal.mediaReference.includes('youtube.com') || previewLessonModal.mediaReference.includes('youtu.be') || previewLessonModal.mediaReference.includes('/video/upload') || previewLessonModal.mediaReference.includes('/media/files/'))) ? (
                 <RecordingVideoPlayer
                   key={previewLessonModal.id || previewLessonModal.mediaReference}
                   url={previewLessonModal.mediaReference}

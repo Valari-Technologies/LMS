@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { getCourse } from '../../api/courses';
 import { myCourses } from '../../api/enrollment';
 import { getCourseProgress } from '../../api/progress';
-import { getLiveSessions, getCourseAttendance, rateRecording } from '../../api/live';
+import { getLiveSessions, getCourseAttendance, rateRecording, getRecordingRatings } from '../../api/live';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
@@ -101,6 +101,33 @@ export default function StudentCourseDashboardPage() {
   const [modalComment, setModalComment] = useState('');
   const [hoverRating, setHoverRating] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
+
+  // Real student reviews for the active player recording
+  const [recordingReviews, setRecordingReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
+  // Fetch real student reviews whenever a recording is selected in player
+  useEffect(() => {
+    if (!selectedRecording?.id) {
+      setRecordingReviews([]);
+      return;
+    }
+    let isMounted = true;
+    setLoadingReviews(true);
+    getRecordingRatings(selectedRecording.id)
+      .then(data => {
+        if (isMounted) {
+          setRecordingReviews(data || []);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load recording ratings/reviews:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingReviews(false);
+      });
+    return () => { isMounted = false; };
+  }, [selectedRecording?.id]);
 
   // Auto-refresh tick for live statuses
   const [, setTick] = useState(0);
@@ -295,6 +322,12 @@ export default function StudentCourseDashboardPage() {
       toast.success('Your rating for this recording class has been saved!');
       setRatingModalRecording(null);
       await loadData(false);
+      // Immediately refresh live reviews for the selected recording in player
+      if (selectedRecording?.id) {
+        getRecordingRatings(selectedRecording.id)
+          .then(data => setRecordingReviews(data || []))
+          .catch(() => {});
+      }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to submit rating';
       toast.error(msg);
@@ -325,8 +358,12 @@ export default function StudentCourseDashboardPage() {
   // .ot-video-card, .ot-learn-action-bar, .ot-learn-tabs, .ot-course-content-sidebar)
   // =========================================================================
   if (selectedRecording) {
-    const curAvgRating = selectedRecording.averageRating ? Number(selectedRecording.averageRating) : 5.0;
-    const curTotalRatings = selectedRecording.totalRatings || 0;
+    const reviewsCount = recordingReviews.length;
+    const realAvg = reviewsCount > 0
+      ? recordingReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount
+      : (selectedRecording.averageRating ? Number(selectedRecording.averageRating) : null);
+    const curAvgRating = realAvg;
+    const curTotalRatings = reviewsCount > 0 ? reviewsCount : (selectedRecording.totalRatings || 0);
     const curUserRating = selectedRecording.userRating;
 
     return (
@@ -374,9 +411,13 @@ export default function StudentCourseDashboardPage() {
                         • {new Date(selectedRecording.scheduledAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     )}
-                    {curAvgRating && (
+                    {curTotalRatings > 0 && curAvgRating ? (
                       <span style={{ marginLeft: '10px', color: '#ca8a04', fontWeight: 700 }}>
                         • ★ {curAvgRating.toFixed(1)} ({curTotalRatings})
+                      </span>
+                    ) : (
+                      <span style={{ marginLeft: '10px', color: '#94a3b8', fontWeight: 600 }}>
+                        • ☆ Unrated
                       </span>
                     )}
                   </div>
@@ -511,8 +552,8 @@ export default function StudentCourseDashboardPage() {
                     {/* Rating Summary Card inside Overview */}
                     <div style={{
                       padding: '16px 20px',
-                      background: 'rgba(234, 179, 8, 0.06)',
-                      border: '1px solid rgba(234, 179, 8, 0.25)',
+                      background: curTotalRatings > 0 ? 'rgba(234, 179, 8, 0.06)' : '#f8fafc',
+                      border: curTotalRatings > 0 ? '1px solid rgba(234, 179, 8, 0.25)' : '1px solid #e2e8f0',
                       borderRadius: '12px',
                       display: 'flex',
                       alignItems: 'center',
@@ -521,15 +562,17 @@ export default function StudentCourseDashboardPage() {
                       gap: '14px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{ fontSize: '2rem', fontWeight: 900, color: '#ca8a04', lineHeight: 1 }}>
-                          {curAvgRating.toFixed(1)}
+                        <div style={{ fontSize: '2rem', fontWeight: 900, color: curTotalRatings > 0 ? '#ca8a04' : '#94a3b8', lineHeight: 1 }}>
+                          {curTotalRatings > 0 && curAvgRating ? curAvgRating.toFixed(1) : '—'}
                         </div>
                         <div>
                           <div style={{ display: 'flex', gap: '3px', fontSize: '1rem', marginBottom: '4px' }}>
-                            {renderStars(curAvgRating)}
+                            {renderStars(curAvgRating || 0)}
                           </div>
                           <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                            {curTotalRatings} {curTotalRatings === 1 ? 'student rating' : 'student ratings'}
+                            {curTotalRatings > 0
+                              ? `${curTotalRatings} ${curTotalRatings === 1 ? 'student rating' : 'student ratings'}`
+                              : 'No student ratings yet'}
                             {curUserRating && (
                               <span style={{ marginLeft: '8px', color: '#ca8a04', fontWeight: 700 }}>
                                 • Your rating: {curUserRating}★
@@ -559,6 +602,143 @@ export default function StudentCourseDashboardPage() {
                         <i className="fa-solid fa-star"></i>
                         <span>{curUserRating ? 'Edit Rating' : 'Rate this Recording'}</span>
                       </button>
+                    </div>
+
+                    {/* Real Student Reviews & Feedback Testimonials Section */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <i className="fa-solid fa-comments" style={{ color: '#5A70D3' }}></i>
+                            <span>Student Reviews & Feedback</span>
+                          </h4>
+                          <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                            Real ratings and testimonials shared by students for this class replay
+                          </p>
+                        </div>
+                        <span style={{
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          color: '#5A70D3',
+                          background: 'rgba(90, 112, 211, 0.08)',
+                          padding: '3px 10px',
+                          borderRadius: '9999px'
+                        }}>
+                          {recordingReviews.length} {recordingReviews.length === 1 ? 'Review' : 'Reviews'}
+                        </span>
+                      </div>
+
+                      {loadingReviews ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.86rem' }}>
+                          <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: '6px' }}></i>
+                          Loading student reviews…
+                        </div>
+                      ) : recordingReviews.length === 0 ? (
+                        <div style={{
+                          padding: '24px',
+                          textAlign: 'center',
+                          background: '#f8fafc',
+                          borderRadius: '12px',
+                          border: '1px dashed #cbd5e1'
+                        }}>
+                          <i className="fa-regular fa-comment-dots" style={{ fontSize: '1.8rem', color: '#94a3b8', marginBottom: '8px', display: 'block' }}></i>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                            No student reviews yet
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '12px' }}>
+                            Have you watched this recording? Be the first to share your rating and feedback!
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
+                            style={{
+                              padding: '7px 14px',
+                              borderRadius: '8px',
+                              background: '#5A70D3',
+                              color: '#ffffff',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              border: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <i className="fa-solid fa-star" style={{ marginRight: '5px' }}></i>
+                            Write a Review
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {recordingReviews.map(rev => {
+                            const isCurrentUser = user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail);
+                            return (
+                              <div
+                                key={rev.id}
+                                style={{
+                                  padding: '14px 18px',
+                                  background: isCurrentUser ? 'rgba(90, 112, 211, 0.04)' : '#ffffff',
+                                  border: isCurrentUser ? '1px solid rgba(90, 112, 211, 0.3)' : '1px solid #e2e8f0',
+                                  borderRadius: '12px',
+                                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{
+                                      width: '32px',
+                                      height: '32px',
+                                      borderRadius: '50%',
+                                      background: isCurrentUser ? '#5A70D3' : '#475569',
+                                      color: '#ffffff',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontWeight: 800,
+                                      fontSize: '0.82rem'
+                                    }}>
+                                      {(rev.studentName || 'S').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>{rev.studentName || 'Student'}</span>
+                                        {isCurrentUser && (
+                                          <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px' }}>
+                                            You
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                        {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ display: 'flex', gap: '2px', fontSize: '0.82rem' }}>
+                                      {renderStars(rev.rating || 5)}
+                                    </div>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ca8a04' }}>
+                                      {rev.rating}.0
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {rev.comment ? (
+                                  <p style={{ margin: '2px 0 0 42px', fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
+                                    "{rev.comment}"
+                                  </p>
+                                ) : (
+                                  <span style={{ margin: '2px 0 0 42px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                    Rated {rev.rating} stars without written comments
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2365,8 +2545,8 @@ export default function StudentCourseDashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {displayedRecordings.map((s, idx) => {
                   const primaryRec = s.recordings[0] || {};
-                  const avgRating = primaryRec.averageRating ? Number(primaryRec.averageRating) : 5.0;
                   const totalRatings = primaryRec.totalRatings || 0;
+                  const avgRating = totalRatings > 0 && primaryRec.averageRating ? Number(primaryRec.averageRating) : null;
                   const userRating = primaryRec.userRating;
 
                   return (
@@ -2486,13 +2666,20 @@ export default function StudentCourseDashboardPage() {
                           )}
 
                           <span style={{ color: '#cbd5e1' }}>•</span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#0f172a', fontWeight: 700 }}>
-                            <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
-                            <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
-                            <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.74rem' }}>
-                              ({totalRatings})
+                          {totalRatings > 0 ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#0f172a', fontWeight: 700 }}>
+                              <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
+                              <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
+                              <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.74rem' }}>
+                                ({totalRatings})
+                              </span>
                             </span>
-                          </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#94a3b8', fontSize: '0.74rem' }}>
+                              <i className="fa-regular fa-star" style={{ fontSize: '0.7rem' }}></i>
+                              <span>Unrated</span>
+                            </span>
+                          )}
 
                           {userRating && (
                             <span style={{
@@ -2597,8 +2784,8 @@ export default function StudentCourseDashboardPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {displayedRecordings.map((s, idx) => {
                   const primaryRec = s.recordings[0] || {};
-                  const avgRating = primaryRec.averageRating ? Number(primaryRec.averageRating) : 5.0;
                   const totalRatings = primaryRec.totalRatings || 0;
+                  const avgRating = totalRatings > 0 && primaryRec.averageRating ? Number(primaryRec.averageRating) : null;
                   const userRating = primaryRec.userRating;
 
                   return (
@@ -2707,11 +2894,18 @@ export default function StudentCourseDashboardPage() {
 
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid #f1f5f9', marginTop: '8px' }}>
-                            <span style={{ fontSize: '0.76rem', color: '#0f172a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
-                              <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
-                              <span style={{ color: '#94a3b8', fontWeight: 500 }}>({totalRatings})</span>
-                            </span>
+                            {totalRatings > 0 ? (
+                              <span style={{ fontSize: '0.76rem', color: '#0f172a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
+                                <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
+                                <span style={{ color: '#94a3b8', fontWeight: 500 }}>({totalRatings})</span>
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                <i className="fa-regular fa-star" style={{ fontSize: '0.7rem' }}></i>
+                                <span>Unrated</span>
+                              </span>
+                            )}
                             <button
                               type="button"
                               onClick={() => handleOpenRatingModal(primaryRec, s.title)}
