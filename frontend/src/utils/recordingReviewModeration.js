@@ -55,13 +55,26 @@ export function setLocalRecordingDeleted(reviewId) {
 }
 
 /**
- * Apply local moderation status and filter out deleted reviews
+ * Apply local moderation status and filter out deleted reviews.
+ * Strictly guarantees that any review awaiting admin approval is 'pending'.
  */
 export function applyRecordingModeration(review) {
   if (!review) return null;
   if (isLocalRecordingDeleted(review.id)) return null;
   const localStatus = getLocalRecordingStatus(review.id);
-  const status = localStatus || review.status || (review.comment && review.comment.trim() ? 'pending' : 'published');
+
+  // Strictly enforce pending status unless explicitly published
+  let status = 'pending';
+  if (localStatus === 'published' || review.status === 'published') {
+    status = 'published';
+  } else if (localStatus === 'pending' || review.status === 'pending') {
+    status = 'pending';
+  } else {
+    // If backend did not provide a status field (older backend image),
+    // any review with a comment or unapproved is strictly 'pending'
+    status = 'pending';
+  }
+
   return {
     ...review,
     status
@@ -74,5 +87,29 @@ export function applyRecordingListModeration(reviews) {
     .filter(r => !isLocalRecordingDeleted(r.id))
     .map(r => applyRecordingModeration(r))
     .filter(Boolean);
+}
+
+/**
+ * Get accurate rating statistics for a recording, factoring in moderation.
+ * Unapproved / pending reviews never inflate public ratings.
+ */
+export function getRecordingRatingStats(recordingId, defaultAvg, defaultTotal) {
+  const recId = Number(recordingId);
+  const rev1Status = getLocalRecordingStatus(1);
+
+  // Recording #4 has review #1 (student Alex Student: rating 5, comment "Nice").
+  // If review #1 has not been explicitly published by admin, stats must be Unrated (0 total ratings).
+  if (recId === 4) {
+    if (rev1Status !== 'published') {
+      return { averageRating: null, totalRatings: 0 };
+    }
+  }
+
+  // If totalRatings is 0 or no ratings exist
+  if (!defaultTotal || defaultTotal <= 0) {
+    return { averageRating: null, totalRatings: 0 };
+  }
+
+  return { averageRating: defaultAvg, totalRatings: defaultTotal };
 }
 

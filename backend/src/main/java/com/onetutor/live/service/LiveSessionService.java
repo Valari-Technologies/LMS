@@ -525,7 +525,7 @@ public class LiveSessionService {
                         if (avg != null) {
                             avg = Math.round(avg * 10.0) / 10.0;
                         }
-                        count = sessionRecordingRatingRepository.countByRecordingId(r.getId());
+                        count = sessionRecordingRatingRepository.countPublishedByRecordingId(r.getId());
                         if (student != null) {
                             var userRatingOpt = sessionRecordingRatingRepository.findByRecordingIdAndStudentId(r.getId(), student.getId());
                             if (userRatingOpt.isPresent()) {
@@ -746,6 +746,7 @@ public class LiveSessionService {
         Long currentUserId = currentActor != null ? currentActor.getId() : null;
 
         return sessionRecordingRatingRepository.findByRecordingIdWithStudent(recordingId).stream()
+                .filter(r -> isAdmin || "published".equalsIgnoreCase(r.getStatus()) || (currentUserId != null && r.getStudent() != null && currentUserId.equals(r.getStudent().getId())))
                 .map(r -> SessionRecordingRatingResponse.from(r, currentUserId, isAdmin))
                 .toList();
     }

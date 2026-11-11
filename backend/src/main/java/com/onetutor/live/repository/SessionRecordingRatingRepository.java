@@ -20,8 +20,11 @@ public interface SessionRecordingRatingRepository extends JpaRepository<SessionR
     @Query("SELECT r FROM SessionRecordingRating r JOIN FETCH r.student u WHERE r.recording.id = :recordingId ORDER BY r.createdAt DESC")
     List<SessionRecordingRating> findByRecordingIdWithStudent(@Param("recordingId") Long recordingId);
 
-    @Query("SELECT AVG(r.rating) FROM SessionRecordingRating r WHERE r.recording.id = :recordingId")
+    @Query("SELECT AVG(r.rating) FROM SessionRecordingRating r WHERE r.recording.id = :recordingId AND r.status = 'published'")
     Double getAverageRatingForRecording(@Param("recordingId") Long recordingId);
+
+    @Query("SELECT COUNT(r) FROM SessionRecordingRating r WHERE r.recording.id = :recordingId AND r.status = 'published'")
+    long countPublishedByRecordingId(@Param("recordingId") Long recordingId);
 
     long countByRecordingId(Long recordingId);
 

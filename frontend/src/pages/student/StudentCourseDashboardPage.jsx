@@ -4,6 +4,7 @@ import { getCourse } from '../../api/courses';
 import { myCourses } from '../../api/enrollment';
 import { getCourseProgress } from '../../api/progress';
 import { getLiveSessions, getCourseAttendance, rateRecording, getRecordingRatings } from '../../api/live';
+import { getRecordingRatingStats } from '../../utils/recordingReviewModeration';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
@@ -358,13 +359,20 @@ export default function StudentCourseDashboardPage() {
   // .ot-video-card, .ot-learn-action-bar, .ot-learn-tabs, .ot-course-content-sidebar)
   // =========================================================================
   if (selectedRecording) {
-    const reviewsCount = recordingReviews.length;
-    const realAvg = reviewsCount > 0
-      ? recordingReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount
-      : (selectedRecording.averageRating ? Number(selectedRecording.averageRating) : null);
-    const curAvgRating = realAvg;
-    const curTotalRatings = reviewsCount > 0 ? reviewsCount : (selectedRecording.totalRatings || 0);
-    const curUserRating = selectedRecording.userRating;
+    const publishedReviews = recordingReviews.filter(r => r.status === 'published');
+    const publishedReviewsWithComment = publishedReviews.filter(r => r.comment && r.comment.trim());
+    const myReview = recordingReviews.find(r =>
+      user && (String(user.id) === String(r.studentId) || user.email === r.studentEmail)
+    );
+    const myPendingReview = myReview && myReview.status !== 'published' ? myReview : null;
+
+    // Public aggregate ratings strictly only count PUBLISHED reviews.
+    // An unapproved / pending review must NEVER inflate public star ratings or total count.
+    const curTotalRatings = publishedReviews.length;
+    const curAvgRating = curTotalRatings > 0
+      ? publishedReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / curTotalRatings
+      : null;
+    const curUserRating = myReview ? myReview.rating : selectedRecording.userRating;
 
     return (
       <div className="ot-learn-page">
@@ -435,7 +443,11 @@ export default function StudentCourseDashboardPage() {
                     }}
                   >
                     <i className="fa-solid fa-star"></i>
-                    <span>{curUserRating ? `Rated ${curUserRating}★` : 'Rate Recording'}</span>
+                    <span>
+                      {curUserRating
+                        ? (myPendingReview ? `Rated ${curUserRating}★ (Pending)` : `Rated ${curUserRating}★`)
+                        : 'Rate Recording'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -575,7 +587,7 @@ export default function StudentCourseDashboardPage() {
                               : 'No student ratings yet'}
                             {curUserRating && (
                               <span style={{ marginLeft: '8px', color: '#ca8a04', fontWeight: 700 }}>
-                                • Your rating: {curUserRating}★
+                                • Your rating: {curUserRating}★ {myPendingReview ? '(Awaiting Admin Approval)' : ''}
                               </span>
                             )}
                           </div>
@@ -836,7 +848,14 @@ export default function StudentCourseDashboardPage() {
                                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
                                   {rec.scheduledAt ? new Date(rec.scheduledAt).toLocaleDateString() : 'Live Class'}
                                   {rec.duration ? ` • ${Math.round(rec.duration / 60)} mins` : ''}
-                                  {rec.averageRating && ` • ★ ${Number(rec.averageRating).toFixed(1)}`}
+                                  {isCurrent ? (
+                                    curTotalRatings > 0 && curAvgRating ? ` • ★ ${curAvgRating.toFixed(1)}` : ''
+                                  ) : (
+                                    (() => {
+                                      const stats = getRecordingRatingStats(rec.id, rec.averageRating ? Number(rec.averageRating) : null, rec.totalRatings || 0);
+                                      return stats.totalRatings > 0 && stats.averageRating ? ` • ★ ${stats.averageRating.toFixed(1)}` : '';
+                                    })()
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1047,13 +1066,27 @@ export default function StudentCourseDashboardPage() {
                                           </span>
                                         </>
                                       )}
-                                      {rec.averageRating && (
-                                        <>
-                                          <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
-                                          <span style={{ color: '#ca8a04', fontWeight: 700 }}>
-                                            ★ {Number(rec.averageRating).toFixed(1)}
-                                          </span>
-                                        </>
+                                      {isCurrent ? (
+                                        curTotalRatings > 0 && curAvgRating && (
+                                          <>
+                                            <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
+                                            <span style={{ color: '#ca8a04', fontWeight: 700 }}>
+                                              ★ {curAvgRating.toFixed(1)}
+                                            </span>
+                                          </>
+                                        )
+                                      ) : (
+                                        (() => {
+                                          const stats = getRecordingRatingStats(rec.id, rec.averageRating ? Number(rec.averageRating) : null, rec.totalRatings || 0);
+                                          return stats.totalRatings > 0 && stats.averageRating ? (
+                                            <>
+                                              <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
+                                              <span style={{ color: '#ca8a04', fontWeight: 700 }}>
+                                                ★ {stats.averageRating.toFixed(1)}
+                                              </span>
+                                            </>
+                                          ) : null;
+                                        })()
                                       )}
                                     </div>
                                   </div>
@@ -2573,8 +2606,9 @@ export default function StudentCourseDashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {displayedRecordings.map((s, idx) => {
                   const primaryRec = s.recordings[0] || {};
-                  const totalRatings = primaryRec.totalRatings || 0;
-                  const avgRating = totalRatings > 0 && primaryRec.averageRating ? Number(primaryRec.averageRating) : null;
+                  const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
+                  const totalRatings = stats.totalRatings;
+                  const avgRating = stats.averageRating;
                   const userRating = primaryRec.userRating;
 
                   return (
@@ -2718,7 +2752,7 @@ export default function StudentCourseDashboardPage() {
                               padding: '1px 6px',
                               borderRadius: '4px'
                             }}>
-                              Your Rating: {userRating}★
+                              Your Rating: {userRating}★ {totalRatings === 0 ? '(Pending Approval)' : ''}
                             </span>
                           )}
                         </div>
@@ -2812,8 +2846,9 @@ export default function StudentCourseDashboardPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {displayedRecordings.map((s, idx) => {
                   const primaryRec = s.recordings[0] || {};
-                  const totalRatings = primaryRec.totalRatings || 0;
-                  const avgRating = totalRatings > 0 && primaryRec.averageRating ? Number(primaryRec.averageRating) : null;
+                  const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
+                  const totalRatings = stats.totalRatings;
+                  const avgRating = stats.averageRating;
                   const userRating = primaryRec.userRating;
 
                   return (
