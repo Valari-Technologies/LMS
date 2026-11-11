@@ -11664,3 +11664,119 @@ h6,
     z-index: 2050;
   }
 }
+
+/* ==========================================================================
+   STUDENT RECORDED SESSIONS (Minimal & Professional Scalable Style)
+   ========================================================================== */
+.ot-recordings-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+}
+
+.ot-recording-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  flex: 1;
+  min-width: 240px;
+  max-width: 440px;
+  transition: all 0.15s ease;
+}
+
+.ot-recording-search-box:focus-within {
+  border-color: #5A70D3;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(90, 112, 211, 0.12);
+}
+
+.ot-recording-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.ot-recording-row {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.ot-recording-row:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.ot-recording-play-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  background: #5A70D3;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(90, 112, 211, 0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ot-recording-play-btn:hover {
+  background: #4a5dbf;
+  box-shadow: 0 4px 10px rgba(90, 112, 211, 0.35);
+}
+
+.ot-recording-rate-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ot-recording-rate-btn:hover {
+  background: #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .ot-recording-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .ot-recording-row-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

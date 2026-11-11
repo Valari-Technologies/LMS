@@ -41,6 +41,27 @@ function renderStars(rating, max = 5) {
   return stars;
 }
 
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return null;
+  const mins = Math.floor(seconds / 60);
+  const hrs = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hrs > 0) {
+    return `${hrs}h ${remMins > 0 ? `${remMins}m` : ''}`.trim();
+  }
+  return `${mins}m`;
+}
+
+function formatSessionDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
 export default function StudentCourseDashboardPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -64,6 +85,11 @@ export default function StudentCourseDashboardPage() {
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [videoPlayerTab, setVideoPlayerTab] = useState('overview'); // 'overview' | 'curriculum' | 'notes' | 'community' | 'resources'
   const [expandedSections, setExpandedSections] = useState({});
+
+  // Recordings tab state (Search, Sort, and View Mode for scalable list)
+  const [recordingSearch, setRecordingSearch] = useState('');
+  const [recordingSort, setRecordingSort] = useState('newest'); // 'newest' | 'oldest'
+  const [recordingViewMode, setRecordingViewMode] = useState('list'); // 'list' | 'grid'
 
   // Sidebar responsive & collapse state for inside course card pages
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -148,6 +174,22 @@ export default function StudentCourseDashboardPage() {
 
   const liveActiveSessions = courseSessions.filter(s => getLiveEffectiveStatus(s) === 'live');
   const recordingSessions = courseSessions.filter(s => s.recordings && s.recordings.length > 0);
+
+  // Filtered and sorted recordings for the Recordings tab
+  const displayedRecordings = recordingSessions
+    .filter(s => {
+      if (!recordingSearch.trim()) return true;
+      const q = recordingSearch.toLowerCase();
+      const matchTitle = (s.title || '').toLowerCase().includes(q);
+      const matchDesc = (s.description || '').toLowerCase().includes(q);
+      const matchBatch = (s.batchName || '').toLowerCase().includes(q);
+      return matchTitle || matchDesc || matchBatch;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.scheduledAt || 0).getTime();
+      const dateB = new Date(b.scheduledAt || 0).getTime();
+      return recordingSort === 'newest' ? dateB - dateA : dateA - dateB;
+    });
 
   // Flatten all recordings for this course into an ordered playlist
   const allRecordings = [];
@@ -2169,162 +2211,316 @@ export default function StudentCourseDashboardPage() {
         )}
 
         {/* ===================================================================
-            TAB 4: RECORDINGS (WITH 5-STAR RECORDING CLASS RATING FEATURE)
+            TAB 4: RECORDINGS (MINIMAL & PROFESSIONAL SCALABLE RECORDED CLASSES)
             =================================================================== */}
         {activeTab === 'recordings' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Header Strip with Counter */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
-                  <span>Recorded Session Classes</span>
+                  <span>Recorded Classes</span>
                 </h2>
-                <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>
-                  Stream full HD replays with WebVTT English subtitles in the video classes player, and share your feedback by rating each recording class.
+                <p style={{ fontSize: '0.86rem', color: '#64748b', margin: 0 }}>
+                  Stream full HD replays with subtitles, track your progression, and rate class sessions.
                 </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  background: '#E8EBFA',
+                  color: '#5A70D3',
+                  padding: '4px 12px',
+                  borderRadius: '9999px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  <i className="fa-solid fa-film"></i>
+                  <span>{recordingSessions.length} {recordingSessions.length === 1 ? 'Class' : 'Classes'}</span>
+                </span>
               </div>
             </div>
 
+            {/* Quick Search & Sort Filter Toolbar */}
+            {recordingSessions.length > 0 && (
+              <div className="ot-recordings-toolbar">
+                {/* Search Box */}
+                <div className="ot-recording-search-box">
+                  <i className="fa-solid fa-magnifying-glass" style={{ color: '#94a3b8', fontSize: '0.85rem' }}></i>
+                  <input
+                    type="text"
+                    className="ot-recording-search-input"
+                    placeholder="Search recorded classes by title or topic..."
+                    value={recordingSearch}
+                    onChange={(e) => setRecordingSearch(e.target.value)}
+                  />
+                  {recordingSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setRecordingSearch('')}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', padding: '0 2px' }}
+                      title="Clear search"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </div>
+
+                {/* Right Controls: Sort & View Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Sort selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700 }}>Sort:</span>
+                    <select
+                      value={recordingSort}
+                      onChange={(e) => setRecordingSort(e.target.value)}
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: '#334155',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                    </select>
+                  </div>
+
+                  {/* View Mode Toggle */}
+                  <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setRecordingViewMode('list')}
+                      title="Compact List View"
+                      style={{
+                        border: 'none',
+                        background: recordingViewMode === 'list' ? '#ffffff' : 'transparent',
+                        color: recordingViewMode === 'list' ? '#5A70D3' : '#64748b',
+                        borderRadius: '6px',
+                        padding: '5px 9px',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem',
+                        boxShadow: recordingViewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        fontWeight: 700
+                      }}
+                    >
+                      <i className="fa-solid fa-bars"></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecordingViewMode('grid')}
+                      title="Grid Cards View"
+                      style={{
+                        border: 'none',
+                        background: recordingViewMode === 'grid' ? '#ffffff' : 'transparent',
+                        color: recordingViewMode === 'grid' ? '#5A70D3' : '#64748b',
+                        borderRadius: '6px',
+                        padding: '5px 9px',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem',
+                        boxShadow: recordingViewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        fontWeight: 700
+                      }}
+                    >
+                      <i className="fa-solid fa-table-cells-large"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
             {recordingSessions.length === 0 ? (
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '48px 24px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '48px 24px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b' }}>
                 <i className="fa-solid fa-film" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
                 <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>No session recordings available yet</h3>
-                <p style={{ margin: 0, fontSize: '0.9rem' }}>Recordings are processed and uploaded here after live classes conclude.</p>
+                <p style={{ margin: 0, fontSize: '0.9rem' }}>Recordings will appear here after live classes conclude.</p>
               </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '22px' }}>
-                {recordingSessions.map(s => {
+            ) : displayedRecordings.length === 0 ? (
+              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '36px 20px', border: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ fontSize: '2rem', color: '#cbd5e1', marginBottom: '10px', display: 'block' }}></i>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>No recordings match "{recordingSearch}"</h3>
+                <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem' }}>Try searching with a different title or keyword.</p>
+                <button
+                  type="button"
+                  onClick={() => setRecordingSearch('')}
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontWeight: 700 }}
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : recordingViewMode === 'list' ? (
+              /* =========================================================
+                 1. COMPACT PROFESSIONAL LIST VIEW (Default - Scalable)
+                 ========================================================= */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {displayedRecordings.map((s, idx) => {
+                  const primaryRec = s.recordings[0] || {};
+                  const avgRating = primaryRec.averageRating ? Number(primaryRec.averageRating) : 5.0;
+                  const totalRatings = primaryRec.totalRatings || 0;
+                  const userRating = primaryRec.userRating;
+
                   return (
                     <div
                       key={s.id}
-                      style={{
-                        background: '#ffffff',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        border: '1px solid #cbd5e1',
-                        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between'
-                      }}
+                      className="ot-recording-row"
                     >
-                      <div>
-                        {/* Session Date & Batch Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
-                            <i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: '#5A70D3' }}></i>
-                            {new Date(s.scheduledAt).toLocaleDateString()}
+                      {/* Left: Index & Play Icon Circle */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#94a3b8', width: '24px', textAlign: 'center' }}>
+                          #{idx + 1}
+                        </span>
+                        <div
+                          onClick={() => setSelectedRecording({
+                            ...primaryRec,
+                            id: primaryRec.id,
+                            url: primaryRec.url || primaryRec.recordingUrl,
+                            sessionTitle: s.title,
+                            courseName: course?.name || course?.title,
+                            description: s.description,
+                            subtitleUrl: primaryRec.subtitleUrl || null,
+                            scheduledAt: s.scheduledAt,
+                            batchName: s.batchName
+                          })}
+                          style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '10px',
+                            background: 'rgba(90, 112, 211, 0.08)',
+                            color: '#5A70D3',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            flexShrink: 0
+                          }}
+                          title="Watch Class Replay"
+                        >
+                          <i className="fa-solid fa-play" style={{ fontSize: '0.9rem', marginLeft: '2px' }}></i>
+                        </div>
+                      </div>
+
+                      {/* Middle: Title & Inline Metadata Strip */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                          <span
+                            onClick={() => setSelectedRecording({
+                              ...primaryRec,
+                              id: primaryRec.id,
+                              url: primaryRec.url || primaryRec.recordingUrl,
+                              sessionTitle: s.title,
+                              courseName: course?.name || course?.title,
+                              description: s.description,
+                              subtitleUrl: primaryRec.subtitleUrl || null,
+                              scheduledAt: s.scheduledAt,
+                              batchName: s.batchName
+                            })}
+                            style={{
+                              fontSize: '0.96rem',
+                              fontWeight: 800,
+                              color: '#0f172a',
+                              cursor: 'pointer',
+                              lineHeight: 1.3
+                            }}
+                            title={s.title}
+                          >
+                            {s.title}
                           </span>
 
                           {s.batchName && (
-                            <span style={{ fontSize: '0.74rem', background: '#E8EBFA', color: '#5A70D3', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
+                            <span style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              color: '#5A70D3',
+                              background: 'rgba(90, 112, 211, 0.08)',
+                              padding: '2px 8px',
+                              borderRadius: '9999px'
+                            }}>
                               {s.batchName}
+                            </span>
+                          )}
+
+                          {primaryRec.subtitleUrl && (
+                            <span style={{
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                              color: '#059669',
+                              background: '#ecfdf5',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              <i className="fa-solid fa-closed-captioning"></i>
+                              CC
                             </span>
                           )}
                         </div>
 
-                        <h3 style={{ fontSize: '1.22rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3 }}>
-                          {s.title}
-                        </h3>
+                        {/* Inline Meta Strip */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#64748b', flexWrap: 'wrap' }}>
+                          <span>
+                            <i className="fa-regular fa-calendar" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
+                            {formatSessionDate(s.scheduledAt)}
+                          </span>
 
-                        {s.description && (
-                          <p style={{ fontSize: '0.86rem', color: '#64748b', lineHeight: 1.45, marginBottom: '16px' }}>
-                            {s.description}
-                          </p>
-                        )}
-                      </div>
+                          {primaryRec.duration && (
+                            <>
+                              <span style={{ color: '#cbd5e1' }}>•</span>
+                              <span>
+                                <i className="fa-regular fa-clock" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
+                                {formatDuration(primaryRec.duration)}
+                              </span>
+                            </>
+                          )}
 
-                      {/* Recordings List & Individual Rating for each Recording */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
-                        {(s.recordings || []).map((r, rIdx) => {
-                          const recUrl = r.url || r.recordingUrl;
-                          const avgRating = r.averageRating ? Number(r.averageRating) : 5.0;
-                          const totalRatings = r.totalRatings || 0;
-                          const userRating = r.userRating;
+                          <span style={{ color: '#cbd5e1' }}>•</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#0f172a', fontWeight: 700 }}>
+                            <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
+                            <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
+                            <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.74rem' }}>
+                              ({totalRatings})
+                            </span>
+                          </span>
 
-                          return (
-                            <div
-                              key={r.id || rIdx}
-                              style={{
-                                background: '#f8fafc',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '14px',
-                                padding: '14px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '10px'
-                              }}
-                            >
-                              {/* Recording Title / Meta Row */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <i className="fa-solid fa-circle-play" style={{ color: '#5A70D3' }}></i>
-                                  <span>Recording {s.recordings.length > 1 ? `#${rIdx + 1}` : 'Class'}</span>
-                                  {r.duration ? <span style={{ color: '#64748b', fontWeight: 500, fontSize: '0.8rem' }}>({Math.round(r.duration / 60)} mins)</span> : null}
-                                </span>
+                          {userRating && (
+                            <span style={{
+                              color: '#b45309',
+                              fontWeight: 700,
+                              fontSize: '0.72rem',
+                              background: 'rgba(234, 179, 8, 0.1)',
+                              padding: '1px 6px',
+                              borderRadius: '4px'
+                            }}>
+                              Your Rating: {userRating}★
+                            </span>
+                          )}
+                        </div>
 
-                                {r.subtitleUrl && (
-                                  <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '9999px', fontWeight: 700 }}>
-                                    <i className="fa-solid fa-closed-captioning" style={{ marginRight: '3px' }}></i> Subtitles Ready
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* RATINGS ROW: Star Rating Display + Rate Class Button */}
-                              <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                background: '#ffffff',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '10px',
-                                padding: '8px 12px',
-                                flexWrap: 'wrap',
-                                gap: '8px'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <div style={{ display: 'flex', gap: '3px', fontSize: '0.88rem' }}>
-                                    {renderStars(avgRating)}
-                                  </div>
-                                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
-                                    {avgRating.toFixed(1)}
-                                  </span>
-                                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                                    ({totalRatings} {totalRatings === 1 ? 'rating' : 'ratings'})
-                                  </span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenRatingModal(r, s.title)}
-                                  style={{
-                                    background: userRating ? '#E8EBFA' : 'rgba(234, 179, 8, 0.12)',
-                                    color: userRating ? '#5A70D3' : '#b45309',
-                                    border: userRating ? '1px solid rgba(90, 112, 211, 0.25)' : '1px solid rgba(234, 179, 8, 0.3)',
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                >
-                                  <i className="fa-solid fa-star" style={{ color: '#eab308' }}></i>
-                                  <span>{userRating ? `Your Rating: ${userRating}★ (Edit)` : 'Rate Recording'}</span>
-                                </button>
-                              </div>
-
-                              {/* Watch Recording Button (Launches Video Classes Style Player) */}
+                        {/* Multiple Parts if session has > 1 recordings */}
+                        {s.recordings && s.recordings.length > 1 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Parts:</span>
+                            {s.recordings.map((r, rIdx) => (
                               <button
+                                key={r.id || rIdx}
                                 type="button"
                                 onClick={() => setSelectedRecording({
                                   ...r,
                                   id: r.id,
-                                  url: recUrl,
-                                  sessionTitle: s.title,
+                                  url: r.url || r.recordingUrl,
+                                  sessionTitle: `${s.title} (Part ${rIdx + 1})`,
                                   courseName: course?.name || course?.title,
                                   description: s.description,
                                   subtitleUrl: r.subtitleUrl || null,
@@ -2332,28 +2528,241 @@ export default function StudentCourseDashboardPage() {
                                   batchName: s.batchName
                                 })}
                                 style={{
-                                  height: '42px',
-                                  borderRadius: '8px',
-                                  background: '#5A70D3',
-                                  color: '#ffffff',
-                                  fontWeight: 800,
-                                  fontSize: '0.88rem',
-                                  border: 'none',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  background: '#f1f5f9',
+                                  border: '1px solid #cbd5e1',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  color: '#334155',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '8px',
-                                  boxShadow: '0 2px 8px rgba(90, 112, 211, 0.25)',
-                                  transition: 'all 0.18s ease'
+                                  gap: '4px'
                                 }}
                               >
-                                <i className="fa-solid fa-play" style={{ fontSize: '0.8rem' }}></i>
-                                <span>Watch Class Replay</span>
+                                <i className="fa-solid fa-play" style={{ fontSize: '0.6rem', color: '#5A70D3' }}></i>
+                                <span>Part {rIdx + 1}</span>
+                                {r.duration ? <span style={{ color: '#94a3b8' }}>({Math.round(r.duration / 60)}m)</span> : null}
                               </button>
-                            </div>
-                          );
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="ot-recording-row-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          className="ot-recording-rate-btn"
+                          onClick={() => handleOpenRatingModal(primaryRec, s.title)}
+                          style={{
+                            background: userRating ? 'rgba(90, 112, 211, 0.08)' : '#ffffff',
+                            color: userRating ? '#5A70D3' : '#475569',
+                            border: userRating ? '1px solid rgba(90, 112, 211, 0.3)' : '1px solid #cbd5e1'
+                          }}
+                          title="Rate this recording"
+                        >
+                          <i className="fa-solid fa-star" style={{ color: '#eab308' }}></i>
+                          <span>{userRating ? `${userRating}★ Edit` : 'Rate'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="ot-recording-play-btn"
+                          onClick={() => setSelectedRecording({
+                            ...primaryRec,
+                            id: primaryRec.id,
+                            url: primaryRec.url || primaryRec.recordingUrl,
+                            sessionTitle: s.title,
+                            courseName: course?.name || course?.title,
+                            description: s.description,
+                            subtitleUrl: primaryRec.subtitleUrl || null,
+                            scheduledAt: s.scheduledAt,
+                            batchName: s.batchName
+                          })}
+                        >
+                          <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
+                          <span>Watch Replay</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* =========================================================
+                 2. COMPACT MINIMAL GRID VIEW
+                 ========================================================= */
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                {displayedRecordings.map((s, idx) => {
+                  const primaryRec = s.recordings[0] || {};
+                  const avgRating = primaryRec.averageRating ? Number(primaryRec.averageRating) : 5.0;
+                  const totalRatings = primaryRec.totalRatings || 0;
+                  const userRating = primaryRec.userRating;
+
+                  return (
+                    <div
+                      key={s.id}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                        transition: 'all 0.18s ease'
+                      }}
+                    >
+                      {/* Video Banner */}
+                      <div
+                        onClick={() => setSelectedRecording({
+                          ...primaryRec,
+                          id: primaryRec.id,
+                          url: primaryRec.url || primaryRec.recordingUrl,
+                          sessionTitle: s.title,
+                          courseName: course?.name || course?.title,
+                          description: s.description,
+                          subtitleUrl: primaryRec.subtitleUrl || null,
+                          scheduledAt: s.scheduledAt,
+                          batchName: s.batchName
                         })}
+                        style={{
+                          height: '110px',
+                          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#ffffff'
+                        }}
+                      >
+                        <div style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          backdropFilter: 'blur(4px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.1rem'
+                        }}>
+                          <i className="fa-solid fa-play" style={{ marginLeft: '2px' }}></i>
+                        </div>
+
+                        <span style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '10px',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          background: 'rgba(0, 0, 0, 0.65)',
+                          color: '#ffffff',
+                          padding: '2px 8px',
+                          borderRadius: '4px'
+                        }}>
+                          #{idx + 1}
+                        </span>
+
+                        {primaryRec.duration && (
+                          <span style={{
+                            position: 'absolute',
+                            bottom: '10px',
+                            right: '10px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            background: 'rgba(0, 0, 0, 0.75)',
+                            color: '#ffffff',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {formatDuration(primaryRec.duration)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Card Content */}
+                      <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+                              <i className="fa-regular fa-calendar" style={{ marginRight: '4px' }}></i>
+                              {formatSessionDate(s.scheduledAt)}
+                            </span>
+                            {s.batchName && (
+                              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#5A70D3', background: 'rgba(90, 112, 211, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                                {s.batchName}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', lineHeight: 1.35 }}>
+                            {s.title}
+                          </h3>
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid #f1f5f9', marginTop: '8px' }}>
+                            <span style={{ fontSize: '0.76rem', color: '#0f172a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
+                              <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
+                              <span style={{ color: '#94a3b8', fontWeight: 500 }}>({totalRatings})</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRatingModal(primaryRec, s.title)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#ca8a04',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                padding: '2px 4px'
+                              }}
+                            >
+                              {userRating ? `${userRating}★ Edit` : 'Rate Class'}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRecording({
+                              ...primaryRec,
+                              id: primaryRec.id,
+                              url: primaryRec.url || primaryRec.recordingUrl,
+                              sessionTitle: s.title,
+                              courseName: course?.name || course?.title,
+                              description: s.description,
+                              subtitleUrl: primaryRec.subtitleUrl || null,
+                              scheduledAt: s.scheduledAt,
+                              batchName: s.batchName
+                            })}
+                            style={{
+                              width: '100%',
+                              height: '34px',
+                              borderRadius: '6px',
+                              background: '#5A70D3',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              fontSize: '0.8rem',
+                              border: 'none',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              marginTop: '8px'
+                            }}
+                          >
+                            <i className="fa-solid fa-play" style={{ fontSize: '0.7rem' }}></i>
+                            <span>Watch Replay</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
