@@ -35,6 +35,9 @@ public class SessionRecordingRating {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
+    @Column(nullable = false, length = 20)
+    private String status = "pending";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -43,6 +46,9 @@ public class SessionRecordingRating {
 
     @PrePersist
     void onCreate() {
+        if (this.status == null || this.status.isBlank()) {
+            this.status = "pending";
+        }
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -52,4 +58,3 @@ public class SessionRecordingRating {
         this.updatedAt = Instant.now();
     }
 }
-

@@ -708,6 +708,11 @@ export default function StudentCourseDashboardPage() {
                                             You
                                           </span>
                                         )}
+                                        {rev.status === 'pending' && isCurrentUser && (
+                                          <span style={{ fontSize: '0.68rem', fontWeight: 700, background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px' }}>
+                                            Pending Approval
+                                          </span>
+                                        )}
                                       </div>
                                       <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
                                         {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
@@ -725,10 +730,14 @@ export default function StudentCourseDashboardPage() {
                                   </div>
                                 </div>
 
-                                {rev.comment ? (
+                                {rev.comment && (rev.status === 'published' || isCurrentUser) ? (
                                   <p style={{ margin: '2px 0 0 42px', fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
                                     "{rev.comment}"
                                   </p>
+                                ) : rev.comment && rev.status === 'pending' && !isCurrentUser ? (
+                                  <span style={{ margin: '2px 0 0 42px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                    Rated {rev.rating} stars (written feedback awaiting approval)
+                                  </span>
                                 ) : (
                                   <span style={{ margin: '2px 0 0 42px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
                                     Rated {rev.rating} stars without written comments

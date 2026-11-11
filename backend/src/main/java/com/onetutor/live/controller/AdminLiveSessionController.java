@@ -92,4 +92,28 @@ public class AdminLiveSessionController {
         return ApiResponse.ok("Subtitle generation job queued successfully",
                 liveSessionService.generateRecordingSubtitles(sessionId, recordingId, actor));
     }
+
+    @PatchMapping("/recordings/ratings/{id}/publish")
+    public ApiResponse<SessionRecordingRatingResponse> togglePublishRating(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "true") boolean publish,
+            @AuthenticationPrincipal User actor) {
+        return ApiResponse.ok(publish ? "Recording review published successfully" : "Recording review moved to pending approval",
+                liveSessionService.adminPublishRecordingRating(id, publish, actor));
+    }
+
+    @DeleteMapping("/recordings/ratings/{id}")
+    public ApiResponse<Void> deleteRating(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User actor) {
+        liveSessionService.adminDeleteRecordingRating(id, actor);
+        return ApiResponse.ok("Recording review removed successfully", null);
+    }
+
+    @GetMapping("/recordings/{recordingId}/ratings")
+    public ApiResponse<java.util.List<SessionRecordingRatingResponse>> getAdminRecordingRatings(
+            @PathVariable Long recordingId,
+            @AuthenticationPrincipal User actor) {
+        return ApiResponse.ok(liveSessionService.getRecordingRatings(recordingId, actor));
+    }
 }

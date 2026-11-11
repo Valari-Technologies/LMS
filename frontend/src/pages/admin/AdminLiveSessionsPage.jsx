@@ -10,12 +10,14 @@ import {
   updateRecording,
   deleteRecording,
   generateRecordingSubtitles,
-  getRecordingRatings
+  getRecordingRatings,
+  togglePublishRecordingRating,
+  deleteRecordingRating
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
 import { getCourseBatches, getAdminBatches } from '../../api/batches';
-import { useNotification } from '../../context/NotificationContext';
+import { useNotification, confirmDialog } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
@@ -500,6 +502,49 @@ export default function AdminLiveSessionsPage() {
       toast.error(err.response?.data?.message || 'Failed to trigger subtitle generation');
     } finally {
       setGeneratingSubtitleId(null);
+    }
+  }
+
+  async function handleTogglePublishRecordingReview(review, publish) {
+    if (isReadOnly) return;
+    try {
+      await togglePublishRecordingRating(review.id, publish);
+      toast.success(publish ? 'Recording review published! It is now live for students.' : 'Recording review unpublished and moved to pending approval.');
+      setRecordingRatingsMap(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(recId => {
+          next[recId] = (next[recId] || []).map(r => r.id === review.id ? { ...r, status: publish ? 'published' : 'pending' } : r);
+        });
+        return next;
+      });
+    } catch (err) {
+      toast.error('Failed to update review status');
+    }
+  }
+
+  async function handleDeleteRecordingReview(review) {
+    if (isReadOnly) return;
+    const confirmed = await confirm({
+      title: `Delete Review by ${review.studentName || 'Student'}?`,
+      description: `Are you sure you want to permanently remove this ${review.rating}-star review? This action cannot be undone.`,
+      confirmText: 'Delete Review',
+      cancelText: 'Cancel',
+      variant: 'delete'
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteRecordingRating(review.id);
+      toast.success('Review deleted successfully.');
+      setRecordingRatingsMap(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(recId => {
+          next[recId] = (next[recId] || []).filter(r => r.id !== review.id);
+        });
+        return next;
+      });
+    } catch (err) {
+      toast.error('Failed to delete review');
     }
   }
 
@@ -1805,7 +1850,7 @@ export default function AdminLiveSessionsPage() {
                                   padding: '10px 12px'
                                 }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <div style={{
                                       width: '26px',
@@ -1824,14 +1869,89 @@ export default function AdminLiveSessionsPage() {
                                     <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                                       {review.studentName || 'Student'}
                                     </span>
+                                    {review.comment && (
+                                      review.status === 'published' ? (
+                                        <span style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                          padding: '1px 6px',
+                                          borderRadius: '10px',
+                                          fontSize: '0.68rem',
+                                          fontWeight: 700,
+                                          background: 'rgba(34, 197, 94, 0.12)',
+                                          color: '#16a34a',
+                                          border: '1px solid rgba(34, 197, 94, 0.25)'
+                                        }}>
+                                          <i className="fa-solid fa-circle-check"></i> Published
+                                        </span>
+                                      ) : (
+                                        <span style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                          padding: '1px 6px',
+                                          borderRadius: '10px',
+                                          fontSize: '0.68rem',
+                                          fontWeight: 700,
+                                          background: 'rgba(245, 158, 11, 0.15)',
+                                          color: '#b45309',
+                                          border: '1px solid rgba(245, 158, 11, 0.3)'
+                                        }}>
+                                          <i className="fa-solid fa-hourglass-half"></i> Pending
+                                        </span>
+                                      )
+                                    )}
                                   </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ color: '#eab308', fontSize: '0.82rem' }}>
                                       {'★'.repeat(review.rating || 5)}{'☆'.repeat(Math.max(0, 5 - (review.rating || 5)))}
                                     </span>
                                     <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
                                       {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
                                     </span>
+
+                                    {/* Action buttons: Publish/Unpublish, Delete */}
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
+                                      {review.comment && (
+                                        review.status === 'published' ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTogglePublishRecordingReview(review, false)}
+                                            disabled={isReadOnly}
+                                            className="btn btn-secondary btn-sm"
+                                            style={{ padding: '2px 7px', fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}
+                                            title="Unpublish this review comment"
+                                          >
+                                            <i className="fa-solid fa-eye-slash" style={{ marginRight: '3px' }}></i>
+                                            Unpublish
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTogglePublishRecordingReview(review, true)}
+                                            disabled={isReadOnly}
+                                            className="btn btn-sm"
+                                            style={{ padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700, background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '4px' }}
+                                            title="Publish this review comment live"
+                                          >
+                                            <i className="fa-solid fa-circle-check" style={{ marginRight: '3px' }}></i>
+                                            Publish
+                                          </button>
+                                        )
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteRecordingReview(review)}
+                                        disabled={isReadOnly}
+                                        className="btn btn-ghost btn-sm"
+                                        style={{ padding: '2px 5px', fontSize: '0.74rem', color: '#ef4444' }}
+                                        title="Delete student review permanently"
+                                      >
+                                        <i className="fa-regular fa-trash-can"></i>
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                                 {review.comment ? (

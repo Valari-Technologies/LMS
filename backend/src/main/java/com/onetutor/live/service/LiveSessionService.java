@@ -27,9 +27,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -709,20 +715,129 @@ public class LiveSessionService {
                 });
 
         rating.setRating(req.rating());
-        rating.setComment(req.comment() != null ? req.comment().trim() : null);
+        String newComment = req.comment() != null && !req.comment().trim().isEmpty() ? req.comment().trim() : null;
+        if (newComment != null) {
+            // New or modified comment starts in pending approval status
+            if (!newComment.equals(rating.getComment())) {
+                rating.setComment(newComment);
+                rating.setStatus("pending");
+            }
+        } else {
+            rating.setComment(null);
+            rating.setStatus("published");
+        }
         sessionRecordingRatingRepository.save(rating);
 
         auditService.log(student, "RATE_SESSION_RECORDING", "SessionRecording", recording.getId(),
                 "Student rated recording #" + recordingId + " with " + req.rating() + " stars");
 
-        return SessionRecordingRatingResponse.from(rating);
+        return SessionRecordingRatingResponse.from(rating, student.getId(), false);
     }
 
     @Transactional(readOnly = true)
     public List<SessionRecordingRatingResponse> getRecordingRatings(Long recordingId) {
-        return sessionRecordingRatingRepository.findByRecordingId(recordingId).stream()
-                .map(SessionRecordingRatingResponse::from)
+        return getRecordingRatings(recordingId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionRecordingRatingResponse> getRecordingRatings(Long recordingId, User currentActor) {
+        boolean isAdmin = currentActor != null && currentActor.getRole() != null &&
+                (currentActor.getRole().name().contains("ADMIN") || currentActor.getRole().name().contains("CONTENT_CREATOR"));
+        Long currentUserId = currentActor != null ? currentActor.getId() : null;
+
+        return sessionRecordingRatingRepository.findByRecordingIdWithStudent(recordingId).stream()
+                .map(r -> SessionRecordingRatingResponse.from(r, currentUserId, isAdmin))
                 .toList();
+    }
+
+    @Transactional
+    public SessionRecordingRatingResponse adminPublishRecordingRating(Long id, boolean publish, User actor) {
+        SessionRecordingRating rating = sessionRecordingRatingRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("RATING_NOT_FOUND", "Recording review not found with ID: " + id));
+        rating.setStatus(publish ? "published" : "pending");
+        sessionRecordingRatingRepository.save(rating);
+        if (actor != null) {
+            auditService.log(actor, "MODERATE_RECORDING_RATING", "SessionRecordingRating", id,
+                    (publish ? "Published" : "Unpublished") + " recording review #" + id);
+        }
+        return SessionRecordingRatingResponse.from(rating, null, true);
+    }
+
+    @Transactional
+    public void adminDeleteRecordingRating(Long id, User actor) {
+        SessionRecordingRating rating = sessionRecordingRatingRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("RATING_NOT_FOUND", "Recording review not found with ID: " + id));
+        sessionRecordingRatingRepository.delete(rating);
+        if (actor != null) {
+            auditService.log(actor, "DELETE_RECORDING_RATING", "SessionRecordingRating", id,
+                    "Deleted recording review #" + id);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SessionRecordingRatingResponse> adminGetRecordingRatings(
+            Long courseId, Integer rating, String status, String search, Pageable pageable) {
+
+        Specification<SessionRecordingRating> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (courseId != null) {
+                Join<SessionRecordingRating, SessionRecording> recJoin = root.join("recording", JoinType.LEFT);
+                Join<SessionRecording, LiveSession> sessionJoin = recJoin.join("session", JoinType.LEFT);
+                Join<LiveSession, Course> courseJoin = sessionJoin.join("course", JoinType.LEFT);
+                predicates.add(cb.equal(courseJoin.get("id"), courseId));
+            }
+
+            if (rating != null && rating >= 1 && rating <= 5) {
+                predicates.add(cb.equal(root.get("rating"), rating));
+            }
+
+            if (status != null && !status.isBlank() && !status.equalsIgnoreCase("ALL")) {
+                predicates.add(cb.equal(cb.lower(root.get("status")), status.trim().toLowerCase()));
+            }
+
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.trim().toLowerCase() + "%";
+                Join<SessionRecordingRating, User> userJoin = root.join("student", JoinType.LEFT);
+                Join<SessionRecordingRating, SessionRecording> recJoin = root.join("recording", JoinType.LEFT);
+                Join<SessionRecording, LiveSession> sessionJoin = recJoin.join("session", JoinType.LEFT);
+                Join<LiveSession, Course> courseJoin = sessionJoin.join("course", JoinType.LEFT);
+
+                Predicate userName = cb.like(cb.lower(userJoin.get("name")), pattern);
+                Predicate userEmail = cb.like(cb.lower(userJoin.get("email")), pattern);
+                Predicate recTitle = cb.like(cb.lower(recJoin.get("title")), pattern);
+                Predicate sessionTitle = cb.like(cb.lower(sessionJoin.get("title")), pattern);
+                Predicate courseName = cb.like(cb.lower(courseJoin.get("name")), pattern);
+                Predicate comment = cb.like(cb.lower(root.get("comment")), pattern);
+
+                predicates.add(cb.or(userName, userEmail, recTitle, sessionTitle, courseName, comment));
+            }
+
+            if (query != null) {
+                query.orderBy(cb.desc(root.get("createdAt")));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return sessionRecordingRatingRepository.findAll(spec, pageable)
+                .map(r -> SessionRecordingRatingResponse.from(r, null, true));
+    }
+
+    @Transactional(readOnly = true)
+    public com.onetutor.reviews.dto.AdminReviewStats adminGetRecordingRatingStats() {
+        long total = sessionRecordingRatingRepository.count();
+        Double rawAvg = sessionRecordingRatingRepository.getOverallAverageRating();
+        double roundedAvg = 0.0;
+        if (rawAvg != null && total > 0) {
+            roundedAvg = BigDecimal.valueOf(rawAvg).setScale(1, RoundingMode.HALF_UP).doubleValue();
+        }
+        long fiveStar = sessionRecordingRatingRepository.countFiveStarRatings();
+        long uniqueStudents = sessionRecordingRatingRepository.countDistinctStudents();
+        long uniqueCourses = sessionRecordingRatingRepository.countDistinctCourses();
+        long pendingCount = sessionRecordingRatingRepository.countPendingRatings();
+
+        return new com.onetutor.reviews.dto.AdminReviewStats(total, roundedAvg, fiveStar, uniqueStudents, uniqueCourses, pendingCount);
     }
 
     @Transactional

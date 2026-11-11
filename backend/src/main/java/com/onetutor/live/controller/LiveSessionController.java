@@ -48,8 +48,10 @@ public class LiveSessionController {
     }
 
     @GetMapping("/recordings/{recordingId}/ratings")
-    public ApiResponse<List<SessionRecordingRatingResponse>> getRecordingRatings(@PathVariable Long recordingId) {
-        return ApiResponse.ok(liveSessionService.getRecordingRatings(recordingId));
+    public ApiResponse<List<SessionRecordingRatingResponse>> getRecordingRatings(
+            @PathVariable Long recordingId,
+            @AuthenticationPrincipal User student) {
+        return ApiResponse.ok(liveSessionService.getRecordingRatings(recordingId, student));
     }
 
     @GetMapping("/courses/{courseId}/attendance")

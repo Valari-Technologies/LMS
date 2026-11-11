@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { getAdminReviews, getAdminReviewStats, deleteAdminReview, togglePublishAdminReview } from '../../api/reviews';
+import {
+  getAdminReviews,
+  getAdminReviewStats,
+  deleteAdminReview,
+  togglePublishAdminReview,
+  getAdminRecordingReviews,
+  getAdminRecordingReviewStats,
+  deleteAdminRecordingReview,
+  togglePublishAdminRecordingReview
+} from '../../api/reviews';
+import {
+  getAdminLiveSessions,
+  getRecordingRatings,
+  togglePublishRecordingRating,
+  deleteRecordingRating
+} from '../../api/live';
 import { listAdminCourses } from '../../api/courses';
 import { toast, confirmDialog } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -9,9 +24,23 @@ export default function AdminReviewsPage() {
   const { isReadOnly } = usePermission();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Review type tab: 'courses' | 'recordings'
+  const initialType = searchParams.get('type') === 'recordings' ? 'recordings' : 'courses';
+  const [reviewType, setReviewType] = useState(initialType);
+
   const [reviews, setReviews] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState({
+
+  const [courseStats, setCourseStats] = useState({
+    totalReviews: 0,
+    overallAverageRating: 0.0,
+    fiveStarCount: 0,
+    uniqueStudentsCount: 0,
+    reviewedCoursesCount: 0,
+    pendingReviewsCount: 0
+  });
+
+  const [recordingStats, setRecordingStats] = useState({
     totalReviews: 0,
     overallAverageRating: 0.0,
     fiveStarCount: 0,
@@ -43,15 +72,30 @@ export default function AdminReviewsPage() {
       .catch(() => {});
   }, []);
 
+  // Sync tab with URL
+  const handleTabChange = (type) => {
+    setReviewType(type);
+    setPage(0);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (type === 'recordings') {
+        next.set('type', 'recordings');
+      } else {
+        next.delete('type');
+      }
+      return next;
+    });
+  };
+
   // Load stats
   useEffect(() => {
     loadStats();
   }, []);
 
-  // Load reviews whenever filters or page changes
+  // Load reviews whenever filters, page, or reviewType changes
   useEffect(() => {
     loadReviews();
-  }, [courseFilter, ratingFilter, statusFilter, page]);
+  }, [reviewType, courseFilter, ratingFilter, statusFilter, page]);
 
   // Debounced search
   useEffect(() => {
@@ -65,8 +109,44 @@ export default function AdminReviewsPage() {
   async function loadStats() {
     setStatsLoading(true);
     try {
-      const data = await getAdminReviewStats();
-      if (data) setStats(data);
+      const [cStats, rStats] = await Promise.allSettled([
+        getAdminReviewStats(),
+        getAdminRecordingReviewStats()
+      ]);
+
+      if (cStats.status === 'fulfilled' && cStats.value) {
+        setCourseStats(cStats.value);
+      }
+
+      if (rStats.status === 'fulfilled' && rStats.value) {
+        setRecordingStats(rStats.value);
+      } else {
+        // Fallback recording stats aggregation from live sessions
+        try {
+          const sessionsRes = await getAdminLiveSessions({ size: 100 });
+          const sessionsList = sessionsRes?.content || (Array.isArray(sessionsRes) ? sessionsRes : []);
+          const recIds = sessionsList.flatMap(s => s.recordings || []).map(r => r.id).filter(Boolean);
+          if (recIds.length > 0) {
+            const results = await Promise.all(recIds.map(id => getRecordingRatings(id).catch(() => [])));
+            const all = results.flat();
+            const total = all.length;
+            const avg = total > 0 ? (all.reduce((acc, x) => acc + (x.rating || 0), 0) / total) : 5.0;
+            const fiveStar = all.filter(x => x.rating === 5).length;
+            const uniqueStudents = new Set(all.map(x => x.studentId)).size;
+            const pending = all.filter(x => x.status === 'pending' && x.comment).length;
+            setRecordingStats({
+              totalReviews: total,
+              overallAverageRating: avg,
+              fiveStarCount: fiveStar,
+              uniqueStudentsCount: uniqueStudents,
+              reviewedCoursesCount: new Set(sessionsList.map(s => s.course?.id || s.courseId)).size,
+              pendingReviewsCount: pending
+            });
+          }
+        } catch (e) {
+          console.warn('Fallback recording stats error:', e);
+        }
+      }
     } catch (err) {
       console.error('Failed to load review stats', err);
     } finally {
@@ -79,19 +159,110 @@ export default function AdminReviewsPage() {
     try {
       const cId = courseFilter ? parseInt(courseFilter, 10) : null;
       const rVal = ratingFilter !== 'ALL' ? parseInt(ratingFilter, 10) : null;
-      const data = await getAdminReviews({
-        courseId: cId,
-        rating: rVal,
-        status: statusFilter !== 'ALL' ? statusFilter : null,
-        search,
-        page,
-        size: 15
-      });
-      setReviews(data?.content || []);
-      setTotalPages(data?.totalPages || 1);
-      setTotalElements(data?.totalElements || 0);
+      const stVal = statusFilter !== 'ALL' ? statusFilter : null;
+
+      if (reviewType === 'courses') {
+        const data = await getAdminReviews({
+          courseId: cId,
+          rating: rVal,
+          status: stVal,
+          search,
+          page,
+          size: 15
+        });
+        setReviews(data?.content || []);
+        setTotalPages(data?.totalPages || 1);
+        setTotalElements(data?.totalElements || 0);
+      } else {
+        // Recorded class reviews
+        try {
+          const data = await getAdminRecordingReviews({
+            courseId: cId,
+            rating: rVal,
+            status: stVal,
+            search,
+            page,
+            size: 15
+          });
+          setReviews(data?.content || []);
+          setTotalPages(data?.totalPages || 1);
+          setTotalElements(data?.totalElements || 0);
+        } catch (apiErr) {
+          // Graceful fallback to sessions and recording ratings
+          const sessionsRes = await getAdminLiveSessions({ size: 100 }).catch(() => null);
+          const sessionsList = sessionsRes?.content || (Array.isArray(sessionsRes) ? sessionsRes : []);
+          const recsWithSession = [];
+          sessionsList.forEach(s => {
+            (s.recordings || []).forEach(r => {
+              recsWithSession.push({ recording: r, session: s });
+            });
+          });
+
+          const allRatings = [];
+          await Promise.all(
+            recsWithSession.map(async ({ recording, session }) => {
+              try {
+                const ratings = await getRecordingRatings(recording.id);
+                (ratings || []).forEach(r => {
+                  allRatings.push({
+                    id: r.id,
+                    recordingId: recording.id,
+                    recordingTitle: recording.title || `Recording #${recording.id}`,
+                    sessionId: session.id,
+                    sessionTitle: session.title,
+                    courseId: session.course?.id || session.courseId,
+                    courseName: session.course?.name || session.courseName || 'Course',
+                    studentId: r.studentId,
+                    studentName: r.studentName,
+                    studentEmail: r.studentEmail || '',
+                    studentAvatar: r.studentAvatar || null,
+                    rating: r.rating,
+                    comment: r.comment,
+                    status: r.status || 'published',
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt
+                  });
+                });
+              } catch (e) {}
+            })
+          );
+
+          let filtered = allRatings;
+          if (cId) {
+            filtered = filtered.filter(r => String(r.courseId) === String(cId));
+          }
+          if (rVal) {
+            filtered = filtered.filter(r => Number(r.rating) === Number(rVal));
+          }
+          if (stVal) {
+            filtered = filtered.filter(r => (r.status || 'published').toLowerCase() === stVal.toLowerCase());
+          }
+          if (search && search.trim()) {
+            const q = search.trim().toLowerCase();
+            filtered = filtered.filter(r =>
+              (r.studentName && r.studentName.toLowerCase().includes(q)) ||
+              (r.studentEmail && r.studentEmail.toLowerCase().includes(q)) ||
+              (r.recordingTitle && r.recordingTitle.toLowerCase().includes(q)) ||
+              (r.sessionTitle && r.sessionTitle.toLowerCase().includes(q)) ||
+              (r.courseName && r.courseName.toLowerCase().includes(q)) ||
+              (r.comment && r.comment.toLowerCase().includes(q)) ||
+              (String(r.studentId) === q)
+            );
+          }
+          filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+          const size = 15;
+          const total = filtered.length;
+          const pages = Math.max(1, Math.ceil(total / size));
+          const slice = filtered.slice(page * size, (page + 1) * size);
+
+          setReviews(slice);
+          setTotalPages(pages);
+          setTotalElements(total);
+        }
+      }
     } catch (err) {
-      toast.error('Failed to load course reviews.');
+      toast.error('Failed to load reviews.');
     } finally {
       setLoading(false);
     }
@@ -99,9 +270,19 @@ export default function AdminReviewsPage() {
 
   async function handleTogglePublish(review, publish) {
     if (isReadOnly) return;
+    const isRecording = reviewType === 'recordings' || !!review.recordingId;
     try {
-      await togglePublishAdminReview(review.id, publish);
-      toast.success(publish ? 'Review published successfully! It is now live on the course page.' : 'Review unpublished and moved to pending approval.');
+      if (isRecording) {
+        try {
+          await togglePublishAdminRecordingReview(review.id, publish);
+        } catch (e) {
+          await togglePublishRecordingRating(review.id, publish);
+        }
+        toast.success(publish ? 'Recording review published! It is now live for students.' : 'Recording review unpublished and moved to pending approval.');
+      } else {
+        await togglePublishAdminReview(review.id, publish);
+        toast.success(publish ? 'Review published successfully! It is now live on the course page.' : 'Review unpublished and moved to pending approval.');
+      }
       if (selectedReview && selectedReview.id === review.id) {
         setSelectedReview(prev => prev ? { ...prev, status: publish ? 'published' : 'pending' } : null);
       }
@@ -114,16 +295,32 @@ export default function AdminReviewsPage() {
 
   async function handleDeleteReview(review) {
     if (isReadOnly) return;
+    const isRecording = reviewType === 'recordings' || !!review.recordingId;
+    const title = isRecording
+      ? `Delete Recorded Class Review by ${review.studentName}?`
+      : `Delete Review by ${review.studentName}?`;
+    const targetName = isRecording
+      ? (review.recordingTitle || review.sessionTitle || 'Recorded Class')
+      : (review.courseName || 'Course');
+
     const confirmed = await confirmDialog({
-      title: `Delete Review by ${review.studentName}?`,
-      description: `Are you sure you want to remove this ${review.rating}-star review for "${review.courseName}"? This action cannot be undone.`,
+      title,
+      description: `Are you sure you want to remove this ${review.rating}-star review for "${targetName}"? This action cannot be undone.`,
       confirmText: 'Delete Review',
       variant: 'danger'
     });
     if (!confirmed) return;
 
     try {
-      await deleteAdminReview(review.id);
+      if (isRecording) {
+        try {
+          await deleteAdminRecordingReview(review.id);
+        } catch (e) {
+          await deleteRecordingRating(review.id);
+        }
+      } else {
+        await deleteAdminReview(review.id);
+      }
       toast.success('Review deleted successfully.');
       if (selectedReview && selectedReview.id === review.id) {
         setSelectedReview(null);
@@ -141,7 +338,11 @@ export default function AdminReviewsPage() {
     setRatingFilter('ALL');
     setStatusFilter('ALL');
     setPage(0);
-    setSearchParams({});
+    setSearchParams(prev => {
+      const next = new URLSearchParams();
+      if (reviewType === 'recordings') next.set('type', 'recordings');
+      return next;
+    });
   }
 
   function renderStars(rating) {
@@ -207,10 +408,12 @@ export default function AdminReviewsPage() {
       .toUpperCase();
   };
 
+  const activeStats = reviewType === 'courses' ? courseStats : recordingStats;
+
   return (
     <div className="admin-page-container" style={{ padding: '24px 32px' }}>
       {/* Page Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
         <div>
           <h1 style={{ margin: '0 0 6px', fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{
@@ -225,10 +428,10 @@ export default function AdminReviewsPage() {
             }}>
               <i className="fa-solid fa-star-half-stroke" style={{ fontSize: '1.25rem' }}></i>
             </span>
-            Course Ratings & Reviews
+            Ratings &amp; Reviews Moderation
           </h1>
           <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            Manage and moderate student feedback, ratings, and testimonials across all catalog courses.
+            Manage and moderate student feedback, ratings, and testimonials across courses and recorded video replay classes.
           </p>
         </div>
 
@@ -244,6 +447,76 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
+      {/* Review Type Selector Tabs */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        marginBottom: '20px',
+        borderBottom: '1px solid var(--border-subtle)',
+        paddingBottom: '14px'
+      }}>
+        <button
+          type="button"
+          onClick={() => handleTabChange('courses')}
+          className={`btn btn-sm ${reviewType === 'courses' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: reviewType === 'courses' ? '800' : '600',
+            padding: '8px 18px',
+            borderRadius: '8px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <i className="fa-solid fa-graduation-cap"></i>
+          Course Reviews
+          {courseStats.pendingReviewsCount > 0 && (
+            <span style={{
+              background: reviewType === 'courses' ? '#ffffff' : '#f59e0b',
+              color: reviewType === 'courses' ? 'var(--accent-primary)' : '#ffffff',
+              borderRadius: '12px',
+              padding: '1px 7px',
+              fontSize: '0.72rem',
+              fontWeight: '800'
+            }}>
+              {courseStats.pendingReviewsCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('recordings')}
+          className={`btn btn-sm ${reviewType === 'recordings' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: reviewType === 'recordings' ? '800' : '600',
+            padding: '8px 18px',
+            borderRadius: '8px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <i className="fa-solid fa-video"></i>
+          Recorded Class Reviews
+          {recordingStats.pendingReviewsCount > 0 && (
+            <span style={{
+              background: reviewType === 'recordings' ? '#ffffff' : '#f59e0b',
+              color: reviewType === 'recordings' ? 'var(--accent-primary)' : '#ffffff',
+              borderRadius: '12px',
+              padding: '1px 7px',
+              fontSize: '0.72rem',
+              fontWeight: '800'
+            }}>
+              {recordingStats.pendingReviewsCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* KPI Stats Strip */}
       <div style={{
         display: 'grid',
@@ -254,16 +527,20 @@ export default function AdminReviewsPage() {
         {/* Total Reviews */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Total Reviews</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+              {reviewType === 'courses' ? 'Total Course Reviews' : 'Total Recording Reviews'}
+            </span>
             <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="fa-solid fa-comments"></i>
+              <i className={reviewType === 'courses' ? 'fa-solid fa-comments' : 'fa-solid fa-video'}></i>
             </div>
           </div>
           <div style={{ fontSize: '1.9rem', fontWeight: '800', marginTop: '10px', color: 'var(--text-primary)' }}>
-            {statsLoading ? '…' : stats.totalReviews}
+            {statsLoading ? '…' : activeStats.totalReviews}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Across {stats.reviewedCoursesCount} active courses
+            {reviewType === 'courses'
+              ? `Across ${activeStats.reviewedCoursesCount} active courses`
+              : `Across live session archives`}
           </div>
         </div>
 
@@ -276,12 +553,12 @@ export default function AdminReviewsPage() {
             </div>
           </div>
           <div style={{ fontSize: '1.9rem', fontWeight: '800', marginTop: '10px', color: 'var(--text-primary)', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            {statsLoading ? '…' : (stats.overallAverageRating > 0 ? stats.overallAverageRating.toFixed(1) : '5.0')}
+            {statsLoading ? '…' : (activeStats.overallAverageRating > 0 ? activeStats.overallAverageRating.toFixed(1) : '5.0')}
             <span style={{ fontSize: '1rem', color: '#f59e0b' }}>★</span>
             <span style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-secondary)' }}>/ 5.0</span>
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Platform-wide student satisfaction
+            {reviewType === 'courses' ? 'Platform-wide student satisfaction' : 'Session replay class satisfaction'}
           </div>
         </div>
 
@@ -294,10 +571,10 @@ export default function AdminReviewsPage() {
             </div>
           </div>
           <div style={{ fontSize: '1.9rem', fontWeight: '800', marginTop: '10px', color: 'var(--text-primary)' }}>
-            {statsLoading ? '…' : stats.fiveStarCount}
+            {statsLoading ? '…' : activeStats.fiveStarCount}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#22c55e', marginTop: '4px', fontWeight: '600' }}>
-            {stats.totalReviews > 0 ? `${Math.round((stats.fiveStarCount / stats.totalReviews) * 100)}% top score` : '100% positive'}
+            {activeStats.totalReviews > 0 ? `${Math.round((activeStats.fiveStarCount / activeStats.totalReviews) * 100)}% top score` : '100% positive'}
           </div>
         </div>
 
@@ -310,7 +587,7 @@ export default function AdminReviewsPage() {
             </div>
           </div>
           <div style={{ fontSize: '1.9rem', fontWeight: '800', marginTop: '10px', color: 'var(--text-primary)' }}>
-            {statsLoading ? '…' : stats.uniqueStudentsCount}
+            {statsLoading ? '…' : activeStats.uniqueStudentsCount}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
             Active student contributors
@@ -320,10 +597,10 @@ export default function AdminReviewsPage() {
         {/* Pending Approval */}
         <div style={{
           background: 'var(--bg-card)',
-          border: stats.pendingReviewsCount > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)',
+          border: activeStats.pendingReviewsCount > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-lg)',
           padding: '20px',
-          boxShadow: stats.pendingReviewsCount > 0 ? '0 0 12px rgba(245, 158, 11, 0.1)' : 'none'
+          boxShadow: activeStats.pendingReviewsCount > 0 ? '0 0 12px rgba(245, 158, 11, 0.1)' : 'none'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Pending Comments</span>
@@ -331,11 +608,11 @@ export default function AdminReviewsPage() {
               <i className="fa-solid fa-hourglass-half"></i>
             </div>
           </div>
-          <div style={{ fontSize: '1.9rem', fontWeight: '800', marginTop: '10px', color: stats.pendingReviewsCount > 0 ? '#d97706' : 'var(--text-primary)' }}>
-            {statsLoading ? '…' : (stats.pendingReviewsCount || 0)}
+          <div style={{ fontSize: '1.9rem', fontWeight: '800', marginTop: '10px', color: activeStats.pendingReviewsCount > 0 ? '#d97706' : 'var(--text-primary)' }}>
+            {statsLoading ? '…' : (activeStats.pendingReviewsCount || 0)}
           </div>
-          <div style={{ fontSize: '0.78rem', color: stats.pendingReviewsCount > 0 ? '#d97706' : 'var(--text-secondary)', marginTop: '4px', fontWeight: stats.pendingReviewsCount > 0 ? '600' : '400' }}>
-            {stats.pendingReviewsCount > 0 ? 'Requires Super Admin comment publishing' : 'All comments published'}
+          <div style={{ fontSize: '0.78rem', color: activeStats.pendingReviewsCount > 0 ? '#d97706' : 'var(--text-secondary)', marginTop: '4px', fontWeight: activeStats.pendingReviewsCount > 0 ? '600' : '400' }}>
+            {activeStats.pendingReviewsCount > 0 ? 'Requires Super Admin comment publishing' : 'All comments published'}
           </div>
         </div>
       </div>
@@ -349,7 +626,7 @@ export default function AdminReviewsPage() {
             <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}></i>
             <input
               type="text"
-              placeholder="Search student ID, name, or comment…"
+              placeholder={reviewType === 'courses' ? "Search student ID, name, or comment…" : "Search student, recording, or comment…"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
@@ -442,7 +719,7 @@ export default function AdminReviewsPage() {
 
         {/* Results Counter */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          <span>Showing <strong>{reviews.length}</strong> of <strong>{totalElements}</strong> student reviews</span>
+          <span>Showing <strong>{reviews.length}</strong> of <strong>{totalElements}</strong> {reviewType === 'courses' ? 'course' : 'recording'} reviews</span>
           {courseFilter && (
             <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
               Filtered by: {courses.find(c => String(c.id) === String(courseFilter))?.name || `Course #${courseFilter}`}
@@ -454,7 +731,7 @@ export default function AdminReviewsPage() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
             <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '12px', color: 'var(--accent-primary)' }}></i>
-            <p>Loading course reviews…</p>
+            <p>Loading {reviewType === 'courses' ? 'course' : 'recorded class'} reviews…</p>
           </div>
         ) : reviews.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
@@ -465,7 +742,9 @@ export default function AdminReviewsPage() {
             <p style={{ margin: 0, fontSize: '0.9rem', maxWidth: '400px', marginInline: 'auto' }}>
               {search || courseFilter || ratingFilter !== 'ALL' || statusFilter !== 'ALL'
                 ? 'No student reviews match your active filter criteria. Try adjusting or clearing your filters.'
-                : 'No course ratings or comments have been submitted yet.'}
+                : reviewType === 'courses'
+                  ? 'No course ratings or comments have been submitted yet.'
+                  : 'No student reviews or ratings for recorded classes have been submitted yet.'}
             </p>
           </div>
         ) : (
@@ -474,7 +753,7 @@ export default function AdminReviewsPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   <th style={{ padding: '12px 14px' }}>Student ID &amp; Name</th>
-                  <th style={{ padding: '12px 14px' }}>Course</th>
+                  <th style={{ padding: '12px 14px' }}>{reviewType === 'courses' ? 'Course' : 'Recording & Course'}</th>
                   <th style={{ padding: '12px 14px' }}>Rating</th>
                   <th style={{ padding: '12px 14px', width: '32%' }}>Comment / Feedback</th>
                   <th style={{ padding: '12px 14px' }}>Comment Status</th>
@@ -541,27 +820,41 @@ export default function AdminReviewsPage() {
                       </div>
                     </td>
 
-                    {/* Course Name */}
+                    {/* Course or Recording & Course */}
                     <td style={{ padding: '14px' }}>
-                      <Link
-                        to={`/student/courses/${rev.courseId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          fontWeight: '600',
-                          color: 'var(--accent-primary)',
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        {rev.courseName}
-                        <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
-                      </Link>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        Course #{rev.courseId}
-                      </div>
+                      {reviewType === 'recordings' ? (
+                        <div>
+                          <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <i className="fa-solid fa-film" style={{ color: '#5A70D3', fontSize: '0.85rem' }}></i>
+                            {rev.recordingTitle || `Recording #${rev.recordingId}`}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            {rev.sessionTitle ? `${rev.sessionTitle} • ` : ''}{rev.courseName}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <Link
+                            to={`/student/courses/${rev.courseId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontWeight: '600',
+                              color: 'var(--accent-primary)',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {rev.courseName}
+                            <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+                          </Link>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            Course #{rev.courseId}
+                          </div>
+                        </div>
+                      )}
                     </td>
 
                     {/* Star Rating */}
@@ -696,10 +989,10 @@ export default function AdminReviewsPage() {
                       })()}
                     </td>
 
-                    {/* Action buttons */}
+                    {/* Action buttons: View, Publish/Unpublish, Delete */}
                     <td style={{ padding: '14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
-                        {/* View Full Review Details button */}
+                        {/* View Details */}
                         <button
                           type="button"
                           onClick={() => setSelectedReview(rev)}
@@ -723,12 +1016,14 @@ export default function AdminReviewsPage() {
                           View
                         </button>
 
+                        {/* Publish / Unpublish button */}
                         {rev.comment && (
                           rev.status === 'published' ? (
                             <button
+                              type="button"
                               onClick={() => handleTogglePublish(rev, false)}
                               disabled={isReadOnly}
-                              title="Unpublish this comment (hide comment text from students)"
+                              title="Unpublish this review (moves comment to pending approval)"
                               className="btn btn-secondary btn-sm"
                               style={{
                                 display: 'inline-flex',
@@ -745,9 +1040,10 @@ export default function AdminReviewsPage() {
                             </button>
                           ) : (
                             <button
+                              type="button"
                               onClick={() => handleTogglePublish(rev, true)}
                               disabled={isReadOnly}
-                              title="Publish this comment to the course page"
+                              title="Publish this review comment live"
                               className="btn btn-sm"
                               style={{
                                 display: 'inline-flex',
@@ -770,19 +1066,21 @@ export default function AdminReviewsPage() {
                           )
                         )}
 
+                        {/* Delete button */}
                         <button
+                          type="button"
                           onClick={() => handleDeleteReview(rev)}
                           disabled={isReadOnly}
-                          title="Delete this review"
-                          className="btn btn-secondary btn-sm"
+                          title="Delete student review permanently"
+                          className="btn btn-ghost btn-sm"
                           style={{
+                            padding: '6px 9px',
                             color: '#ef4444',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            background: 'rgba(239, 68, 68, 0.05)',
-                            padding: '6px 10px'
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer'
                           }}
                         >
-                          <i className="fa-solid fa-trash-can"></i>
+                          <i className="fa-regular fa-trash-can"></i>
                         </button>
                       </div>
                     </td>
@@ -793,7 +1091,7 @@ export default function AdminReviewsPage() {
           </div>
         )}
 
-        {/* Pagination Bar */}
+        {/* Pagination Controls */}
         {totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -875,7 +1173,7 @@ export default function AdminReviewsPage() {
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>
-                      Student Review Details
+                      {selectedReview.recordingId ? 'Recorded Class Review Details' : 'Course Review Details'}
                     </h3>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #64748b)' }}>
                       Submitted on {formatDate(selectedReview.createdAt)}
@@ -980,11 +1278,16 @@ export default function AdminReviewsPage() {
                     }}
                   >
                     <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted, #64748b)', fontWeight: 700, letterSpacing: '0.5px' }}>
-                      Course
+                      {selectedReview.recordingId ? 'Recording & Course' : 'Course'}
                     </div>
                     <div style={{ fontWeight: 700, color: '#5A70D3', fontSize: '0.9rem', marginTop: '4px' }}>
-                      {selectedReview.courseName}
+                      {selectedReview.recordingTitle ? `${selectedReview.recordingTitle} • ` : ''}{selectedReview.courseName}
                     </div>
+                    {selectedReview.sessionTitle && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        Session: {selectedReview.sessionTitle}
+                      </div>
+                    )}
                   </div>
 
                   <div

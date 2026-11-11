@@ -2,9 +2,12 @@ package com.onetutor.reviews.controller;
 
 import com.onetutor.common.ApiResponse;
 import com.onetutor.common.PageResponse;
+import com.onetutor.live.dto.SessionRecordingRatingResponse;
+import com.onetutor.live.service.LiveSessionService;
 import com.onetutor.reviews.dto.AdminReviewStats;
 import com.onetutor.reviews.dto.ReviewResponse;
 import com.onetutor.reviews.service.CourseReviewService;
+import com.onetutor.users.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,15 +15,21 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/reviews")
 @RequiredArgsConstructor
-@Tag(name = "Admin Reviews & Ratings", description = "Course review and rating moderation for Super Admin and Administrators")
+@Tag(name = "Admin Reviews & Ratings", description = "Course review and recorded session rating moderation for Super Admin and Administrators")
 public class AdminReviewController {
 
     private final CourseReviewService reviewService;
+    private final LiveSessionService liveSessionService;
+
+    // ============================================================
+    // Course Reviews Moderation
+    // ============================================================
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'READONLY_ADMIN')")
@@ -49,16 +58,63 @@ public class AdminReviewController {
 
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'READONLY_ADMIN')")
-    @Operation(summary = "Get platform-wide review statistics and KPIs")
+    @Operation(summary = "Get platform-wide course review statistics and KPIs")
     public ApiResponse<AdminReviewStats> getStats() {
         return ApiResponse.ok(reviewService.adminGetStats());
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete / moderate a student review")
+    @Operation(summary = "Delete / moderate a student course review")
     public ApiResponse<Void> deleteReview(@PathVariable Long id) {
         reviewService.adminDeleteReview(id);
         return ApiResponse.ok("Review removed successfully", null);
+    }
+
+    // ============================================================
+    // Recorded Class Reviews Moderation
+    // ============================================================
+
+    @GetMapping("/recordings")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'READONLY_ADMIN')")
+    @Operation(summary = "List all student recorded video reviews with filtering")
+    public ApiResponse<PageResponse<SessionRecordingRatingResponse>> listRecordingReviews(
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 100)));
+        Page<SessionRecordingRatingResponse> result = liveSessionService.adminGetRecordingRatings(courseId, rating, status, search, pageable);
+        return ApiResponse.ok(PageResponse.from(result));
+    }
+
+    @PatchMapping("/recordings/{id}/publish")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Publish or unpublish a student recorded video review")
+    public ApiResponse<SessionRecordingRatingResponse> togglePublishRecordingReview(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "true") boolean publish,
+            @AuthenticationPrincipal User actor) {
+        SessionRecordingRatingResponse updated = liveSessionService.adminPublishRecordingRating(id, publish, actor);
+        return ApiResponse.ok(publish ? "Recording review published successfully" : "Recording review moved to pending approval", updated);
+    }
+
+    @DeleteMapping("/recordings/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete / moderate a student recorded video review")
+    public ApiResponse<Void> deleteRecordingReview(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User actor) {
+        liveSessionService.adminDeleteRecordingRating(id, actor);
+        return ApiResponse.ok("Recording review removed successfully", null);
+    }
+
+    @GetMapping("/recordings/stats")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'READONLY_ADMIN')")
+    @Operation(summary = "Get platform-wide recorded video review statistics")
+    public ApiResponse<AdminReviewStats> getRecordingStats() {
+        return ApiResponse.ok(liveSessionService.adminGetRecordingRatingStats());
     }
 }

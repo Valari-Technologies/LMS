@@ -94,6 +94,43 @@ export async function getRecordingRatings(recordingId) {
   return res.data.data;
 }
 
+export async function getAdminRecordingRatings(recordingId) {
+  try {
+    const res = await api.get(`/admin/live-sessions/recordings/${recordingId}/ratings`);
+    return res.data.data;
+  } catch (err) {
+    return getRecordingRatings(recordingId);
+  }
+}
+
+export async function togglePublishRecordingRating(ratingId, publish = true) {
+  try {
+    const res = await api.patch(`/admin/live-sessions/recordings/ratings/${ratingId}/publish`, null, {
+      params: { publish }
+    });
+    emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+    return res.data.data;
+  } catch (err) {
+    const res = await api.patch(`/admin/reviews/recordings/${ratingId}/publish`, null, {
+      params: { publish }
+    });
+    emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+    return res.data.data;
+  }
+}
+
+export async function deleteRecordingRating(ratingId) {
+  try {
+    const res = await api.delete(`/admin/live-sessions/recordings/ratings/${ratingId}`);
+    emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+    return res.data.data;
+  } catch (err) {
+    const res = await api.delete(`/admin/reviews/recordings/${ratingId}`);
+    emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+    return res.data.data;
+  }
+}
+
 export async function getCourseAttendance(courseId) {
   const res = await api.get(`/live-sessions/courses/${courseId}/attendance`);
   return res.data.data;

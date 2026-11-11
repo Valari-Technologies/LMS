@@ -60,3 +60,34 @@ export async function deleteAdminReview(reviewId) {
   const res = await api.delete(`/admin/reviews/${reviewId}`);
   return res.data.data;
 }
+
+/**
+ * Super Admin & Administrator oversight endpoints for Recorded Class Video Reviews
+ */
+export async function getAdminRecordingReviews({ courseId, rating, status, search, page = 0, size = 15 } = {}) {
+  const params = { page, size };
+  if (courseId) params.courseId = courseId;
+  if (rating) params.rating = rating;
+  if (status && status !== 'ALL') params.status = status;
+  if (search) params.search = search.trim();
+
+  const res = await api.get('/admin/reviews/recordings', { params });
+  return res.data.data;
+}
+
+export async function togglePublishAdminRecordingReview(reviewId, publish = true) {
+  const res = await api.patch(`/admin/reviews/recordings/${reviewId}/publish`, null, {
+    params: { publish }
+  });
+  return res.data.data;
+}
+
+export async function getAdminRecordingReviewStats() {
+  const res = await api.get('/admin/reviews/recordings/stats');
+  return res.data.data;
+}
+
+export async function deleteAdminRecordingReview(reviewId) {
+  const res = await api.delete(`/admin/reviews/recordings/${reviewId}`);
+  return res.data.data;
+}
