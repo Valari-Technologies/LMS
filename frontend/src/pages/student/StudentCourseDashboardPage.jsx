@@ -605,150 +605,169 @@ export default function StudentCourseDashboardPage() {
                     </div>
 
                     {/* Real Student Reviews & Feedback Testimonials Section */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <i className="fa-solid fa-comments" style={{ color: '#5A70D3' }}></i>
-                            <span>Student Reviews & Feedback</span>
-                          </h4>
-                          <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-                            Real ratings and testimonials shared by students for this class replay
-                          </p>
-                        </div>
-                        <span style={{
-                          fontSize: '0.76rem',
-                          fontWeight: 700,
-                          color: '#5A70D3',
-                          background: 'rgba(90, 112, 211, 0.08)',
-                          padding: '3px 10px',
-                          borderRadius: '9999px'
-                        }}>
-                          {recordingReviews.length} {recordingReviews.length === 1 ? 'Review' : 'Reviews'}
-                        </span>
-                      </div>
+                    {(() => {
+                      const publishedReviews = recordingReviews.filter(rev => rev.status === 'published' && rev.comment && rev.comment.trim());
+                      const myPendingReview = recordingReviews.find(rev =>
+                        user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail) && rev.status !== 'published' && rev.comment && rev.comment.trim()
+                      );
 
-                      {loadingReviews ? (
-                        <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.86rem' }}>
-                          <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: '6px' }}></i>
-                          Loading student reviews…
-                        </div>
-                      ) : recordingReviews.length === 0 ? (
-                        <div style={{
-                          padding: '24px',
-                          textAlign: 'center',
-                          background: '#f8fafc',
-                          borderRadius: '12px',
-                          border: '1px dashed #cbd5e1'
-                        }}>
-                          <i className="fa-regular fa-comment-dots" style={{ fontSize: '1.8rem', color: '#94a3b8', marginBottom: '8px', display: 'block' }}></i>
-                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                            No student reviews yet
-                          </div>
-                          <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '12px' }}>
-                            Have you watched this recording? Be the first to share your rating and feedback!
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
-                            style={{
-                              padding: '7px 14px',
-                              borderRadius: '8px',
-                              background: '#5A70D3',
-                              color: '#ffffff',
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-comments" style={{ color: '#5A70D3' }}></i>
+                                <span>Student Reviews & Feedback</span>
+                              </h4>
+                              <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                                Real ratings and testimonials shared by students for this class replay
+                              </p>
+                            </div>
+                            <span style={{
+                              fontSize: '0.76rem',
                               fontWeight: 700,
-                              fontSize: '0.82rem',
-                              border: 'none',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <i className="fa-solid fa-star" style={{ marginRight: '5px' }}></i>
-                            Write a Review
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {recordingReviews.map(rev => {
-                            const isCurrentUser = user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail);
-                            return (
-                              <div
-                                key={rev.id}
+                              color: '#5A70D3',
+                              background: 'rgba(90, 112, 211, 0.08)',
+                              padding: '3px 10px',
+                              borderRadius: '9999px'
+                            }}>
+                              {publishedReviews.length} {publishedReviews.length === 1 ? 'Review' : 'Reviews'}
+                            </span>
+                          </div>
+
+                          {/* Notice for author if their review comment is still awaiting admin approval */}
+                          {myPendingReview && (
+                            <div style={{
+                              padding: '12px 16px',
+                              background: '#fffbeb',
+                              border: '1px solid #fde68a',
+                              borderRadius: '10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px'
+                            }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <i className="fa-solid fa-hourglass-half"></i>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#92400e', marginBottom: '2px' }}>
+                                  Your review comment is awaiting admin approval
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: '#b45309' }}>
+                                  "{myPendingReview.comment}" &mdash; Your feedback is saved and will appear publicly once approved by an administrator.
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {loadingReviews ? (
+                            <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.86rem' }}>
+                              <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: '6px' }}></i>
+                              Loading student reviews…
+                            </div>
+                          ) : publishedReviews.length === 0 ? (
+                            <div style={{
+                              padding: '24px',
+                              textAlign: 'center',
+                              background: '#f8fafc',
+                              borderRadius: '12px',
+                              border: '1px dashed #cbd5e1'
+                            }}>
+                              <i className="fa-regular fa-comment-dots" style={{ fontSize: '1.8rem', color: '#94a3b8', marginBottom: '8px', display: 'block' }}></i>
+                              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                                No published student reviews yet
+                              </div>
+                              <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '12px' }}>
+                                Have you watched this recording? Be the first to share your rating and feedback!
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
                                 style={{
-                                  padding: '14px 18px',
-                                  background: isCurrentUser ? 'rgba(90, 112, 211, 0.04)' : '#ffffff',
-                                  border: isCurrentUser ? '1px solid rgba(90, 112, 211, 0.3)' : '1px solid #e2e8f0',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '8px'
+                                  padding: '7px 14px',
+                                  borderRadius: '8px',
+                                  background: '#5A70D3',
+                                  color: '#ffffff',
+                                  fontWeight: 700,
+                                  fontSize: '0.82rem',
+                                  border: 'none',
+                                  cursor: 'pointer'
                                 }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{
-                                      width: '32px',
-                                      height: '32px',
-                                      borderRadius: '50%',
-                                      background: isCurrentUser ? '#5A70D3' : '#475569',
-                                      color: '#ffffff',
+                                <i className="fa-solid fa-star" style={{ marginRight: '5px' }}></i>
+                                Write a Review
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {publishedReviews.map(rev => {
+                                const isCurrentUser = user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail);
+                                return (
+                                  <div
+                                    key={rev.id}
+                                    style={{
+                                      padding: '14px 18px',
+                                      background: isCurrentUser ? 'rgba(90, 112, 211, 0.04)' : '#ffffff',
+                                      border: isCurrentUser ? '1px solid rgba(90, 112, 211, 0.3)' : '1px solid #e2e8f0',
+                                      borderRadius: '12px',
+                                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
                                       display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      fontWeight: 800,
-                                      fontSize: '0.82rem'
-                                    }}>
-                                      {(rev.studentName || 'S').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>{rev.studentName || 'Student'}</span>
-                                        {isCurrentUser && (
-                                          <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px' }}>
-                                            You
-                                          </span>
-                                        )}
-                                        {rev.status === 'pending' && isCurrentUser && (
-                                          <span style={{ fontSize: '0.68rem', fontWeight: 700, background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px' }}>
-                                            Pending Approval
-                                          </span>
-                                        )}
+                                      flexDirection: 'column',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{
+                                          width: '32px',
+                                          height: '32px',
+                                          borderRadius: '50%',
+                                          background: isCurrentUser ? '#5A70D3' : '#475569',
+                                          color: '#ffffff',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontWeight: 800,
+                                          fontSize: '0.82rem'
+                                        }}>
+                                          {(rev.studentName || 'S').charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>{rev.studentName || 'Student'}</span>
+                                            {isCurrentUser && (
+                                              <span style={{ fontSize: '0.68rem', fontWeight: 800, background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px' }}>
+                                                You
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                            {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                                          </div>
+                                        </div>
                                       </div>
-                                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                                        {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ display: 'flex', gap: '2px', fontSize: '0.82rem' }}>
+                                          {renderStars(rev.rating || 5)}
+                                        </div>
+                                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ca8a04' }}>
+                                          {rev.rating}.0
+                                        </span>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ display: 'flex', gap: '2px', fontSize: '0.82rem' }}>
-                                      {renderStars(rev.rating || 5)}
-                                    </div>
-                                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ca8a04' }}>
-                                      {rev.rating}.0
-                                    </span>
+                                    <p style={{ margin: '2px 0 0 42px', fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
+                                      "{rev.comment}"
+                                    </p>
                                   </div>
-                                </div>
-
-                                {rev.comment && (rev.status === 'published' || isCurrentUser) ? (
-                                  <p style={{ margin: '2px 0 0 42px', fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
-                                    "{rev.comment}"
-                                  </p>
-                                ) : rev.comment && rev.status === 'pending' && !isCurrentUser ? (
-                                  <span style={{ margin: '2px 0 0 42px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                                    Rated {rev.rating} stars (written feedback awaiting approval)
-                                  </span>
-                                ) : (
-                                  <span style={{ margin: '2px 0 0 42px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                                    Rated {rev.rating} stars without written comments
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
 

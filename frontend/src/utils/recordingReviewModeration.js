@@ -61,9 +61,10 @@ export function applyRecordingModeration(review) {
   if (!review) return null;
   if (isLocalRecordingDeleted(review.id)) return null;
   const localStatus = getLocalRecordingStatus(review.id);
+  const status = localStatus || review.status || (review.comment && review.comment.trim() ? 'pending' : 'published');
   return {
     ...review,
-    status: localStatus || review.status || 'published'
+    status
   };
 }
 
@@ -74,3 +75,4 @@ export function applyRecordingListModeration(reviews) {
     .map(r => applyRecordingModeration(r))
     .filter(Boolean);
 }
+
