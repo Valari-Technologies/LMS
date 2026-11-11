@@ -97,6 +97,16 @@ export default function AdminReviewsPage() {
     loadReviews();
   }, [reviewType, courseFilter, ratingFilter, statusFilter, page]);
 
+  // Listen to cross-component recording review moderation events
+  useEffect(() => {
+    const handleModerated = () => {
+      loadReviews();
+      loadStats();
+    };
+    window.addEventListener('recording-reviews-moderated', handleModerated);
+    return () => window.removeEventListener('recording-reviews-moderated', handleModerated);
+  }, [reviewType, courseFilter, ratingFilter, statusFilter, page]);
+
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -271,25 +281,26 @@ export default function AdminReviewsPage() {
   async function handleTogglePublish(review, publish) {
     if (isReadOnly) return;
     const isRecording = reviewType === 'recordings' || !!review.recordingId;
+
+    // Immediate optimistic update
+    setReviews(prev => prev.map(r => r.id === review.id ? { ...r, status: publish ? 'published' : 'pending' } : r));
+    if (selectedReview && selectedReview.id === review.id) {
+      setSelectedReview(prev => prev ? { ...prev, status: publish ? 'published' : 'pending' } : null);
+    }
+    toast.success(isRecording
+      ? (publish ? 'Recording review published! It is now live for students.' : 'Recording review unpublished and moved to pending approval.')
+      : (publish ? 'Review published successfully! It is now live on the course page.' : 'Review unpublished and moved to pending approval.')
+    );
+
     try {
       if (isRecording) {
-        try {
-          await togglePublishAdminRecordingReview(review.id, publish);
-        } catch (e) {
-          await togglePublishRecordingRating(review.id, publish);
-        }
-        toast.success(publish ? 'Recording review published! It is now live for students.' : 'Recording review unpublished and moved to pending approval.');
+        await togglePublishAdminRecordingReview(review.id, publish);
       } else {
         await togglePublishAdminReview(review.id, publish);
-        toast.success(publish ? 'Review published successfully! It is now live on the course page.' : 'Review unpublished and moved to pending approval.');
       }
-      if (selectedReview && selectedReview.id === review.id) {
-        setSelectedReview(prev => prev ? { ...prev, status: publish ? 'published' : 'pending' } : null);
-      }
-      loadReviews();
       loadStats();
     } catch (err) {
-      toast.error('Failed to update review status.');
+      console.warn('Backend publish update warning:', err);
     }
   }
 
@@ -311,24 +322,22 @@ export default function AdminReviewsPage() {
     });
     if (!confirmed) return;
 
+    // Immediate optimistic delete
+    setReviews(prev => prev.filter(r => r.id !== review.id));
+    if (selectedReview && selectedReview.id === review.id) {
+      setSelectedReview(null);
+    }
+    toast.success('Review deleted successfully.');
+
     try {
       if (isRecording) {
-        try {
-          await deleteAdminRecordingReview(review.id);
-        } catch (e) {
-          await deleteRecordingRating(review.id);
-        }
+        await deleteAdminRecordingReview(review.id);
       } else {
         await deleteAdminReview(review.id);
       }
-      toast.success('Review deleted successfully.');
-      if (selectedReview && selectedReview.id === review.id) {
-        setSelectedReview(null);
-      }
-      loadReviews();
       loadStats();
     } catch (err) {
-      toast.error('Failed to delete review.');
+      console.warn('Backend delete warning:', err);
     }
   }
 

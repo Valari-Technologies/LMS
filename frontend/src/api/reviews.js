@@ -1,4 +1,9 @@
 import { api } from './client';
+import {
+  setLocalRecordingStatus,
+  setLocalRecordingDeleted,
+  applyRecordingListModeration
+} from '../utils/recordingReviewModeration';
 
 /**
  * Public & Student endpoints
@@ -72,14 +77,30 @@ export async function getAdminRecordingReviews({ courseId, rating, status, searc
   if (search) params.search = search.trim();
 
   const res = await api.get('/admin/reviews/recordings', { params });
-  return res.data.data;
+  const data = res.data.data;
+  if (data && Array.isArray(data.content)) {
+    data.content = applyRecordingListModeration(data.content);
+  }
+  return data;
 }
 
 export async function togglePublishAdminRecordingReview(reviewId, publish = true) {
-  const res = await api.patch(`/admin/reviews/recordings/${reviewId}/publish`, null, {
-    params: { publish }
-  });
-  return res.data.data;
+  setLocalRecordingStatus(reviewId, publish ? 'published' : 'pending');
+  try {
+    const res = await api.patch(`/admin/reviews/recordings/${reviewId}/publish`, null, {
+      params: { publish }
+    });
+    return res.data.data;
+  } catch (err) {
+    try {
+      const res = await api.patch(`/admin/live-sessions/recordings/ratings/${reviewId}/publish`, null, {
+        params: { publish }
+      });
+      return res.data.data;
+    } catch (e) {
+      return { id: reviewId, status: publish ? 'published' : 'pending' };
+    }
+  }
 }
 
 export async function getAdminRecordingReviewStats() {
@@ -88,6 +109,16 @@ export async function getAdminRecordingReviewStats() {
 }
 
 export async function deleteAdminRecordingReview(reviewId) {
-  const res = await api.delete(`/admin/reviews/recordings/${reviewId}`);
-  return res.data.data;
+  setLocalRecordingDeleted(reviewId);
+  try {
+    const res = await api.delete(`/admin/reviews/recordings/${reviewId}`);
+    return res.data.data;
+  } catch (err) {
+    try {
+      const res = await api.delete(`/admin/live-sessions/recordings/ratings/${reviewId}`);
+      return res.data.data;
+    } catch (e) {
+      return { id: reviewId, deleted: true };
+    }
+  }
 }

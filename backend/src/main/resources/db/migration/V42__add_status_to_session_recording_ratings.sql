@@ -9,3 +9,4 @@ ALTER TABLE session_recording_ratings
 ALTER COLUMN status SET DEFAULT 'pending';
 
 CREATE INDEX IF NOT EXISTS idx_session_rec_ratings_status ON session_recording_ratings(status);
+
