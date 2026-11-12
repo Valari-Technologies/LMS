@@ -149,8 +149,11 @@ export default function AdminLiveSessionsPage() {
   const [editBatches, setEditBatches] = useState([]);
 
   const [recordingForm, setRecordingForm] = useState({
+    title: '',
+    overview: '',
     url: '',
     duration: '',
+    mediaAssetId: null
   });
 
   // Recording Modal states
@@ -172,6 +175,8 @@ export default function AdminLiveSessionsPage() {
   const [editRecordingForm, setEditRecordingForm] = useState({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
   const [editRecordingTab, setEditRecordingTab] = useState('url'); // 'upload' | 'library' | 'url'
   const [resourceModalRecording, setResourceModalRecording] = useState(null); // { recording, session }
+  const [overviewModalRecording, setOverviewModalRecording] = useState(null); // { recording, session }
+  const [overviewModalForm, setOverviewModalForm] = useState({ title: '', overview: '' });
 
   useEffect(() => {
     listAdminCourses({ size: 100 })
@@ -432,10 +437,39 @@ export default function AdminLiveSessionsPage() {
   function openRecordingModal(session) {
     setShowRecordingModal(session);
     setRecordingTab('upload');
-    setRecordingForm({ url: '', duration: '' });
+    const existingCount = (session.recordings || []).length;
+    setRecordingForm({
+      title: `${session.title || 'Live Class Session'} - Recording ${existingCount + 1}`,
+      overview: session.description || '',
+      url: '',
+      duration: '',
+      mediaAssetId: null
+    });
     setSelectedMediaAsset(null);
     setMediaSearch('');
     loadMediaLibrary('');
+  }
+
+  function openOverviewModal(session, recording) {
+    if (!recording) return;
+    const recId = recording.id;
+    const defaultTitle = getRecordingCustomTitle(recId, recording.title || (session ? `${session.title} - Recording` : 'Class Recording'));
+    const defaultOverview = getRecordingOverview(recId, recording.description || session?.description || '');
+    setOverviewModalForm({ title: defaultTitle, overview: defaultOverview });
+    setOverviewModalRecording({ session, recording });
+  }
+
+  function handleSaveRecordingOverview(e) {
+    if (e) e.preventDefault();
+    if (!overviewModalRecording?.recording) return;
+    const recId = overviewModalRecording.recording.id;
+    setRecordingOverview(recId, overviewModalForm.overview, overviewModalForm.title);
+    toast.success('Recording overview and title saved successfully!');
+    setOverviewModalRecording(null);
+    loadSessions();
+    if (manageRecordingsModal) {
+      setManageRecordingsModal(prev => prev ? ({ ...prev }) : null);
+    }
   }
 
   async function handleUploadRecordingVideo(e) {
@@ -476,15 +510,25 @@ export default function AdminLiveSessionsPage() {
     }
     setSubmitting(true);
     try {
-      await attachRecording(showRecordingModal.id, {
+      const savedRecording = await attachRecording(showRecordingModal.id, {
         url: finalUrl,
         mediaAssetId: selectedMediaAsset?.id || recordingForm.mediaAssetId || null,
         duration: recordingForm.duration ? Number(recordingForm.duration) : null,
       });
+
+      // Save recording title and rich overview to persistent storage
+      const savedRecId = savedRecording?.id || (showRecordingModal.recordings && showRecordingModal.recordings[showRecordingModal.recordings.length - 1]?.id);
+      if (savedRecId) {
+        setRecordingOverview(savedRecId, recordingForm.overview, recordingForm.title);
+      } else {
+        const nextId = (showRecordingModal.recordings || []).length + 1;
+        setRecordingOverview(nextId, recordingForm.overview, recordingForm.title);
+      }
+
       setShowRecordingModal(null);
-      setRecordingForm({ url: '', duration: '', mediaAssetId: null });
+      setRecordingForm({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
       setSelectedMediaAsset(null);
-      toast.success('Recording attached successfully! English subtitles are generating automatically.');
+      toast.success('Recording attached and overview saved successfully!');
       loadSessions();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to attach recording');
@@ -898,6 +942,15 @@ export default function AdminLiveSessionsPage() {
                               </button>
                               <button
                                 className="btn btn-secondary btn-sm"
+                                onClick={() => openOverviewModal(s, s.recordings[0])}
+                                title="Edit recording overview & notes for students"
+                                style={{ color: '#5A70D3', fontWeight: 700, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
+                              >
+                                <i className="fa-regular fa-file-lines"></i>
+                                <span>Overview</span>
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-sm"
                                 onClick={() => openRecordingModal(s)}
                                 title="Add another recording"
                                 aria-label="Add recording"
@@ -1297,6 +1350,86 @@ export default function AdminLiveSessionsPage() {
                 </p>
               </div>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowRecordingModal(null)}>✕</button>
+            </div>
+
+            {/* Recording Title & Overview Section */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 'var(--radius-md, 10px)',
+              padding: '14px 16px',
+              marginBottom: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-regular fa-file-lines" style={{ color: '#5A70D3', fontSize: '1rem' }}></i>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
+                    Recording Overview & Details
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#5A70D3', background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                  Overview Tab Content
+                </span>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '4px' }}>
+                  Recording Title
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Session 2: Redux Architecture & State Management"
+                  value={recordingForm.title}
+                  onChange={(e) => setRecordingForm(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.82rem', margin: 0 }}>
+                    Recording Overview / Description
+                  </label>
+                  {showRecordingModal.description && (
+                    <button
+                      type="button"
+                      onClick={() => setRecordingForm(prev => ({ ...prev, overview: showRecordingModal.description }))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#5A70D3',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                    >
+                      <i className="fa-solid fa-copy" style={{ marginRight: '3px' }}></i>
+                      Copy session description
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  rows={3}
+                  className="form-control"
+                  placeholder="Enter a rich summary of topics covered in this video recording, takeaways, and notes for students..."
+                  value={recordingForm.overview}
+                  onChange={(e) => setRecordingForm(prev => ({ ...prev, overview: e.target.value }))}
+                  style={{ lineHeight: 1.5, resize: 'vertical', fontSize: '0.86rem' }}
+                />
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                  Students will see this in the Overview tab below the video player.
+                </div>
+              </div>
+            </div>
+
+            {/* Video Media Source Tabs Header */}
+            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
+              <span>Select Recording Video Source</span>
             </div>
 
             {/* Tabs */}
@@ -1783,21 +1916,39 @@ export default function AdminLiveSessionsPage() {
                             gap: '5px',
                             color: '#5A70D3',
                             fontWeight: 700,
+                            borderColor: 'rgba(90, 112, 211, 0.4)',
+                            background: 'rgba(90, 112, 211, 0.08)'
+                          }}
+                          onClick={() => openOverviewModal(manageRecordingsModal, r)}
+                          title="Add or edit the rich overview description for this recording"
+                        >
+                          <i className="fa-regular fa-file-lines"></i>
+                          <span>{getRecordingOverview(r.id, '') ? 'Overview' : '+ Add Overview'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            color: '#0f172a',
+                            fontWeight: 600,
                             borderColor: 'rgba(90, 112, 211, 0.35)',
-                            background: 'rgba(90, 112, 211, 0.06)'
+                            background: 'rgba(90, 112, 211, 0.04)'
                           }}
                           onClick={() => setResourceModalRecording({ recording: r, session: manageRecordingsModal })}
                           title="Attach or manage downloadable PDF, code, and slide resources for this recording"
                         >
-                          <i className="fa-solid fa-paperclip"></i>
+                          <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3' }}></i>
                           <span>Resources ({getRecordingResources(r.id, r.subtitleUrl).length})</span>
                         </button>
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => openEditRecordingModal(manageRecordingsModal, r)}
-                          title="Edit recording overview, title, and video details"
+                          title="Edit recording video details, duration, or overview"
                         >
-                          <i className="fa-solid fa-pen-to-square" style={{ marginRight: '4px' }}></i> Edit Overview
+                          <i className="fa-solid fa-pen-to-square" style={{ marginRight: '4px' }}></i> Edit Video
                         </button>
                         <button
                           className="btn btn-secondary btn-sm"
@@ -1808,6 +1959,48 @@ export default function AdminLiveSessionsPage() {
                           <i className="fa-solid fa-trash"></i>
                         </button>
                       </div>
+                    </div>
+
+                    {/* Prominent Recording Overview Banner Card */}
+                    <div style={{
+                      padding: '10px 16px',
+                      background: 'rgba(90, 112, 211, 0.04)',
+                      borderBottom: '1px solid var(--border-subtle, #f1f5f9)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#5A70D3', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <i className="fa-regular fa-file-lines"></i>
+                          <span>Student View Overview</span>
+                        </div>
+                        {(() => {
+                          const ov = getRecordingOverview(r.id, '');
+                          if (ov) {
+                            return (
+                              <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.5, whiteSpace: 'pre-line', maxHeight: '72px', overflowY: 'auto' }}>
+                                {ov}
+                              </div>
+                            );
+                          }
+                          return (
+                            <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                              No recording overview added yet. Students will see fallback session info. Click &quot;+ Add Overview&quot; to write an overview.
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.74rem', padding: '4px 10px', flexShrink: 0, fontWeight: 700, color: '#5A70D3', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#ffffff', borderColor: '#cbd5e1' }}
+                        onClick={() => openOverviewModal(manageRecordingsModal, r)}
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                        <span>{getRecordingOverview(r.id, '') ? 'Edit Overview' : '+ Add Overview'}</span>
+                      </button>
                     </div>
 
                     {/* Real Student Ratings & Reviews Section */}
@@ -2268,6 +2461,110 @@ export default function AdminLiveSessionsPage() {
           onClose={() => setResourceModalRecording(null)}
           onUpdated={() => loadSessions()}
         />
+      )}
+
+      {/* Dedicated Recording Overview Modal */}
+      {overviewModalRecording && (
+        <div className="modal-backdrop" onClick={() => setOverviewModalRecording(null)}>
+          <div className="modal-dialog" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-regular fa-file-lines" style={{ color: '#5A70D3' }}></i>
+                  <span>Recording Overview & Details</span>
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                  Session: <strong>{overviewModalRecording.session?.title || 'Live Session'}</strong>
+                </p>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setOverviewModalRecording(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveRecordingOverview}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>
+                    Recording Title
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Session 2: Redux Architecture & State Management"
+                    value={overviewModalForm.title}
+                    onChange={(e) => setOverviewModalForm(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Title displayed in the student learning view and sidebar playlist.
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem', margin: 0 }}>
+                      Recording Overview & Notes (Student View)
+                    </label>
+                    {overviewModalRecording.session?.description && (
+                      <button
+                        type="button"
+                        onClick={() => setOverviewModalForm(prev => ({ ...prev, overview: overviewModalRecording.session.description }))}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#5A70D3',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        <i className="fa-solid fa-copy" style={{ marginRight: '4px' }}></i>
+                        Copy session description
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={6}
+                    className="form-control"
+                    placeholder="Write a rich summary of topics covered in this video recording, key concepts, takeaways, and notes for students..."
+                    value={overviewModalForm.overview}
+                    onChange={(e) => setOverviewModalForm(prev => ({ ...prev, overview: e.target.value }))}
+                    style={{ lineHeight: 1.6, resize: 'vertical' }}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Students will see this overview in the dedicated Overview tab below the video player.
+                  </div>
+                </div>
+
+                {/* Live Preview Box */}
+                {overviewModalForm.overview && (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.4px' }}>
+                      Preview for Students (Overview Tab):
+                    </div>
+                    <div style={{ fontSize: '0.84rem', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                      {overviewModalForm.overview}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setOverviewModalRecording(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#5A70D3', borderColor: '#5A70D3' }}>
+                  <i className="fa-solid fa-check" style={{ marginRight: '6px' }}></i>
+                  Save Overview
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
