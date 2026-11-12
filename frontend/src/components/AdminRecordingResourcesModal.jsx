@@ -153,7 +153,7 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
         inset: 0,
         background: 'rgba(15, 23, 42, 0.75)',
         backdropFilter: 'blur(4px)',
-        zIndex: 1100,
+        zIndex: 4500,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -168,10 +168,12 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
           maxWidth: '680px',
           maxHeight: '90vh',
           borderRadius: '16px',
-          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          position: 'relative',
+          zIndex: 4501
         }}
         onClick={(e) => e.stopPropagation()}
       >

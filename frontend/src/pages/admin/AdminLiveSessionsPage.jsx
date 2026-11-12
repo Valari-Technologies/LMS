@@ -2670,8 +2670,8 @@ export default function AdminLiveSessionsPage() {
 
       {/* Edit Recording Modal (CRUD Update) */}
       {showEditRecordingModal && (
-        <div className="modal-backdrop" onClick={() => setShowEditRecordingModal(null)}>
-          <div className="modal-dialog" style={{ maxWidth: '650px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" style={{ zIndex: 4500 }} onClick={() => setShowEditRecordingModal(null)}>
+          <div className="modal-dialog" style={{ maxWidth: '650px', zIndex: 4501 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
@@ -2856,7 +2856,7 @@ export default function AdminLiveSessionsPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.92)',
-            zIndex: 2000,
+            zIndex: 5000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -2917,14 +2917,17 @@ export default function AdminLiveSessionsPage() {
           recording={resourceModalRecording.recording}
           session={resourceModalRecording.session}
           onClose={() => setResourceModalRecording(null)}
-          onUpdated={() => loadSessions()}
+          onUpdated={() => {
+            loadSessions(false);
+            setManageRecordingsModal(prev => prev ? ({ ...prev }) : null);
+          }}
         />
       )}
 
       {/* Dedicated Recording Overview Modal */}
       {overviewModalRecording && (
-        <div className="modal-backdrop" onClick={() => setOverviewModalRecording(null)}>
-          <div className="modal-dialog" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" style={{ zIndex: 4500 }} onClick={() => setOverviewModalRecording(null)}>
+          <div className="modal-dialog" style={{ maxWidth: '640px', zIndex: 4501 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
