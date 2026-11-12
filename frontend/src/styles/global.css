@@ -1683,6 +1683,37 @@ a:hover {
   z-index: 3001 !important;
 }
 
+/* Elevated Sub-Modals (Resources, Overviews, Nested Dialogs) */
+.ot-resource-modal-backdrop,
+.ot-overview-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  z-index: 9999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
+}
+
+.ot-resource-modal-dialog,
+.ot-overview-modal-dialog {
+  position: relative !important;
+  z-index: 10000000 !important;
+  background: #ffffff !important;
+  width: 100% !important;
+  max-width: 680px !important;
+  max-height: 90vh !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;

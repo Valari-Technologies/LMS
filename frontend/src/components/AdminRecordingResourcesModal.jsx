@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { uploadMedia, listMedia } from '../api/media';
 import { resolveMediaUrl } from '../utils/mediaUtils';
 import { toast } from '../context/NotificationContext';
@@ -146,14 +147,16 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
     reloadResources();
   };
 
-  return (
+  const modalContent = (
     <div
+      className="ot-resource-modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 4500,
+        background: 'rgba(15, 23, 42, 0.78)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        zIndex: 9999999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -162,18 +165,19 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
       onClick={onClose}
     >
       <div
+        className="ot-resource-modal-dialog"
         style={{
           background: '#ffffff',
           width: '100%',
           maxWidth: '680px',
           maxHeight: '90vh',
           borderRadius: '16px',
-          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)',
+          boxShadow: '0 25px 60px -12px rgba(15, 23, 42, 0.45)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           position: 'relative',
-          zIndex: 4501
+          zIndex: 10000000
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -669,5 +673,7 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }
 

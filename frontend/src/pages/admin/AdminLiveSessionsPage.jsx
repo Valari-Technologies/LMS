@@ -2035,7 +2035,13 @@ export default function AdminLiveSessionsPage() {
 
       {/* Manage Recordings Modal */}
       {manageRecordingsModal && (
-        <div className="modal-backdrop" onClick={() => setManageRecordingsModal(null)}>
+        <div
+          className="modal-backdrop"
+          style={{
+            zIndex: resourceModalRecording || overviewModalRecording ? 2800 : undefined
+          }}
+          onClick={() => setManageRecordingsModal(null)}
+        >
           <div
             className="modal-dialog"
             style={{
@@ -2926,8 +2932,8 @@ export default function AdminLiveSessionsPage() {
 
       {/* Dedicated Recording Overview Modal */}
       {overviewModalRecording && (
-        <div className="modal-backdrop" style={{ zIndex: 4500 }} onClick={() => setOverviewModalRecording(null)}>
-          <div className="modal-dialog" style={{ maxWidth: '640px', zIndex: 4501 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop ot-overview-modal-backdrop" style={{ zIndex: 9999999 }} onClick={() => setOverviewModalRecording(null)}>
+          <div className="modal-dialog ot-overview-modal-dialog" style={{ maxWidth: '640px', zIndex: 10000000 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
