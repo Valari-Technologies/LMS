@@ -8,46 +8,9 @@ import { resolveMediaUrl } from './mediaUtils';
 const OVERVIEWS_KEY = 'onetutor_rec_overviews';
 const RESOURCES_KEY = 'onetutor_rec_resources';
 
-const DEFAULT_SAMPLE_OVERVIEWS = {
-  '4': `Welcome to this recorded session replay! In this live interactive class, we conducted an in-depth architectural breakdown of full stack application patterns, modern state management, and real-time client-server synchronization.
+const DEFAULT_SAMPLE_OVERVIEWS = {};
 
-Key Topics Covered in this Session:
-• System architecture breakdown: separation of concerns between API services and client views
-• Effective API endpoint structuring, request caching, and error boundary handling
-• Real-time data synchronization patterns and optimistic UI updates
-• Practical debugging walkthrough and question-and-answer discussion
-
-Be sure to review the downloadable lecture materials, architectural diagram slides, and demo code in the Resources tab.`
-};
-
-const DEFAULT_SAMPLE_RESOURCES = {
-  '4': [
-    {
-      id: 101,
-      name: 'Full_Stack_Architecture_Diagram.pdf',
-      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      type: 'PDF',
-      size: '1.4 MB',
-      createdAt: '2026-10-28T10:00:00.000Z'
-    },
-    {
-      id: 102,
-      name: 'Live_Session_2_Demo_Code.zip',
-      url: 'https://github.com/Valari-Technologies/LMS/archive/refs/heads/main.zip',
-      type: 'ZIP',
-      size: '4.8 MB',
-      createdAt: '2026-10-28T10:30:00.000Z'
-    },
-    {
-      id: 103,
-      name: 'Class_Lecture_Slides_Key_Notes.pdf',
-      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      type: 'SLIDES',
-      size: '2.1 MB',
-      createdAt: '2026-10-28T11:00:00.000Z'
-    }
-  ]
-};
+const DEFAULT_SAMPLE_RESOURCES = {};
 
 /**
  * Get the overview text and custom title for a recording.
@@ -59,12 +22,19 @@ export function getRecordingOverview(recordingId, defaultDesc = '') {
     if (raw) {
       const map = JSON.parse(raw);
       if (map[String(recordingId)] && map[String(recordingId)].overview) {
-        return map[String(recordingId)].overview;
+        const ov = map[String(recordingId)].overview;
+        // Purge legacy sample overview text if present
+        if (typeof ov === 'string' && ov.includes('Welcome to this recorded session replay!') && ov.includes('architectural breakdown')) {
+          delete map[String(recordingId)].overview;
+          localStorage.setItem(OVERVIEWS_KEY, JSON.stringify(map));
+          return defaultDesc || '';
+        }
+        return ov;
       }
     }
   } catch (e) {}
 
-  return DEFAULT_SAMPLE_OVERVIEWS[String(recordingId)] || defaultDesc || '';
+  return defaultDesc || '';
 }
 
 /**
@@ -108,6 +78,24 @@ export function setRecordingOverview(recordingId, overview, title = '') {
 }
 
 /**
+ * Check if a resource is a legacy dummy/sample resource that should be purged.
+ */
+function isLegacySampleResource(r) {
+  if (!r) return true;
+  if (r.id === 101 || r.id === 102 || r.id === 103) return true;
+  const legacyNames = [
+    'full_stack_architecture_diagram.pdf',
+    'live_session_2_demo_code.zip',
+    'class_lecture_slides_key_notes.pdf'
+  ];
+  if (r.name && legacyNames.includes(String(r.name).trim().toLowerCase())) return true;
+  if (r.url && (r.url.includes('tests/xhtml/testfiles/resources/pdf/dummy.pdf') || r.url.includes('/archive/refs/heads/main.zip'))) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Get list of downloadable resources attached to a recording.
  */
 export function getRecordingResources(recordingId, subtitleUrl = null) {
@@ -121,14 +109,19 @@ export function getRecordingResources(recordingId, subtitleUrl = null) {
         list = [...map[String(recordingId)]];
       }
     }
-    // Fall back to sample resources for recording #4 if not yet modified
-    if (list.length === 0 && DEFAULT_SAMPLE_RESOURCES[String(recordingId)]) {
-      list = [...DEFAULT_SAMPLE_RESOURCES[String(recordingId)]];
-    }
   } catch (e) {
-    if (DEFAULT_SAMPLE_RESOURCES[String(recordingId)]) {
-      list = [...DEFAULT_SAMPLE_RESOURCES[String(recordingId)]];
-    }
+    list = [];
+  }
+
+  // Purge any legacy sample resources if previously saved in user's browser localStorage
+  if (list.some(isLegacySampleResource)) {
+    list = list.filter(r => !isLegacySampleResource(r));
+    try {
+      const raw = localStorage.getItem(RESOURCES_KEY);
+      const map = raw ? JSON.parse(raw) : {};
+      map[String(recordingId)] = list;
+      localStorage.setItem(RESOURCES_KEY, JSON.stringify(map));
+    } catch (e) {}
   }
 
   // Include subtitles as a resource entry if available
@@ -155,9 +148,9 @@ export function addRecordingResource(recordingId, resource) {
   try {
     const raw = localStorage.getItem(RESOURCES_KEY);
     const map = raw ? JSON.parse(raw) : {};
-    const list = Array.isArray(map[String(recordingId)])
-      ? map[String(recordingId)]
-      : (DEFAULT_SAMPLE_RESOURCES[String(recordingId)] ? [...DEFAULT_SAMPLE_RESOURCES[String(recordingId)]] : []);
+    let list = Array.isArray(map[String(recordingId)]) ? map[String(recordingId)] : [];
+    // Ensure clean from legacy samples
+    list = list.filter(r => !isLegacySampleResource(r));
 
     const newRes = {
       id: Date.now(),
@@ -191,17 +184,38 @@ export function deleteRecordingResource(recordingId, resourceId) {
   try {
     const raw = localStorage.getItem(RESOURCES_KEY);
     const map = raw ? JSON.parse(raw) : {};
-    const list = Array.isArray(map[String(recordingId)])
-      ? map[String(recordingId)]
-      : (DEFAULT_SAMPLE_RESOURCES[String(recordingId)] ? [...DEFAULT_SAMPLE_RESOURCES[String(recordingId)]] : []);
+    let list = Array.isArray(map[String(recordingId)]) ? map[String(recordingId)] : [];
 
-    const filtered = list.filter(r => String(r.id) !== String(resourceId));
+    // Filter out the requested resource AND any legacy sample resources
+    const filtered = list.filter(r => String(r.id) !== String(resourceId) && !isLegacySampleResource(r));
     map[String(recordingId)] = filtered;
     localStorage.setItem(RESOURCES_KEY, JSON.stringify(map));
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('recording-resources-changed', {
         detail: { recordingId, type: 'resource_deleted', resourceId }
+      }));
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Clear all attached resources for a recording.
+ */
+export function clearAllRecordingResources(recordingId) {
+  if (!recordingId) return false;
+  try {
+    const raw = localStorage.getItem(RESOURCES_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[String(recordingId)] = [];
+    localStorage.setItem(RESOURCES_KEY, JSON.stringify(map));
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('recording-resources-changed', {
+        detail: { recordingId, type: 'resources_cleared' }
       }));
     }
     return true;

@@ -6,6 +6,7 @@ import {
   getRecordingResources,
   addRecordingResource,
   deleteRecordingResource,
+  clearAllRecordingResources,
   inferResourceType,
   getResourceVisual,
   downloadResourceFile
@@ -140,11 +141,9 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
       toast.error('System generated subtitle streams cannot be deleted here.');
       return;
     }
-    if (window.confirm(`Remove "${r.name}" from this recording class?`)) {
-      deleteRecordingResource(recId, r.id);
-      toast.success('Resource removed.');
-      reloadResources();
-    }
+    deleteRecordingResource(recId, r.id);
+    toast.success(`Removed "${r.name}".`);
+    reloadResources();
   };
 
   return (
@@ -235,9 +234,38 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
           {/* Section 1: Currently Attached Resources List */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
-                Currently Attached ({resources.length})
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
+                  Currently Attached ({resources.length})
+                </span>
+                {resources.filter(r => !r.isSystemSubtitle).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearAllRecordingResources(recId);
+                      toast.success('All attached resources removed.');
+                      reloadResources();
+                    }}
+                    style={{
+                      border: '1px solid #fecdd3',
+                      background: '#fff1f2',
+                      color: '#e11d48',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Remove all uploaded resources for this recording"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                    <span>Clear All</span>
+                  </button>
+                )}
+              </div>
               <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
                 Available for student download in Resources tab
               </span>
