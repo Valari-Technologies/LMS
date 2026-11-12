@@ -193,11 +193,6 @@ export default function StudentCourseDashboardPage() {
   useEffect(() => {
     loadData(true);
 
-    const handleRecChange = () => {
-      setTick(t => t + 1);
-    };
-    window.addEventListener('recording-resources-changed', handleRecChange);
-
     const unsub = subscribeSyncEvents((event) => {
       if (
         event.type === SYNC_EVENTS.LIVE_SESSIONS_CHANGED ||
@@ -211,7 +206,6 @@ export default function StudentCourseDashboardPage() {
     const interval = setInterval(() => setTick(t => t + 1), 5000);
 
     return () => {
-      window.removeEventListener('recording-resources-changed', handleRecChange);
       unsub();
       clearInterval(interval);
     };
@@ -247,7 +241,6 @@ export default function StudentCourseDashboardPage() {
   // Flatten all recordings for this course into an ordered playlist
   const allRecordings = [];
   recordingSessions.forEach(s => {
-    parseSessionRecordingMetadata(s);
     (s.recordings || []).forEach((r, rIdx) => {
       allRecordings.push({
         ...r,

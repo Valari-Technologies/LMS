@@ -75,12 +75,6 @@ export function parseSessionRecordingMetadata(session) {
 
       localStorage.setItem(RESOURCES_KEY, JSON.stringify(resMap));
       localStorage.setItem(OVERVIEWS_KEY, JSON.stringify(ovMap));
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('recording-resources-changed', {
-          detail: { sessionId: session.id, data }
-        }));
-      }
     }
     return data;
   } catch (e) {
@@ -170,6 +164,9 @@ export async function syncSessionRecordingDataToBackend(session, recordingId, up
     }
 
     const newDesc = `${baseDesc}\n${TAG_START}${JSON.stringify(currentData)}${TAG_END}`;
+    if (session.description === newDesc) {
+      return; // Already in sync, no network request needed
+    }
 
     await updateLiveSession(session.id, {
       courseId: session.courseId || session.course?.id,
@@ -187,6 +184,9 @@ export async function syncSessionRecordingDataToBackend(session, recordingId, up
   }
 }
 
+// Track sessions already auto-synced in this browser instance to avoid duplicate calls
+const _autoSyncedSessionIds = new Set();
+
 /**
  * Automatically push existing local resources and overviews up to backend database for any sessions missing them.
  */
@@ -201,7 +201,7 @@ export async function autoSyncLocalResourcesToBackend(sessions) {
     const ovMap = rawOv ? JSON.parse(rawOv) : {};
 
     for (const session of sessions) {
-      if (!session || !session.id) continue;
+      if (!session || !session.id || _autoSyncedSessionIds.has(session.id)) continue;
       const desc = session.description || '';
       const hasTag = desc.includes(TAG_START);
 
@@ -220,6 +220,7 @@ export async function autoSyncLocalResourcesToBackend(sessions) {
 
       // If we have local data and backend description doesn't have it, sync!
       if (hasLocalData && !hasTag) {
+        _autoSyncedSessionIds.add(session.id);
         const firstRecId = session.recordings?.[0]?.id || 1;
         await syncSessionRecordingDataToBackend(session, firstRecId);
       }
