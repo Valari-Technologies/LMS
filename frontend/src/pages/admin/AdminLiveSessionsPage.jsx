@@ -27,7 +27,10 @@ import {
   getRecordingOverview,
   setRecordingOverview,
   getRecordingCustomTitle,
-  getRecordingResources
+  getRecordingResources,
+  addRecordingResource,
+  inferResourceType,
+  getResourceVisual
 } from '../../utils/recordingResources';
 
 const getDirectMediaUrl = (asset) => {
@@ -177,6 +180,12 @@ export default function AdminLiveSessionsPage() {
   const [resourceModalRecording, setResourceModalRecording] = useState(null); // { recording, session }
   const [overviewModalRecording, setOverviewModalRecording] = useState(null); // { recording, session }
   const [overviewModalForm, setOverviewModalForm] = useState({ title: '', overview: '' });
+  const [newRecordingResources, setNewRecordingResources] = useState([]);
+  const [uploadingResource, setUploadingResource] = useState(false);
+  const [resourceUploadProgress, setResourceUploadProgress] = useState(0);
+  const [showAddResourceLink, setShowAddResourceLink] = useState(false);
+  const [resourceLinkForm, setResourceLinkForm] = useState({ name: '', url: '', type: 'LINK' });
+  const resourceFileInputRef = useRef(null);
 
   useEffect(() => {
     listAdminCourses({ size: 100 })
@@ -445,6 +454,9 @@ export default function AdminLiveSessionsPage() {
       duration: '',
       mediaAssetId: null
     });
+    setNewRecordingResources([]);
+    setShowAddResourceLink(false);
+    setResourceLinkForm({ name: '', url: '', type: 'LINK' });
     setSelectedMediaAsset(null);
     setMediaSearch('');
     loadMediaLibrary('');
@@ -470,6 +482,64 @@ export default function AdminLiveSessionsPage() {
     if (manageRecordingsModal) {
       setManageRecordingsModal(prev => prev ? ({ ...prev }) : null);
     }
+  }
+
+  async function handleUploadNewRecordingResource(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const inferred = inferResourceType(file.name);
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    const sizeStr = `${sizeMb} MB`;
+
+    setUploadingResource(true);
+    setResourceUploadProgress(15);
+
+    try {
+      const uploaded = await uploadMedia(file, (pct) => setResourceUploadProgress(pct));
+      const fileUrl = getDirectMediaUrl(uploaded) || uploaded?.url || uploaded?.storagePath || '';
+      if (!fileUrl) throw new Error('No URL returned from upload');
+
+      const newRes = {
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        name: file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
+        url: fileUrl,
+        type: inferred,
+        size: sizeStr
+      };
+
+      setNewRecordingResources(prev => [...prev, newRes]);
+      toast.success(`Attached "${file.name}" to recording!`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to upload resource file');
+    } finally {
+      setUploadingResource(false);
+      setResourceUploadProgress(0);
+      if (resourceFileInputRef.current) resourceFileInputRef.current.value = '';
+    }
+  }
+
+  function handleAddNewResourceLink() {
+    if (!resourceLinkForm.name.trim() || !resourceLinkForm.url.trim()) {
+      toast.error('Please enter resource title and URL');
+      return;
+    }
+    const inferred = inferResourceType(resourceLinkForm.name, resourceLinkForm.url);
+    const newRes = {
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      name: resourceLinkForm.name.trim(),
+      url: resourceLinkForm.url.trim(),
+      type: resourceLinkForm.type || inferred || 'LINK',
+      size: 'External Link'
+    };
+    setNewRecordingResources(prev => [...prev, newRes]);
+    setResourceLinkForm({ name: '', url: '', type: 'LINK' });
+    setShowAddResourceLink(false);
+    toast.success('Resource link attached!');
+  }
+
+  function handleRemoveNewRecordingResource(id) {
+    setNewRecordingResources(prev => prev.filter(r => r.id !== id));
   }
 
   async function handleUploadRecordingVideo(e) {
@@ -518,17 +588,29 @@ export default function AdminLiveSessionsPage() {
 
       // Save recording title and rich overview to persistent storage
       const savedRecId = savedRecording?.id || (showRecordingModal.recordings && showRecordingModal.recordings[showRecordingModal.recordings.length - 1]?.id);
-      if (savedRecId) {
-        setRecordingOverview(savedRecId, recordingForm.overview, recordingForm.title);
-      } else {
-        const nextId = (showRecordingModal.recordings || []).length + 1;
-        setRecordingOverview(nextId, recordingForm.overview, recordingForm.title);
+      const targetRecId = savedRecId || ((showRecordingModal.recordings || []).length + 1);
+      setRecordingOverview(targetRecId, recordingForm.overview, recordingForm.title);
+
+      // Attach any resources added during recording creation
+      if (newRecordingResources.length > 0) {
+        newRecordingResources.forEach(res => {
+          addRecordingResource(targetRecId, {
+            name: res.name,
+            url: res.url,
+            type: res.type,
+            size: res.size
+          });
+        });
       }
 
       setShowRecordingModal(null);
       setRecordingForm({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
+      setNewRecordingResources([]);
       setSelectedMediaAsset(null);
-      toast.success('Recording attached and overview saved successfully!');
+      toast.success(newRecordingResources.length > 0
+        ? `Recording, overview, and ${newRecordingResources.length} resource(s) saved successfully!`
+        : 'Recording attached and overview saved successfully!'
+      );
       loadSessions();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to attach recording');
@@ -948,6 +1030,15 @@ export default function AdminLiveSessionsPage() {
                               >
                                 <i className="fa-regular fa-file-lines"></i>
                                 <span>Overview</span>
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setResourceModalRecording({ recording: s.recordings[0], session: s })}
+                                title={`Manage downloadable resources for recording (${getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl).length} attached)`}
+                                style={{ color: '#0f172a', fontWeight: 600, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
+                              >
+                                <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3' }}></i>
+                                <span>Resources ({getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl).length})</span>
                               </button>
                               <button
                                 className="btn btn-secondary btn-sm"
@@ -1648,6 +1739,208 @@ export default function AdminLiveSessionsPage() {
                 </div>
               </div>
             )}
+
+            {/* Downloadable Resources Section */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 'var(--radius-md, 10px)',
+              padding: '14px 16px',
+              marginTop: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3', fontSize: '1rem' }}></i>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
+                    Downloadable Resources & Class Materials (Optional)
+                  </span>
+                  {newRecordingResources.length > 0 && (
+                    <span style={{
+                      background: '#5A70D3',
+                      color: '#ffffff',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      padding: '1px 7px',
+                      borderRadius: '9999px'
+                    }}>
+                      {newRecordingResources.length}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    ref={resourceFileInputRef}
+                    type="file"
+                    style={{ display: 'none' }}
+                    onChange={handleUploadNewRecordingResource}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    disabled={uploadingResource}
+                    onClick={() => resourceFileInputRef.current?.click()}
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      color: '#5A70D3',
+                      borderColor: 'rgba(90, 112, 211, 0.4)',
+                      background: 'rgba(90, 112, 211, 0.08)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                    <span>{uploadingResource ? `Uploading ${resourceUploadProgress}%…` : '+ Upload File'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setShowAddResourceLink(prev => !prev)}
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <i className="fa-solid fa-link"></i>
+                    <span>+ Add Link</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress bar if uploading resource file */}
+              {uploadingResource && (
+                <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(resourceUploadProgress, 10)}%`, height: '100%', background: '#5A70D3', transition: 'width 0.2s ease' }} />
+                </div>
+              )}
+
+              {/* Form to add resource link */}
+              {showAddResourceLink && (
+                <div style={{
+                  padding: '12px 14px',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Resource name (e.g. GitHub Repository, Lecture Slides)"
+                      value={resourceLinkForm.name}
+                      onChange={(e) => setResourceLinkForm(f => ({ ...f, name: e.target.value }))}
+                      style={{ fontSize: '0.82rem' }}
+                    />
+                    <input
+                      type="url"
+                      className="form-control"
+                      placeholder="https://github.com/... or https://..."
+                      value={resourceLinkForm.url}
+                      onChange={(e) => setResourceLinkForm(f => ({ ...f, url: e.target.value }))}
+                      style={{ fontSize: '0.82rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.76rem' }}
+                      onClick={() => setShowAddResourceLink(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.76rem', background: '#5A70D3', borderColor: '#5A70D3' }}
+                      onClick={handleAddNewResourceLink}
+                    >
+                      Attach Link
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* List of attached resources */}
+              {newRecordingResources.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {newRecordingResources.map((res) => {
+                    const visual = getResourceVisual(res.type);
+                    return (
+                      <div
+                        key={res.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          gap: '10px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          <span style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '6px',
+                            background: visual.bg,
+                            color: visual.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.8rem',
+                            flexShrink: 0
+                          }}>
+                            <i className={visual.icon}></i>
+                          </span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {res.name}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, background: visual.bg, color: visual.color, padding: '1px 5px', borderRadius: '4px' }}>
+                            {visual.label}
+                          </span>
+                          {res.size && <span style={{ fontSize: '0.72rem', color: '#64748b' }}>• {res.size}</span>}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNewRecordingResource(res.id)}
+                          style={{
+                            border: 'none',
+                            background: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            padding: '2px 6px'
+                          }}
+                          title="Remove resource"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.76rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                  Attach PDF lecture notes, demo code (ZIP), slide decks, or reference links for students to download in the player&apos;s Resources tab.
+                </div>
+              )}
+            </div>
 
             {/* Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '24px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
@@ -2553,14 +2846,39 @@ export default function AdminLiveSessionsPage() {
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setOverviewModalRecording(null)}>
-                  Cancel
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    color: '#5A70D3',
+                    fontWeight: 700,
+                    borderColor: 'rgba(90, 112, 211, 0.4)',
+                    background: 'rgba(90, 112, 211, 0.08)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onClick={() => {
+                    const target = overviewModalRecording;
+                    setOverviewModalRecording(null);
+                    setResourceModalRecording(target);
+                  }}
+                  title="Attach or manage downloadable files, PDFs, slides, and code for this recording"
+                >
+                  <i className="fa-solid fa-paperclip"></i>
+                  <span>Manage Resources ({getRecordingResources(overviewModalRecording.recording?.id, overviewModalRecording.recording?.subtitleUrl).length})</span>
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ background: '#5A70D3', borderColor: '#5A70D3' }}>
-                  <i className="fa-solid fa-check" style={{ marginRight: '6px' }}></i>
-                  Save Overview
-                </button>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setOverviewModalRecording(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" style={{ background: '#5A70D3', borderColor: '#5A70D3' }}>
+                    <i className="fa-solid fa-check" style={{ marginRight: '6px' }}></i>
+                    Save Overview
+                  </button>
+                </div>
               </div>
             </form>
           </div>
