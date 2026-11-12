@@ -9554,20 +9554,38 @@ h6,
   display: flex;
   align-items: center;
   gap: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0;
   margin-bottom: 22px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  /* Sticky below the global header */
+  /* Default: sticky cleanly to the top of viewport */
   position: sticky;
-  top: 72px;
-  z-index: 90;
+  top: 0;
+  z-index: 120;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(11, 31, 58, 0.06);
-  padding: 8px 12px 0 12px;
+  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.07);
+  padding: 6px 18px 0 18px;
   margin-left: -2px;
   margin-right: -2px;
+  border-radius: 0;
+}
+
+/* When the global header (.ud-header) is present, offset sticky below it */
+body:has(.ud-header) .ot-learn-tabs {
+  top: 72px;
+}
+
+/* Dashboard learn page explicitly sticks at top: 0 with solid background and shadow */
+.ot-dashboard-learn-page .ot-learn-tabs {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 120 !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.07) !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  border-radius: 0 !important;
+  padding: 6px 18px 0 18px !important;
 }
 
 .ot-learn-tabs::-webkit-scrollbar {
@@ -9687,8 +9705,8 @@ h6,
 /* Right Sidebar Sticky Card */
 .ot-course-content-sidebar {
   position: sticky;
-  top: 88px;
-  max-height: calc(100vh - 108px);
+  top: 16px;
+  max-height: calc(100vh - 32px);
   background: #ffffff;
   border-radius: 18px;
   border: 1px solid #eef4f0;
@@ -9698,6 +9716,16 @@ h6,
   flex-direction: column;
   box-sizing: border-box;
   z-index: 10;
+}
+
+body:has(.ud-header) .ot-course-content-sidebar {
+  top: 88px;
+  max-height: calc(100vh - 108px);
+}
+
+.ot-dashboard-learn-page .ot-course-content-sidebar {
+  top: 16px !important;
+  max-height: calc(100vh - 32px) !important;
 }
 
 .ot-sidebar-header {
@@ -10103,10 +10131,20 @@ h6,
   .ot-learn-tabs {
     gap: 14px;
     margin-bottom: 16px;
-    top: 58px; /* mobile header is 58px */
-    padding: 10px 10px 0 10px;
-    z-index: 90;
+    top: 0;
+    padding: 8px 12px 0 12px;
+    z-index: 120;
     background: #ffffff;
+    border-bottom: 2px solid #e2e8f0;
+    border-radius: 0;
+  }
+
+  body:has(.ud-header) .ot-learn-tabs {
+    top: 58px; /* mobile header is 58px */
+  }
+
+  .ot-dashboard-learn-page .ot-learn-tabs {
+    top: 0 !important;
   }
 
   .ot-learn-tab {

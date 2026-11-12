@@ -413,7 +413,7 @@ export default function StudentCourseDashboardPage() {
     );
 
     return (
-      <div className="ot-learn-page">
+      <div className="ot-learn-page ot-dashboard-learn-page">
         <div className="ot-learn-container" style={{ paddingTop: '20px' }}>
           {/* 2-Column Responsive Grid Layout matching LearningPage */}
           <div className="ot-learn-layout">
@@ -565,6 +565,31 @@ export default function StudentCourseDashboardPage() {
                   <i className="fa-solid fa-paperclip"></i>
                   <span>Resources</span>
                   {recResources.length > 0 && <span className="ot-tab-badge">{recResources.length}</span>}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedRecording(null)}
+                  style={{
+                    marginLeft: 'auto',
+                    border: 'none',
+                    background: 'rgba(90, 112, 211, 0.08)',
+                    color: '#5A70D3',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Exit recording player and return to dashboard"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                  <span>Back to Course</span>
                 </button>
               </div>
 
