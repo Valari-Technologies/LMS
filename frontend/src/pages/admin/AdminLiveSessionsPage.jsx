@@ -30,7 +30,11 @@ import {
   getRecordingResources,
   addRecordingResource,
   inferResourceType,
-  getResourceVisual
+  getResourceVisual,
+  cleanDescription,
+  parseSessionRecordingMetadata,
+  syncSessionRecordingDataToBackend,
+  autoSyncLocalResourcesToBackend
 } from '../../utils/recordingResources';
 
 const getDirectMediaUrl = (asset) => {
@@ -241,6 +245,13 @@ export default function AdminLiveSessionsPage() {
         size: 100
       });
       const fetchedSessions = res?.content || [];
+
+      // 1. Parse remote recording metadata (resources, overviews) from backend into local storage
+      fetchedSessions.forEach(s => parseSessionRecordingMetadata(s));
+
+      // 2. Automatically sync any local resources/overviews previously added in this browser to backend database
+      autoSyncLocalResourcesToBackend(fetchedSessions);
+
       setSessions(fetchedSessions);
       setTotalPages(res?.totalPages || 1);
 
@@ -348,7 +359,7 @@ export default function AdminLiveSessionsPage() {
       courseId: session.courseId || '',
       batchId: session.batchId || '',
       title: session.title || '',
-      description: session.description || '',
+      description: cleanDescription(session.description || ''),
       scheduledAt: toDatetimeLocal(session.scheduledAt),
       endTime: toDatetimeLocal(session.endTime),
       meetingUrl: session.meetingUrl || '',
@@ -371,11 +382,18 @@ export default function AdminLiveSessionsPage() {
         finalStatus = 'live';
       }
 
+      // Preserve any embedded recording metadata block
+      let finalDesc = editForm.description.trim();
+      const metaIdx = (showEditModal.description || '').indexOf('<!--OT_REC_DATA:');
+      if (metaIdx !== -1) {
+        finalDesc += '\n' + showEditModal.description.substring(metaIdx).trim();
+      }
+
       await updateLiveSession(showEditModal.id, {
         courseId: editForm.courseId ? Number(editForm.courseId) : undefined,
         batchId: editForm.batchId ? Number(editForm.batchId) : null,
         title: editForm.title.trim(),
-        description: editForm.description.trim(),
+        description: finalDesc,
         scheduledAt: scheduledDate.toISOString(),
         endTime: editForm.endTime ? new Date(editForm.endTime).toISOString() : null,
         meetingUrl: editForm.meetingUrl.trim(),
@@ -471,11 +489,20 @@ export default function AdminLiveSessionsPage() {
     setOverviewModalRecording({ session, recording });
   }
 
-  function handleSaveRecordingOverview(e) {
+  async function handleSaveRecordingOverview(e) {
     if (e) e.preventDefault();
     if (!overviewModalRecording?.recording) return;
     const recId = overviewModalRecording.recording.id;
     setRecordingOverview(recId, overviewModalForm.overview, overviewModalForm.title);
+    if (overviewModalRecording.session) {
+      await syncSessionRecordingDataToBackend(
+        overviewModalRecording.session,
+        recId,
+        null,
+        overviewModalForm.overview,
+        overviewModalForm.title
+      );
+    }
     toast.success('Recording overview and title saved successfully!');
     setOverviewModalRecording(null);
     loadSessions();
@@ -602,6 +629,16 @@ export default function AdminLiveSessionsPage() {
           });
         });
       }
+
+      // Sync recording overview, title, and resources to backend database so students instantly receive them
+      const currentList = getRecordingResources(targetRecId, null, showRecordingModal.id);
+      await syncSessionRecordingDataToBackend(
+        showRecordingModal,
+        targetRecId,
+        currentList,
+        recordingForm.overview,
+        recordingForm.title
+      );
 
       setShowRecordingModal(null);
       setRecordingForm({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
@@ -948,9 +985,9 @@ export default function AdminLiveSessionsPage() {
                     <tr key={s.id}>
                       <td>
                         <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{s.title}</div>
-                        {s.description && (
+                        {cleanDescription(s.description) && (
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {s.description}
+                            {cleanDescription(s.description)}
                           </div>
                         )}
                       </td>
@@ -1034,11 +1071,11 @@ export default function AdminLiveSessionsPage() {
                               <button
                                 className="btn btn-secondary btn-sm"
                                 onClick={() => setResourceModalRecording({ recording: s.recordings[0], session: s })}
-                                title={`Manage downloadable resources for recording (${getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl).length} attached)`}
+                                title={`Manage downloadable resources for recording (${getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length} attached)`}
                                 style={{ color: '#0f172a', fontWeight: 600, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
                               >
                                 <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3' }}></i>
-                                <span>Resources ({getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl).length})</span>
+                                <span>Resources ({getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length})</span>
                               </button>
                               <button
                                 className="btn btn-secondary btn-sm"
@@ -2304,7 +2341,7 @@ export default function AdminLiveSessionsPage() {
                           title="Attach or manage downloadable PDF, code, and slide resources for this recording"
                         >
                           <i className="fa-solid fa-paperclip"></i>
-                          <span>+ Add Resource ({getRecordingResources(r.id, r.subtitleUrl).length})</span>
+                          <span>+ Add Resource ({getRecordingResources(r.id, r.subtitleUrl, manageRecordingsModal?.id).length})</span>
                         </button>
                         <button
                           className="btn btn-secondary btn-sm"
@@ -2340,7 +2377,7 @@ export default function AdminLiveSessionsPage() {
                           <span>Student View Overview</span>
                         </div>
                         {(() => {
-                          const ov = getRecordingOverview(r.id, '');
+                          const ov = getRecordingOverview(r.id, '', manageRecordingsModal?.id);
                           if (ov) {
                             return (
                               <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.5, whiteSpace: 'pre-line', maxHeight: '72px', overflowY: 'auto' }}>
@@ -2362,13 +2399,13 @@ export default function AdminLiveSessionsPage() {
                         onClick={() => openOverviewModal(manageRecordingsModal, r)}
                       >
                         <i className="fa-solid fa-pen-to-square"></i>
-                        <span>{getRecordingOverview(r.id, '') ? 'Edit Overview' : '+ Add Overview'}</span>
+                        <span>{getRecordingOverview(r.id, '', manageRecordingsModal?.id) ? 'Edit Overview' : '+ Add Overview'}</span>
                       </button>
                     </div>
 
                     {/* Prominent Recording Resources Banner Card */}
                     {(() => {
-                      const resList = getRecordingResources(r.id, r.subtitleUrl);
+                      const resList = getRecordingResources(r.id, r.subtitleUrl, manageRecordingsModal?.id);
                       return (
                         <div style={{
                           padding: '10px 16px',
@@ -2387,7 +2424,7 @@ export default function AdminLiveSessionsPage() {
                             {resList.length > 0 ? (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
                                 {resList.map((res, rIdx) => {
-                                  const visual = getResourceVisual(res);
+                                  const visual = getResourceVisual(res.type);
                                   return (
                                     <span
                                       key={res.id || rIdx}
@@ -2711,7 +2748,7 @@ export default function AdminLiveSessionsPage() {
                   title="Manage downloadable PDF, code, and slide resources for this recording"
                 >
                   <i className="fa-solid fa-paperclip"></i>
-                  <span>+ Add / Manage Resources ({getRecordingResources(showEditRecordingModal.recording.id, showEditRecordingModal.recording.subtitleUrl).length})</span>
+                  <span>+ Add / Manage Resources ({getRecordingResources(showEditRecordingModal.recording.id, showEditRecordingModal.recording.subtitleUrl, showEditRecordingModal.session?.id).length})</span>
                 </button>
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowEditRecordingModal(null)}>✕</button>
               </div>
@@ -3041,7 +3078,7 @@ export default function AdminLiveSessionsPage() {
                   title="Attach or manage downloadable files, PDFs, slides, and code for this recording"
                 >
                   <i className="fa-solid fa-paperclip"></i>
-                  <span>Manage Resources ({getRecordingResources(overviewModalRecording.recording?.id, overviewModalRecording.recording?.subtitleUrl).length})</span>
+                  <span>Manage Resources ({getRecordingResources(overviewModalRecording.recording?.id, overviewModalRecording.recording?.subtitleUrl, overviewModalRecording.session?.id).length})</span>
                 </button>
 
                 <div style={{ display: 'flex', gap: '10px' }}>

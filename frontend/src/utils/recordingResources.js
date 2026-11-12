@@ -4,50 +4,272 @@
 // ============================================================
 
 import { resolveMediaUrl } from './mediaUtils';
+import { updateLiveSession } from '../api/live';
 
 const OVERVIEWS_KEY = 'onetutor_rec_overviews';
 const RESOURCES_KEY = 'onetutor_rec_resources';
 
 const DEFAULT_SAMPLE_OVERVIEWS = {};
-
 const DEFAULT_SAMPLE_RESOURCES = {};
+
+const TAG_START = '<!--OT_REC_DATA:';
+const TAG_END = '-->';
+
+/**
+ * Clean session description for user-facing UI (removes any embedded metadata block).
+ */
+export function cleanDescription(desc) {
+  if (!desc || typeof desc !== 'string') return '';
+  const idx = desc.indexOf(TAG_START);
+  if (idx === -1) return desc.trim();
+  const endIdx = desc.indexOf(TAG_END, idx);
+  if (endIdx === -1) return desc.substring(0, idx).trim();
+  return (desc.substring(0, idx) + desc.substring(endIdx + TAG_END.length)).trim();
+}
+
+/**
+ * Extract structured recording metadata (resources, overviews, custom titles) from session description
+ * and sync them directly into local storage so any student on any browser/incognito session has instant access.
+ */
+export function parseSessionRecordingMetadata(session) {
+  if (!session || !session.description) return null;
+  const desc = session.description;
+  const startIdx = desc.indexOf(TAG_START);
+  if (startIdx === -1) return null;
+  const endIdx = desc.indexOf(TAG_END, startIdx);
+  if (endIdx === -1) return null;
+
+  try {
+    const jsonStr = desc.substring(startIdx + TAG_START.length, endIdx).trim();
+    const data = JSON.parse(jsonStr);
+    if (!data || typeof data !== 'object') return null;
+
+    if (data.recordings && typeof data.recordings === 'object') {
+      const rawRes = localStorage.getItem(RESOURCES_KEY);
+      const resMap = rawRes ? JSON.parse(rawRes) : {};
+      const rawOv = localStorage.getItem(OVERVIEWS_KEY);
+      const ovMap = rawOv ? JSON.parse(rawOv) : {};
+
+      Object.entries(data.recordings).forEach(([recId, recData]) => {
+        if (Array.isArray(recData.resources)) {
+          // If remote has resources, merge/sync them so students always see them
+          const cleanRes = recData.resources.filter(r => !isLegacySampleResource(r));
+          resMap[String(recId)] = cleanRes;
+          if (session.id) {
+            resMap[`sess_${session.id}`] = cleanRes;
+            resMap[`sess_${session.id}_${recId}`] = cleanRes;
+          }
+        }
+        if (recData.overview || recData.title) {
+          const ovObj = {
+            overview: recData.overview || '',
+            title: recData.title || ''
+          };
+          ovMap[String(recId)] = ovObj;
+          if (session.id) {
+            ovMap[`sess_${session.id}`] = ovObj;
+            ovMap[`sess_${session.id}_${recId}`] = ovObj;
+          }
+        }
+      });
+
+      localStorage.setItem(RESOURCES_KEY, JSON.stringify(resMap));
+      localStorage.setItem(OVERVIEWS_KEY, JSON.stringify(ovMap));
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('recording-resources-changed', {
+          detail: { sessionId: session.id, data }
+        }));
+      }
+    }
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Sync session recording resources, overview, and title up to the backend database via LiveSession description.
+ * This guarantees that every student (on any device, browser profile, or incognito window) gets all files.
+ */
+export async function syncSessionRecordingDataToBackend(session, recordingId, updatedResources = null, updatedOverview = null, updatedTitle = null) {
+  if (!session || !session.id) return;
+  try {
+    const baseDesc = cleanDescription(session.description || '');
+
+    // Existing metadata or new object
+    let currentData = {};
+    const startIdx = (session.description || '').indexOf(TAG_START);
+    if (startIdx !== -1) {
+      const endIdx = (session.description || '').indexOf(TAG_END, startIdx);
+      if (endIdx !== -1) {
+        try {
+          currentData = JSON.parse((session.description || '').substring(startIdx + TAG_START.length, endIdx).trim()) || {};
+        } catch (e) {}
+      }
+    }
+    if (!currentData.recordings) currentData.recordings = {};
+
+    const recKey = String(recordingId || (session.recordings?.[0]?.id || 1));
+    if (!currentData.recordings[recKey]) currentData.recordings[recKey] = {};
+
+    // Get current local storage maps
+    const rawRes = localStorage.getItem(RESOURCES_KEY);
+    const resMap = rawRes ? JSON.parse(rawRes) : {};
+    const rawOv = localStorage.getItem(OVERVIEWS_KEY);
+    const ovMap = rawOv ? JSON.parse(rawOv) : {};
+
+    // Determine resources to save
+    let resourcesToSave = null;
+    if (updatedResources !== null) {
+      resourcesToSave = updatedResources.filter(r => !isLegacySampleResource(r));
+    } else {
+      if (Array.isArray(resMap[recKey]) && resMap[recKey].length > 0) {
+        resourcesToSave = resMap[recKey].filter(r => !isLegacySampleResource(r));
+      } else if (Array.isArray(resMap[`sess_${session.id}`]) && resMap[`sess_${session.id}`].length > 0) {
+        resourcesToSave = resMap[`sess_${session.id}`].filter(r => !isLegacySampleResource(r));
+      } else if (Array.isArray(resMap[String(session.id)])) {
+        resourcesToSave = resMap[String(session.id)].filter(r => !isLegacySampleResource(r));
+      }
+    }
+
+    if (resourcesToSave !== null) {
+      currentData.recordings[recKey].resources = resourcesToSave;
+      currentData.recordings[`sess_${session.id}`] = {
+        ...(currentData.recordings[`sess_${session.id}`] || {}),
+        resources: resourcesToSave
+      };
+      // Also alias to recording 1 if this is the first recording
+      if (session.recordings && session.recordings[0] && String(session.recordings[0].id) === recKey) {
+        currentData.recordings['1'] = {
+          ...(currentData.recordings['1'] || {}),
+          resources: resourcesToSave
+        };
+      }
+    }
+
+    // Determine overview & title to save
+    let overviewToSave = updatedOverview;
+    let titleToSave = updatedTitle;
+    if (overviewToSave === null) {
+      overviewToSave = ovMap[recKey]?.overview || ovMap[`sess_${session.id}`]?.overview || null;
+    }
+    if (titleToSave === null) {
+      titleToSave = ovMap[recKey]?.title || ovMap[`sess_${session.id}`]?.title || null;
+    }
+
+    if (overviewToSave !== null) {
+      currentData.recordings[recKey].overview = overviewToSave;
+      if (!currentData.recordings[`sess_${session.id}`]) currentData.recordings[`sess_${session.id}`] = {};
+      currentData.recordings[`sess_${session.id}`].overview = overviewToSave;
+    }
+    if (titleToSave !== null) {
+      currentData.recordings[recKey].title = titleToSave;
+      if (!currentData.recordings[`sess_${session.id}`]) currentData.recordings[`sess_${session.id}`] = {};
+      currentData.recordings[`sess_${session.id}`].title = titleToSave;
+    }
+
+    const newDesc = `${baseDesc}\n${TAG_START}${JSON.stringify(currentData)}${TAG_END}`;
+
+    await updateLiveSession(session.id, {
+      courseId: session.courseId || session.course?.id,
+      batchId: session.batchId || session.batch?.id || null,
+      title: session.title,
+      description: newDesc,
+      scheduledAt: session.scheduledAt,
+      endTime: session.endTime,
+      meetingUrl: session.meetingUrl,
+      status: session.status
+    });
+    session.description = newDesc;
+  } catch (err) {
+    console.warn('Failed to sync recording metadata to backend:', err);
+  }
+}
+
+/**
+ * Automatically push existing local resources and overviews up to backend database for any sessions missing them.
+ */
+export async function autoSyncLocalResourcesToBackend(sessions) {
+  if (!Array.isArray(sessions) || sessions.length === 0) return;
+  try {
+    const rawRes = localStorage.getItem(RESOURCES_KEY);
+    const rawOv = localStorage.getItem(OVERVIEWS_KEY);
+    if (!rawRes && !rawOv) return;
+
+    const resMap = rawRes ? JSON.parse(rawRes) : {};
+    const ovMap = rawOv ? JSON.parse(rawOv) : {};
+
+    for (const session of sessions) {
+      if (!session || !session.id) continue;
+      const desc = session.description || '';
+      const hasTag = desc.includes(TAG_START);
+
+      // Check if this session or its recordings have any local resources or overviews
+      let hasLocalData = false;
+      const sessKey = `sess_${session.id}`;
+      if ((Array.isArray(resMap[sessKey]) && resMap[sessKey].length > 0) || ovMap[sessKey]?.overview) {
+        hasLocalData = true;
+      }
+      (session.recordings || []).forEach(r => {
+        const rKey = String(r.id);
+        if ((Array.isArray(resMap[rKey]) && resMap[rKey].length > 0) || ovMap[rKey]?.overview) {
+          hasLocalData = true;
+        }
+      });
+
+      // If we have local data and backend description doesn't have it, sync!
+      if (hasLocalData && !hasTag) {
+        const firstRecId = session.recordings?.[0]?.id || 1;
+        await syncSessionRecordingDataToBackend(session, firstRecId);
+      }
+    }
+  } catch (e) {
+    console.warn('Error in autoSyncLocalResourcesToBackend:', e);
+  }
+}
 
 /**
  * Get the overview text and custom title for a recording.
  */
-export function getRecordingOverview(recordingId, defaultDesc = '') {
-  if (!recordingId) return defaultDesc;
+export function getRecordingOverview(recordingId, defaultDesc = '', fallbackSessionId = null) {
+  if (!recordingId && !fallbackSessionId) return cleanDescription(defaultDesc);
   try {
     const raw = localStorage.getItem(OVERVIEWS_KEY);
     if (raw) {
       const map = JSON.parse(raw);
-      if (map[String(recordingId)] && map[String(recordingId)].overview) {
-        const ov = map[String(recordingId)].overview;
-        // Purge legacy sample overview text if present
-        if (typeof ov === 'string' && ov.includes('Welcome to this recorded session replay!') && ov.includes('architectural breakdown')) {
-          delete map[String(recordingId)].overview;
-          localStorage.setItem(OVERVIEWS_KEY, JSON.stringify(map));
-          return defaultDesc || '';
-        }
-        return ov;
+      if (recordingId && map[String(recordingId)] && map[String(recordingId)].overview) {
+        return cleanDescription(map[String(recordingId)].overview);
+      }
+      if (fallbackSessionId && map[`sess_${fallbackSessionId}`] && map[`sess_${fallbackSessionId}`].overview) {
+        return cleanDescription(map[`sess_${fallbackSessionId}`].overview);
+      }
+      if (fallbackSessionId && map[String(fallbackSessionId)] && map[String(fallbackSessionId)].overview) {
+        return cleanDescription(map[String(fallbackSessionId)].overview);
       }
     }
   } catch (e) {}
 
-  return defaultDesc || '';
+  return cleanDescription(defaultDesc) || '';
 }
 
 /**
  * Get custom title for a recording if edited by admin.
  */
-export function getRecordingCustomTitle(recordingId, defaultTitle = '') {
-  if (!recordingId) return defaultTitle;
+export function getRecordingCustomTitle(recordingId, defaultTitle = '', fallbackSessionId = null) {
+  if (!recordingId && !fallbackSessionId) return defaultTitle;
   try {
     const raw = localStorage.getItem(OVERVIEWS_KEY);
     if (raw) {
       const map = JSON.parse(raw);
-      if (map[String(recordingId)] && map[String(recordingId)].title) {
+      if (recordingId && map[String(recordingId)] && map[String(recordingId)].title) {
         return map[String(recordingId)].title;
+      }
+      if (fallbackSessionId && map[`sess_${fallbackSessionId}`] && map[`sess_${fallbackSessionId}`].title) {
+        return map[`sess_${fallbackSessionId}`].title;
+      }
+      if (fallbackSessionId && map[String(fallbackSessionId)] && map[String(fallbackSessionId)].title) {
+        return map[String(fallbackSessionId)].title;
       }
     }
   } catch (e) {}
@@ -98,15 +320,23 @@ function isLegacySampleResource(r) {
 /**
  * Get list of downloadable resources attached to a recording.
  */
-export function getRecordingResources(recordingId, subtitleUrl = null) {
-  if (!recordingId) return [];
+export function getRecordingResources(recordingId, subtitleUrl = null, fallbackSessionId = null) {
+  if (!recordingId && !fallbackSessionId) return [];
   let list = [];
   try {
     const raw = localStorage.getItem(RESOURCES_KEY);
     if (raw) {
       const map = JSON.parse(raw);
-      if (Array.isArray(map[String(recordingId)])) {
+      if (recordingId && Array.isArray(map[String(recordingId)]) && map[String(recordingId)].length > 0) {
         list = [...map[String(recordingId)]];
+      } else if (fallbackSessionId && Array.isArray(map[`sess_${fallbackSessionId}`]) && map[`sess_${fallbackSessionId}`].length > 0) {
+        list = [...map[`sess_${fallbackSessionId}`]];
+      } else if (fallbackSessionId && recordingId && Array.isArray(map[`sess_${fallbackSessionId}_${recordingId}`]) && map[`sess_${fallbackSessionId}_${recordingId}`].length > 0) {
+        list = [...map[`sess_${fallbackSessionId}_${recordingId}`]];
+      } else if (fallbackSessionId && Array.isArray(map[String(fallbackSessionId)]) && map[String(fallbackSessionId)].length > 0) {
+        list = [...map[String(fallbackSessionId)]];
+      } else if (Array.isArray(map['1']) && map['1'].length > 0) {
+        list = [...map['1']];
       }
     }
   } catch (e) {
@@ -119,7 +349,8 @@ export function getRecordingResources(recordingId, subtitleUrl = null) {
     try {
       const raw = localStorage.getItem(RESOURCES_KEY);
       const map = raw ? JSON.parse(raw) : {};
-      map[String(recordingId)] = list;
+      if (recordingId) map[String(recordingId)] = list;
+      if (fallbackSessionId) map[`sess_${fallbackSessionId}`] = list;
       localStorage.setItem(RESOURCES_KEY, JSON.stringify(map));
     } catch (e) {}
   }
@@ -354,4 +585,3 @@ export async function downloadResourceFile(fileUrl, fileName) {
     a.remove();
   }
 }
-

@@ -10,7 +10,9 @@ import {
   clearAllRecordingResources,
   inferResourceType,
   getResourceVisual,
-  downloadResourceFile
+  downloadResourceFile,
+  syncSessionRecordingDataToBackend,
+  parseSessionRecordingMetadata
 } from '../utils/recordingResources';
 
 export default function AdminRecordingResourcesModal({ recording, session, onClose, onUpdated }) {
@@ -37,14 +39,19 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
 
   const reloadResources = () => {
     if (!recId) return;
-    const list = getRecordingResources(recId, recording?.subtitleUrl);
+    const list = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
     setResources(list);
     if (onUpdated) onUpdated();
   };
 
   useEffect(() => {
+    if (session) {
+      parseSessionRecordingMetadata(session);
+      // Auto-sync existing local resources to backend database
+      syncSessionRecordingDataToBackend(session, recId);
+    }
     reloadResources();
-  }, [recId, recording?.subtitleUrl]);
+  }, [recId, recording?.subtitleUrl, session?.id]);
 
   // Load media library when library tab is activated
   useEffect(() => {
@@ -91,6 +98,10 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
         size: sizeStr
       });
 
+      // Sync updated resources immediately to the backend database
+      const latest = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
+      await syncSessionRecordingDataToBackend(session, recId, latest);
+
       toast.success(`Attached "${file.name}" to recording successfully!`);
       reloadResources();
       setUploadProgress(0);
@@ -102,7 +113,7 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
     }
   };
 
-  const handleSelectFromLibrary = (asset) => {
+  const handleSelectFromLibrary = async (asset) => {
     const assetUrl = asset.storagePath || asset.url || `/api/v1/media/files/${asset.id}`;
     const assetName = asset.filename || asset.originalName || 'Class Resource';
     const inferred = inferResourceType(assetName, assetUrl);
@@ -114,11 +125,14 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
       size: asset.size ? `${(asset.size / (1024 * 1024)).toFixed(1)} MB` : ''
     });
 
+    const latest = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
+    await syncSessionRecordingDataToBackend(session, recId, latest);
+
     toast.success(`Attached "${assetName}" to recording!`);
     reloadResources();
   };
 
-  const handleSaveUrlResource = (e) => {
+  const handleSaveUrlResource = async (e) => {
     e.preventDefault();
     if (!resourceForm.name.trim() || !resourceForm.url.trim()) {
       toast.error('Resource name and URL/path are required.');
@@ -132,17 +146,22 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
       size: resourceForm.size || ''
     });
 
+    const latest = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
+    await syncSessionRecordingDataToBackend(session, recId, latest);
+
     toast.success(`Resource "${resourceForm.name}" attached successfully!`);
     setResourceForm({ name: '', url: '', type: 'PDF', size: '' });
     reloadResources();
   };
 
-  const handleDelete = (r) => {
+  const handleDelete = async (r) => {
     if (r.isSystemSubtitle) {
       toast.error('System generated subtitle streams cannot be deleted here.');
       return;
     }
     deleteRecordingResource(recId, r.id);
+    const latest = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
+    await syncSessionRecordingDataToBackend(session, recId, latest);
     toast.success(`Removed "${r.name}".`);
     reloadResources();
   };
@@ -205,9 +224,24 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
               <i className="fa-solid fa-paperclip"></i>
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                Recording Class Resources
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                  Recording Class Resources
+                </h3>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#16a34a',
+                  background: 'rgba(22, 163, 74, 0.08)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <i className="fa-solid fa-cloud"></i> Synced to Cloud
+                </span>
+              </div>
               <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
                 {session?.title || 'Live Interactive Class'} &bull; Recording #{recording?.id}
               </p>
@@ -247,8 +281,9 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
                 {resources.filter(r => !r.isSystemSubtitle).length > 0 && (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       clearAllRecordingResources(recId);
+                      await syncSessionRecordingDataToBackend(session, recId, []);
                       toast.success('All attached resources removed.');
                       reloadResources();
                     }}
@@ -651,13 +686,25 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
           borderTop: '1px solid #e2e8f0',
           background: '#f8fafc',
           display: 'flex',
-          justifyContent: 'flex-end'
+          alignItems: 'center',
+          justifyContent: 'space-between'
         }}>
+          <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <i className="fa-solid fa-circle-check" style={{ color: '#16a34a' }}></i>
+            <span>All changes are automatically synced to the cloud database</span>
+          </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={async () => {
+              if (session && recId) {
+                const latest = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
+                await syncSessionRecordingDataToBackend(session, recId, latest);
+              }
+              if (onUpdated) onUpdated();
+              onClose();
+            }}
             style={{
-              padding: '8px 20px',
+              padding: '8px 22px',
               borderRadius: '8px',
               background: '#0f172a',
               color: '#ffffff',

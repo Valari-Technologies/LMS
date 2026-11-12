@@ -11,6 +11,7 @@ import {
 import { toast } from '../../context/NotificationContext';
 import { resolveMediaUrl, VIDEO_QUALITY_OPTIONS, getQualityVideoUrl } from '../../utils/mediaUtils';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
+import { cleanDescription, parseSessionRecordingMetadata } from '../../utils/recordingResources';
 
 function getYouTubeEmbedUrl(url) {
   if (!url) return null;
@@ -117,6 +118,9 @@ export default function StudentLiveClassesPage() {
     if (showSpinner) setLoading(true);
     try {
       const data = await getLiveSessions();
+      if (Array.isArray(data)) {
+        data.forEach(s => parseSessionRecordingMetadata(s));
+      }
       setSessions(data || []);
     } catch (e) {
       console.error(e);
@@ -376,6 +380,7 @@ export default function StudentLiveClassesPage() {
                               className="ot-live-btn-primary"
                               onClick={() => setSelectedRecording({
                                 ...r,
+                                sessionId: s.id,
                                 url: recUrl,
                                 sessionTitle: s.title,
                                 courseName: s.courseName,
@@ -485,13 +490,13 @@ export default function StudentLiveClassesPage() {
               </div>
 
               {/* Description / Notes */}
-              {selectedRecording.description && (
+              {cleanDescription(selectedRecording.description) && (
                 <div style={{ padding: '14px 24px', color: '#334155', fontSize: '0.9rem', background: '#f8fafc', borderTop: '1px solid #eef4f0', lineHeight: 1.5 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0b1f3a', marginBottom: '4px', fontSize: '0.84rem' }}>
                     <i className="fa-regular fa-file-lines" style={{ color: '#5A70D3' }}></i>
                     <span>Session Notes:</span>
                   </div>
-                  {selectedRecording.description}
+                  {cleanDescription(selectedRecording.description)}
                 </div>
               )}
 

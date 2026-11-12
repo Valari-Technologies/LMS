@@ -10,7 +10,9 @@ import {
   getRecordingCustomTitle,
   getRecordingResources,
   getResourceVisual,
-  downloadResourceFile
+  downloadResourceFile,
+  cleanDescription,
+  parseSessionRecordingMetadata
 } from '../../utils/recordingResources';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
@@ -173,7 +175,9 @@ export default function StudentCourseDashboardPage() {
       }
 
       if (liveRes.status === 'fulfilled') {
-        setLiveSessions(liveRes.value || []);
+        const list = liveRes.value || [];
+        list.forEach(s => parseSessionRecordingMetadata(s));
+        setLiveSessions(list);
       }
 
       if (attRes.status === 'fulfilled') {
@@ -189,6 +193,11 @@ export default function StudentCourseDashboardPage() {
   useEffect(() => {
     loadData(true);
 
+    const handleRecChange = () => {
+      setTick(t => t + 1);
+    };
+    window.addEventListener('recording-resources-changed', handleRecChange);
+
     const unsub = subscribeSyncEvents((event) => {
       if (
         event.type === SYNC_EVENTS.LIVE_SESSIONS_CHANGED ||
@@ -202,6 +211,7 @@ export default function StudentCourseDashboardPage() {
     const interval = setInterval(() => setTick(t => t + 1), 5000);
 
     return () => {
+      window.removeEventListener('recording-resources-changed', handleRecChange);
       unsub();
       clearInterval(interval);
     };
@@ -237,6 +247,7 @@ export default function StudentCourseDashboardPage() {
   // Flatten all recordings for this course into an ordered playlist
   const allRecordings = [];
   recordingSessions.forEach(s => {
+    parseSessionRecordingMetadata(s);
     (s.recordings || []).forEach((r, rIdx) => {
       allRecordings.push({
         ...r,
@@ -261,6 +272,7 @@ export default function StudentCourseDashboardPage() {
       const prev = allRecordings[currentRecordingIndex - 1];
       setSelectedRecording({
         ...prev,
+        sessionId: prev.sessionId,
         url: prev.url,
         sessionTitle: prev.sessionTitle,
         courseName: course?.name || course?.title,
@@ -275,6 +287,7 @@ export default function StudentCourseDashboardPage() {
       const next = allRecordings[currentRecordingIndex + 1];
       setSelectedRecording({
         ...next,
+        sessionId: next.sessionId,
         url: next.url,
         sessionTitle: next.sessionTitle,
         courseName: course?.name || course?.title,
@@ -390,9 +403,21 @@ export default function StudentCourseDashboardPage() {
     const curUserRating = myReview ? myReview.rating : selectedRecording.userRating;
 
     // Overview & Resources for recording video matching course videos
-    const recOverview = getRecordingOverview(selectedRecording.id, selectedRecording.description || selectedRecording.sessionDescription || '');
-    const recCustomTitle = getRecordingCustomTitle(selectedRecording.id, selectedRecording.sessionTitle || 'Recording Replay');
-    const recResources = getRecordingResources(selectedRecording.id, selectedRecording.subtitleUrl);
+    const recOverview = getRecordingOverview(
+      selectedRecording.id,
+      selectedRecording.description || selectedRecording.sessionDescription || '',
+      selectedRecording.sessionId || selectedRecording.session?.id
+    );
+    const recCustomTitle = getRecordingCustomTitle(
+      selectedRecording.id,
+      selectedRecording.sessionTitle || 'Recording Replay',
+      selectedRecording.sessionId || selectedRecording.session?.id
+    );
+    const recResources = getRecordingResources(
+      selectedRecording.id,
+      selectedRecording.subtitleUrl,
+      selectedRecording.sessionId || selectedRecording.session?.id
+    );
 
     return (
       <div className="ot-learn-page">
@@ -573,7 +598,7 @@ export default function StudentCourseDashboardPage() {
                         borderRadius: '12px',
                         border: '1px solid #e2e8f0'
                       }}>
-                        {recOverview || selectedRecording.description || selectedRecording.sessionDescription || 'Join this recorded session replay to reinforce your concepts. This is an on-demand video recording of the live interactive classroom session conducted for this course.'}
+                        {recOverview || cleanDescription(selectedRecording.description || selectedRecording.sessionDescription || '') || 'Join this recorded session replay to reinforce your concepts. This is an on-demand video recording of the live interactive classroom session conducted for this course.'}
                       </div>
                     </div>
 
@@ -1279,6 +1304,7 @@ export default function StudentCourseDashboardPage() {
                                 onClick={() => {
                                   setSelectedRecording({
                                     ...rec,
+                                    sessionId: session.id,
                                     url: rec.url || rec.recordingUrl,
                                     sessionTitle: session.title,
                                     courseName: course?.name || course?.title,
@@ -2643,9 +2669,9 @@ export default function StudentCourseDashboardPage() {
                           {s.title}
                         </h3>
 
-                        {s.description && (
+                        {cleanDescription(s.description) && (
                           <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.45, marginBottom: '16px' }}>
-                            {s.description}
+                            {cleanDescription(s.description)}
                           </p>
                         )}
 
@@ -2867,6 +2893,7 @@ export default function StudentCourseDashboardPage() {
                           onClick={() => setSelectedRecording({
                             ...primaryRec,
                             id: primaryRec.id,
+                            sessionId: s.id,
                             url: primaryRec.url || primaryRec.recordingUrl,
                             sessionTitle: s.title,
                             courseName: course?.name || course?.title,
@@ -2901,6 +2928,7 @@ export default function StudentCourseDashboardPage() {
                             onClick={() => setSelectedRecording({
                               ...primaryRec,
                               id: primaryRec.id,
+                              sessionId: s.id,
                               url: primaryRec.url || primaryRec.recordingUrl,
                               sessionTitle: s.title,
                               courseName: course?.name || course?.title,
@@ -3010,6 +3038,7 @@ export default function StudentCourseDashboardPage() {
                                 onClick={() => setSelectedRecording({
                                   ...r,
                                   id: r.id,
+                                  sessionId: s.id,
                                   url: r.url || r.recordingUrl,
                                   sessionTitle: `${s.title} (Part ${rIdx + 1})`,
                                   courseName: course?.name || course?.title,
@@ -3064,6 +3093,7 @@ export default function StudentCourseDashboardPage() {
                           onClick={() => setSelectedRecording({
                             ...primaryRec,
                             id: primaryRec.id,
+                            sessionId: s.id,
                             url: primaryRec.url || primaryRec.recordingUrl,
                             sessionTitle: s.title,
                             courseName: course?.name || course?.title,
@@ -3113,6 +3143,7 @@ export default function StudentCourseDashboardPage() {
                         onClick={() => setSelectedRecording({
                           ...primaryRec,
                           id: primaryRec.id,
+                          sessionId: s.id,
                           url: primaryRec.url || primaryRec.recordingUrl,
                           sessionTitle: s.title,
                           courseName: course?.name || course?.title,
@@ -3233,6 +3264,7 @@ export default function StudentCourseDashboardPage() {
                             onClick={() => setSelectedRecording({
                               ...primaryRec,
                               id: primaryRec.id,
+                              sessionId: s.id,
                               url: primaryRec.url || primaryRec.recordingUrl,
                               sessionTitle: s.title,
                               courseName: course?.name || course?.title,
