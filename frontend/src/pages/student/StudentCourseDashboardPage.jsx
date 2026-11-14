@@ -693,16 +693,6 @@ export default function StudentCourseDashboardPage() {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <i className="fa-regular fa-clock" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
-                        <div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Duration</div>
-                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
-                            {selectedRecording.duration ? `${Math.round(selectedRecording.duration / 60)} minutes` : 'Full Replay'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
                         <div>
                           <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Resources</div>
