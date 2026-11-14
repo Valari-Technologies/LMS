@@ -2101,10 +2101,6 @@ export default function StudentCourseDashboardPage() {
                   </h2>
                   <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span>Live session telemetry, attendance records, and class replays</span>
-                    <span style={{ fontSize: '0.74rem', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
-                      <i className="fa-solid fa-shield-halved" style={{ marginRight: '4px' }}></i>
-                      {course?.name || course?.title} Only
-                    </span>
                   </div>
                 </div>
 
