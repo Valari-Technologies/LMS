@@ -11950,72 +11950,380 @@ body:has(.ud-header) .ot-course-content-sidebar {
   color: #0f172a;
 }
 
-.ot-recording-row {
+/* ==========================================================================
+   PROFESSIONAL RECORDING CLASS CARDS
+   ========================================================================== */
+.ot-recording-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 18px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+}
+
+.ot-recording-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+/* List Mode (Desktop Horizontal) */
+.ot-recording-card.view-list {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.ot-recording-card.view-list .ot-recording-thumb-wrap {
+  width: 210px;
+  min-width: 210px;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  background: #0f172a;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ot-recording-card.view-list .ot-recording-card-body {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Grid Mode (Card Vertical) */
+.ot-recording-card.view-grid {
+  flex-direction: column;
+}
+
+.ot-recording-card.view-grid .ot-recording-thumb-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  background: #0f172a;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.ot-recording-card.view-grid .ot-recording-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+/* Common Thumbnail Styles */
+.ot-recording-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.ot-recording-card:hover .ot-recording-thumb-img {
+  transform: scale(1.05);
+}
+
+.ot-recording-thumb-fallback {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #64748b;
+  font-size: 2rem;
 }
 
-.ot-recording-row:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
+.ot-recording-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.65) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
 }
 
-.ot-recording-play-btn {
-  padding: 7px 16px;
-  border-radius: 8px;
+.ot-recording-card:hover .ot-recording-thumb-overlay {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.75) 100%);
+}
+
+.ot-recording-play-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #5A70D3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+}
+
+.ot-recording-card:hover .ot-recording-play-badge {
+  transform: scale(1.12);
   background: #5A70D3;
   color: #ffffff;
-  font-size: 0.82rem;
+}
+
+.ot-recording-play-badge i {
+  margin-left: 2px;
+}
+
+.ot-recording-index-pill {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 0.72rem;
   font-weight: 800;
-  border: none;
-  cursor: pointer;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+.ot-recording-duration-pill {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 6px rgba(90, 112, 211, 0.25);
-  transition: all 0.15s ease;
-  white-space: nowrap;
 }
 
-.ot-recording-play-btn:hover {
-  background: #4a5dbf;
-  box-shadow: 0 4px 10px rgba(90, 112, 211, 0.35);
+.ot-recording-cc-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: #059669;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.ot-recording-rate-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
+/* Body Elements */
+.ot-recording-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 0.78rem;
+  color: #64748b;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.ot-recording-batch-pill {
+  font-size: 0.72rem;
   font-weight: 700;
+  color: #5A70D3;
+  background: rgba(90, 112, 211, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ot-recording-date {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ot-recording-card-title {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.35;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.ot-recording-card-title:hover {
+  color: #5A70D3;
+}
+
+.ot-recording-desc {
+  margin: 0 0 10px 0;
+  font-size: 0.84rem;
+  color: #64748b;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ot-recording-meta-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #64748b;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ot-recording-rating-stat {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  transition: all 0.15s ease;
-  white-space: nowrap;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
-.ot-recording-rate-btn:hover {
+.ot-recording-unrated {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 0.76rem;
+}
+
+.ot-recording-resource-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.ot-recording-parts-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ot-recording-parts-label {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.ot-recording-part-btn {
+  padding: 3px 8px;
+  border-radius: 6px;
   background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
 }
 
+.ot-recording-part-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #5A70D3;
+}
+
+.ot-recording-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.ot-recording-btn-watch {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #5A70D3;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 6px rgba(90, 112, 211, 0.25);
+}
+
+.ot-recording-btn-watch:hover {
+  background: #4758b8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(90, 112, 211, 0.35);
+}
+
+.ot-recording-btn-rate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.ot-recording-btn-rate:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #b45309;
+}
+
+/* Mobile Responsive Adjustments */
 @media (max-width: 768px) {
-  .ot-recording-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .ot-recording-card.view-list {
+    flex-direction: column !important;
   }
-  .ot-recording-row-actions {
+
+  .ot-recording-card.view-list .ot-recording-thumb-wrap {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .ot-recording-card.view-list .ot-recording-card-body {
+    padding: 16px !important;
+  }
+
+  .ot-recording-card-actions {
+    flex-direction: row;
     width: 100%;
-    justify-content: space-between;
+  }
+
+  .ot-recording-btn-watch {
+    flex: 1;
   }
 }
