@@ -1629,7 +1629,7 @@ export default function StudentCourseDashboardPage() {
           bottom: 0,
           height: '100vh',
           maxHeight: '100vh',
-          zIndex: 1000
+          zIndex: mobileSidebarOpen ? 2500 : 100
         }}
       >
 
@@ -1863,18 +1863,58 @@ export default function StudentCourseDashboardPage() {
         }}
       >
 
-        {/* Mobile Sidebar Trigger (only on screens <= 1024px) */}
-        <button
-          type="button"
-          className="mobile-only ot-course-mobile-trigger"
-          onClick={() => setMobileSidebarOpen(true)}
-          aria-label="Open Course Menu"
-        >
-          <i className="fa-solid fa-bars"></i>
-        </button>
+        {/* Mobile Topbar Navigation Bar (Sticky on screens <= 1024px) */}
+        <header className="ot-course-mobile-header mobile-only">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <button
+              type="button"
+              className="ot-course-mobile-menu-btn"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open Course Navigation Menu"
+              title="Open menu"
+            >
+              <i className="fa-solid fa-bars"></i>
+            </button>
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }} title="OneTutor Home">
+              <span className="ot-brand-logo-wrap" style={{ display: 'flex', alignItems: 'center' }}>
+                <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '26px' }} />
+              </span>
+            </Link>
+            <span style={{
+              fontSize: '0.64rem',
+              fontWeight: 800,
+              background: 'rgba(90, 112, 211, 0.12)',
+              color: '#5A70D3',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              letterSpacing: '0.4px',
+              whiteSpace: 'nowrap'
+            }}>
+              COURSE SPACE
+            </span>
+          </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span style={{
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: '#5A70D3',
+              background: 'rgba(90, 112, 211, 0.08)',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              whiteSpace: 'nowrap',
+              border: '1px solid rgba(90, 112, 211, 0.2)'
+            }}>
+              {activeTab === 'dashboard' ? 'Dashboard' :
+               activeTab === 'attendance' ? 'Attendance' :
+               activeTab === 'live' ? 'Live Classes' :
+               activeTab === 'recordings' ? 'Recordings' :
+               activeTab === 'community' ? 'Community' : 'Course'}
+            </span>
+          </div>
+        </header>
 
-        <main style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
+        <main className="ot-course-content-main" style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
 
           {/* ===================================================================
             TAB 1: DASHBOARD (Comprehensive Learning & Attendance Telemetry)
