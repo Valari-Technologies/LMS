@@ -1,4 +1,5 @@
 import { api } from './client';
+import { emitSyncEvent, SYNC_EVENTS } from '../utils/syncEvents';
 import {
   setLocalRecordingStatus,
   setLocalRecordingDeleted,
@@ -86,6 +87,7 @@ export async function getAdminRecordingReviews({ courseId, rating, status, searc
 
 export async function togglePublishAdminRecordingReview(reviewId, publish = true) {
   setLocalRecordingStatus(reviewId, publish ? 'published' : 'pending');
+  emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
   try {
     const res = await api.patch(`/admin/reviews/recordings/${reviewId}/publish`, null, {
       params: { publish }
@@ -110,6 +112,7 @@ export async function getAdminRecordingReviewStats() {
 
 export async function deleteAdminRecordingReview(reviewId) {
   setLocalRecordingDeleted(reviewId);
+  emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
   try {
     const res = await api.delete(`/admin/reviews/recordings/${reviewId}`);
     return res.data.data;

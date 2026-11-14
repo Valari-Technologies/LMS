@@ -212,7 +212,7 @@ export default function StudentCourseDashboardPage() {
   }, [courseId]);
 
   // Filter live sessions specifically for THIS course only
-  const courseSessions = liveSessions.filter(s => String(s.courseId) === String(courseId));
+  const courseSessions = liveSessions.filter(s => String(s.courseId || s.course?.id || '') === String(courseId));
 
   const upcomingSessions = courseSessions.filter(s => {
     const eff = getLiveEffectiveStatus(s);
@@ -220,7 +220,7 @@ export default function StudentCourseDashboardPage() {
   });
 
   const liveActiveSessions = courseSessions.filter(s => getLiveEffectiveStatus(s) === 'live');
-  const recordingSessions = courseSessions.filter(s => s.recordings && s.recordings.length > 0);
+  const recordingSessions = courseSessions.filter(s => (s.recordings && s.recordings.length > 0) || s.recordingUrl);
 
   // Filtered and sorted recordings for the Recordings tab
   const displayedRecordings = recordingSessions
@@ -241,7 +241,11 @@ export default function StudentCourseDashboardPage() {
   // Flatten all recordings for this course into an ordered playlist
   const allRecordings = [];
   recordingSessions.forEach(s => {
-    (s.recordings || []).forEach((r, rIdx) => {
+    const recs = (s.recordings && s.recordings.length > 0)
+      ? s.recordings
+      : (s.recordingUrl ? [{ id: s.id, url: s.recordingUrl, sessionTitle: s.title }] : []);
+
+    recs.forEach((r, rIdx) => {
       allRecordings.push({
         ...r,
         sessionId: s.id,
@@ -250,7 +254,7 @@ export default function StudentCourseDashboardPage() {
         sessionDescription: s.description,
         batchName: s.batchName,
         recordingNumber: rIdx + 1,
-        totalInSession: s.recordings.length,
+        totalInSession: recs.length,
         url: r.url || r.recordingUrl
       });
     });
@@ -380,19 +384,21 @@ export default function StudentCourseDashboardPage() {
   // .ot-video-card, .ot-learn-action-bar, .ot-learn-tabs, .ot-course-content-sidebar)
   // =========================================================================
   if (selectedRecording) {
-    const publishedReviews = recordingReviews.filter(r => r.status === 'published');
+    const publishedReviews = recordingReviews.filter(r => (r.status || '').toLowerCase() === 'published');
     const publishedReviewsWithComment = publishedReviews.filter(r => r.comment && r.comment.trim());
     const myReview = recordingReviews.find(r =>
       user && (String(user.id) === String(r.studentId) || user.email === r.studentEmail)
     );
-    const myPendingReview = myReview && myReview.status !== 'published' ? myReview : null;
+    const myPendingReview = myReview && (myReview.status || '').toLowerCase() !== 'published' ? myReview : null;
 
     // Public aggregate ratings strictly only count PUBLISHED reviews.
-    // An unapproved / pending review must NEVER inflate public star ratings or total count.
-    const curTotalRatings = publishedReviews.length;
-    const curAvgRating = curTotalRatings > 0
-      ? publishedReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / curTotalRatings
-      : null;
+    // If published reviews are loaded, compute from them; otherwise fallback to recording stats
+    const curTotalRatings = publishedReviews.length > 0
+      ? publishedReviews.length
+      : (selectedRecording.totalRatings || 0);
+    const curAvgRating = publishedReviews.length > 0
+      ? publishedReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / publishedReviews.length
+      : (selectedRecording.averageRating ? Number(selectedRecording.averageRating) : null);
     const curUserRating = myReview ? myReview.rating : selectedRecording.userRating;
 
     // Overview & Resources for recording video matching course videos
@@ -737,9 +743,9 @@ export default function StudentCourseDashboardPage() {
 
                     {/* Real Student Reviews & Feedback Testimonials Section */}
                     {(() => {
-                      const publishedReviews = recordingReviews.filter(rev => rev.status === 'published' && rev.comment && rev.comment.trim());
+                      const publishedReviews = recordingReviews.filter(rev => (rev.status || '').toLowerCase() === 'published');
                       const myPendingReview = recordingReviews.find(rev =>
-                        user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail) && rev.status !== 'published' && rev.comment && rev.comment.trim()
+                        user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail) && (rev.status || '').toLowerCase() !== 'published'
                       );
 
                       return (
@@ -888,9 +894,11 @@ export default function StudentCourseDashboardPage() {
                                       </div>
                                     </div>
 
-                                    <p style={{ margin: '2px 0 0 42px', fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
-                                      "{rev.comment}"
-                                    </p>
+                                    {rev.comment && (
+                                      <p style={{ margin: '2px 0 0 42px', fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
+                                        "{rev.comment}"
+                                      </p>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -2891,7 +2899,7 @@ export default function StudentCourseDashboardPage() {
                  ========================================================= */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {displayedRecordings.map((s, idx) => {
-                  const primaryRec = s.recordings[0] || {};
+                  const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
                   const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
                   const totalRatings = stats.totalRatings;
                   const avgRating = stats.averageRating;
@@ -3135,7 +3143,7 @@ export default function StudentCourseDashboardPage() {
                  ========================================================= */
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {displayedRecordings.map((s, idx) => {
-                  const primaryRec = s.recordings[0] || {};
+                  const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
                   const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
                   const totalRatings = stats.totalRatings;
                   const avgRating = stats.averageRating;

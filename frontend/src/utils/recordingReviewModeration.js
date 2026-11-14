@@ -56,14 +56,14 @@ export function setLocalRecordingDeleted(reviewId) {
 
 /**
  * Apply local moderation status and filter out deleted reviews.
- * Strictly guarantees that any review awaiting admin approval is 'pending'.
+ * Strictly guarantees that published reviews appear, while unapproved reviews remain pending.
  */
 export function applyRecordingModeration(review) {
   if (!review) return null;
   if (isLocalRecordingDeleted(review.id)) return null;
   const localStatus = getLocalRecordingStatus(review.id);
 
-  // 1. Explicit admin toggle takes highest priority
+  // 1. Explicit admin local toggle in current session takes highest priority for instant UI update
   if (localStatus === 'published') {
     return { ...review, status: 'published' };
   }
@@ -71,25 +71,16 @@ export function applyRecordingModeration(review) {
     return { ...review, status: 'pending' };
   }
 
-  // 2. Default state for review #1 (Alex Student "Nice"):
-  // Must strictly remain 'pending' until the admin explicitly clicks 'Publish' in the admin panel.
-  if (Number(review.id) === 1) {
-    return { ...review, status: 'pending' };
+  // 2. Server database published state (case-insensitive check)
+  const serverStatus = (review.status || '').toLowerCase();
+  if (serverStatus === 'published') {
+    return { ...review, status: 'published' };
   }
 
-  // 3. Any student review with feedback comments requires explicit admin approval before publishing
-  if (review.comment && review.comment.trim()) {
-    // If explicitly marked as published by the backend server
-    if (review.status === 'published') {
-      return { ...review, status: 'published' };
-    }
-    return { ...review, status: 'pending' };
-  }
-
-  // 4. Fallback for ratings without comments
+  // 3. Fallback: if not published by server/admin, it is pending
   return {
     ...review,
-    status: review.status === 'published' ? 'published' : 'pending'
+    status: 'pending'
   };
 }
 
@@ -107,21 +98,18 @@ export function applyRecordingListModeration(reviews) {
  */
 export function getRecordingRatingStats(recordingId, defaultAvg, defaultTotal) {
   const recId = Number(recordingId);
-  const rev1Status = getLocalRecordingStatus(1);
-
-  // Recording #4 has review #1 (student Alex Student: rating 5, comment "Nice").
-  // If review #1 has not been explicitly published by admin, stats must be Unrated (0 total ratings).
-  if (recId === 4) {
-    if (rev1Status !== 'published') {
-      return { averageRating: null, totalRatings: 0 };
-    }
-  }
-
-  // If totalRatings is 0 or no ratings exist
-  if (!defaultTotal || defaultTotal <= 0) {
+  const localStatus = getLocalRecordingStatus(recId);
+  if (localStatus === 'pending') {
     return { averageRating: null, totalRatings: 0 };
   }
 
-  return { averageRating: defaultAvg, totalRatings: defaultTotal };
+  const total = Number(defaultTotal) || 0;
+  const avg = defaultAvg != null ? Number(defaultAvg) : null;
+
+  if (total <= 0 || avg == null || isNaN(avg)) {
+    return { averageRating: null, totalRatings: 0 };
+  }
+
+  return { averageRating: avg, totalRatings: total };
 }
 
