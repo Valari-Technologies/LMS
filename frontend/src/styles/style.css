@@ -9149,14 +9149,20 @@ h6,
 }
 
 /* WhatsApp Style Embedded Dashboard Hub */
+.ot-course-content-main.community-tab-active {
+  padding: 16px 20px 20px 20px !important;
+  max-width: 100% !important;
+}
+
 .ot-dashboard-community-hub {
-  height: calc(100vh - 120px) !important;
-  max-height: calc(100vh - 120px) !important;
+  height: calc(100vh - 100px) !important;
+  max-height: calc(100vh - 100px) !important;
   min-height: 600px !important;
   border-radius: 16px;
   border: 1px solid #cbd5e1;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
   background: #ffffff;
+  width: 100% !important;
 }
 
 .ot-whatsapp-back-btn {
@@ -9164,13 +9170,30 @@ h6,
 }
 
 @media (max-width: 1024px) {
-  .ot-dashboard-community-hub {
-    height: calc(100vh - 80px) !important;
-    max-height: calc(100vh - 80px) !important;
-    min-height: calc(100vh - 80px) !important;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
+  .ot-course-content-main.community-tab-active {
+    padding: 0 !important;
     margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: calc(100dvh - 56px) !important;
+    min-height: calc(100dvh - 56px) !important;
+    max-height: calc(100dvh - 56px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .ot-dashboard-community-hub,
+  .ot-course-content-main.community-tab-active .ot-dashboard-community-hub {
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    flex: 1 !important;
   }
 
   .ot-whatsapp-back-btn {
@@ -9179,6 +9202,7 @@ h6,
 
   .ot-community-wrap.ot-dashboard-community-hub .ot-community-sidebar {
     width: 100% !important;
+    height: 100% !important;
   }
 
   .ot-community-wrap.ot-dashboard-community-hub.sc-chat-open .ot-community-sidebar {
@@ -9187,6 +9211,11 @@ h6,
 
   .ot-community-wrap.ot-dashboard-community-hub:not(.sc-chat-open) .ot-community-chat {
     display: none !important;
+  }
+
+  .ot-community-wrap.ot-dashboard-community-hub .ot-community-chat {
+    width: 100% !important;
+    height: 100% !important;
   }
 }
 

@@ -1878,7 +1878,17 @@ export default function StudentCourseDashboardPage() {
           </div>
         </header>
 
-        <main className="ot-course-content-main" style={{ flex: 1, maxWidth: '1360px', width: '100%', margin: '0 auto', padding: '24px 20px 60px 20px', boxSizing: 'border-box' }}>
+        <main
+          className={`ot-course-content-main ${activeTab === 'community' ? 'community-tab-active' : ''}`}
+          style={{
+            flex: 1,
+            maxWidth: activeTab === 'community' ? '100%' : '1360px',
+            width: '100%',
+            margin: '0 auto',
+            padding: activeTab === 'community' ? '0' : '24px 20px 60px 20px',
+            boxSizing: 'border-box'
+          }}
+        >
 
           {/* ===================================================================
             TAB 1: DASHBOARD (Comprehensive Learning & Attendance Telemetry)

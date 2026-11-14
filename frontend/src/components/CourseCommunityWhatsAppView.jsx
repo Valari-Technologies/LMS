@@ -318,21 +318,22 @@ export default function CourseCommunityWhatsAppView({
                 type="button"
                 className="ot-whatsapp-back-btn"
                 onClick={() => setMobileShowChat(false)}
-                aria-label="Back to all chats"
+                aria-label="Back to chats"
                 title="Back to all course chats"
                 style={{
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
                   color: '#0f172a',
-                  fontSize: '1rem',
+                  fontSize: '1.2rem',
                   padding: '6px 8px 6px 0',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}
               >
                 <i className="fa-solid fa-arrow-left"></i>
-                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#5A70D3' }}>All Chats</span>
               </button>
 
               <div style={{
