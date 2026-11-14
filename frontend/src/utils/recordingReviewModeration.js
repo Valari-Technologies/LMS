@@ -5,6 +5,48 @@
 
 const STATUS_KEY = 'onetutor_rec_reviews_status';
 const DELETED_KEY = 'onetutor_rec_reviews_deleted';
+const STORED_REVIEWS_KEY = 'onetutor_rec_stored_reviews';
+
+export function getLocalStoredRecordingReviews(recordingId) {
+  if (!recordingId) return [];
+  try {
+    const raw = localStorage.getItem(STORED_REVIEWS_KEY);
+    if (!raw) return [];
+    const map = JSON.parse(raw);
+    const list = map[String(recordingId)] || [];
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveRecordingReviewsLocally(recordingId, reviews) {
+  if (!recordingId || !Array.isArray(reviews)) return;
+  try {
+    const raw = localStorage.getItem(STORED_REVIEWS_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[String(recordingId)] = reviews;
+    localStorage.setItem(STORED_REVIEWS_KEY, JSON.stringify(map));
+  } catch (e) {}
+}
+
+export function saveSingleRecordingReviewLocally(recordingId, review) {
+  if (!recordingId || !review) return;
+  try {
+    const raw = localStorage.getItem(STORED_REVIEWS_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const key = String(recordingId);
+    const existing = Array.isArray(map[key]) ? [...map[key]] : [];
+    const idx = existing.findIndex(r => String(r.id) === String(review.id));
+    if (idx >= 0) {
+      existing[idx] = { ...existing[idx], ...review };
+    } else {
+      existing.unshift(review);
+    }
+    map[key] = existing;
+    localStorage.setItem(STORED_REVIEWS_KEY, JSON.stringify(map));
+  } catch (e) {}
+}
 
 export function getLocalRecordingStatus(reviewId) {
   try {
@@ -77,7 +119,12 @@ export function applyRecordingModeration(review) {
     return { ...review, status: 'published' };
   }
 
-  // 3. Fallback: if not published by server/admin, it is pending
+  // 3. If review has rating and no status or status is approved/verified, treat as published
+  if (serverStatus === 'approved' || serverStatus === 'verified' || !review.status) {
+    return { ...review, status: 'published' };
+  }
+
+  // 4. Fallback: if not published by server/admin, it is pending
   return {
     ...review,
     status: 'pending'

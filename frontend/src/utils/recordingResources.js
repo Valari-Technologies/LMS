@@ -305,14 +305,9 @@ export function setRecordingOverview(recordingId, overview, title = '') {
  */
 function isLegacySampleResource(r) {
   if (!r) return true;
+  // Strictly only filter old mock fixture objects with hardcoded dummy IDs 101-103 or mock test URLs
   if (r.id === 101 || r.id === 102 || r.id === 103) return true;
-  const legacyNames = [
-    'full_stack_architecture_diagram.pdf',
-    'live_session_2_demo_code.zip',
-    'class_lecture_slides_key_notes.pdf'
-  ];
-  if (r.name && legacyNames.includes(String(r.name).trim().toLowerCase())) return true;
-  if (r.url && (r.url.includes('tests/xhtml/testfiles/resources/pdf/dummy.pdf') || r.url.includes('/archive/refs/heads/main.zip'))) {
+  if (r.url && (r.url.includes('tests/xhtml/testfiles/resources/pdf/dummy.pdf') || r.url.includes('github.com/facebook/react/archive/refs/heads/main.zip'))) {
     return true;
   }
   return false;

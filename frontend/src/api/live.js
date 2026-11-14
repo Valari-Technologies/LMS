@@ -3,17 +3,36 @@ import { emitSyncEvent, SYNC_EVENTS } from '../utils/syncEvents';
 import {
   setLocalRecordingStatus,
   setLocalRecordingDeleted,
-  applyRecordingListModeration
+  applyRecordingListModeration,
+  saveRecordingReviewsLocally,
+  getLocalStoredRecordingReviews
 } from '../utils/recordingReviewModeration';
+import { cleanDescription, parseSessionRecordingMetadata } from '../utils/recordingResources';
+
+function processSessionData(s) {
+  if (!s) return s;
+  parseSessionRecordingMetadata(s);
+  if (s.description) {
+    s.rawDescription = s.description;
+    s.description = cleanDescription(s.description);
+  }
+  return s;
+}
 
 export async function getLiveSessions() {
   const res = await api.get('/live-sessions');
-  return res.data.data;
+  const data = res.data.data;
+  if (Array.isArray(data)) {
+    data.forEach(processSessionData);
+  }
+  return data;
 }
 
 export async function getLiveSession(id) {
   const res = await api.get(`/live-sessions/${id}`);
-  return res.data.data;
+  const data = res.data.data;
+  if (data) processSessionData(data);
+  return data;
 }
 
 export async function getLiveClassroomJoinInfo(sessionId) {
@@ -28,7 +47,10 @@ export async function getAdminLiveSessions({ courseId, batchId, status, page = 0
   if (batchId && batchId !== 'ALL') params.batchId = batchId;
   if (status && status !== 'ALL') params.status = status;
   const res = await api.get('/admin/live-sessions', { params });
-  return res.data.data;
+  const data = res.data.data;
+  const list = data?.content || (Array.isArray(data) ? data : []);
+  list.forEach(processSessionData);
+  return data;
 }
 
 export async function getUpcomingLiveSessionCount() {
@@ -90,13 +112,37 @@ export async function generateRecordingSubtitles(sessionId, recordingId) {
 
 export async function rateRecording(recordingId, { rating, comment }) {
   const res = await api.post(`/live-sessions/recordings/${recordingId}/rate`, { rating, comment });
+  const data = res.data.data;
+  if (data) {
+    saveRecordingReviewsLocally(recordingId, [data]);
+  }
   emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
-  return res.data.data;
+  return data;
 }
 
 export async function getRecordingRatings(recordingId) {
-  const res = await api.get(`/live-sessions/recordings/${recordingId}/ratings`);
-  return applyRecordingListModeration(res.data.data || []);
+  if (!recordingId) return [];
+  try {
+    const res = await api.get(`/live-sessions/recordings/${recordingId}/ratings`);
+    const list = res.data?.data || [];
+    if (Array.isArray(list) && list.length > 0) {
+      saveRecordingReviewsLocally(recordingId, list);
+      return applyRecordingListModeration(list);
+    }
+  } catch (err) {
+    try {
+      const adminRes = await api.get(`/admin/live-sessions/recordings/${recordingId}/ratings`);
+      const list = adminRes.data?.data || [];
+      if (Array.isArray(list) && list.length > 0) {
+        saveRecordingReviewsLocally(recordingId, list);
+        return applyRecordingListModeration(list);
+      }
+    } catch (e) {}
+  }
+
+  // Resilient fallback to locally cached review entries for this recording
+  const localList = getLocalStoredRecordingReviews(recordingId);
+  return applyRecordingListModeration(localList);
 }
 
 export async function getAdminRecordingRatings(recordingId) {
