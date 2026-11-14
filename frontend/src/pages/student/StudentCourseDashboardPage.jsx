@@ -26,6 +26,7 @@ import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { useAuth } from '../../auth/AuthContext';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
+import CourseCommunityWhatsAppView from '../../components/CourseCommunityWhatsAppView';
 import { ChatPanel } from '../admin/AdminCommunityPage';
 import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
 
@@ -3143,117 +3144,14 @@ export default function StudentCourseDashboardPage() {
           )}
 
           {/* ===================================================================
-            TAB: COMMUNITY CHAT (Embedded in Course Dashboard)
+            TAB: COMMUNITY CHAT (WhatsApp Style Hub: All Chats + Opens this course first)
             =================================================================== */}
           {activeTab === 'community' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Channel Header Banner */}
-              <div style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                padding: '18px 24px',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '12px',
-                    background: 'rgba(90, 112, 211, 0.1)',
-                    color: '#5A70D3',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.25rem'
-                  }}>
-                    <i className="fa-solid fa-comments"></i>
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>
-                      {course?.name || course?.title || 'Course Community'} Channel
-                    </h2>
-                    <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                      Collaborate, discuss lectures, and ask questions with your batch peers and tutors
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toggleMuteChat(courseId);
-                      setChatMuteVersion(v => v + 1);
-                    }}
-                    title={isChatMuted(courseId) ? 'Unmute chat notifications' : 'Mute chat notifications'}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      background: isChatMuted(courseId) ? '#f1f5f9' : 'rgba(90, 112, 211, 0.08)',
-                      border: '1px solid #cbd5e1',
-                      color: isChatMuted(courseId) ? '#64748b' : '#5A70D3',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <i className={`fa-solid ${isChatMuted(courseId) ? 'fa-bell-slash' : 'fa-bell'}`}></i>
-                    <span>{isChatMuted(courseId) ? 'Notifications Muted' : 'Mute Notifications'}</span>
-                  </button>
-
-                  <Link
-                    to={`/student/community/${courseId}`}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#475569',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                    title="Open in standalone full screen hub"
-                  >
-                    <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                    <span>Full Screen</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Embedded Chat Container */}
-              <div style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
-                height: 'calc(100vh - 270px)',
-                minHeight: '560px',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-              }}>
-                <ChatPanel
-                  key={courseId}
-                  courseId={courseId}
-                  courseName={course?.name || course?.title}
-                  currentUser={user}
-                  placeholder="Share ideas or ask classmates a question…"
-                />
-              </div>
-            </div>
+            <CourseCommunityWhatsAppView
+              initialCourseId={courseId}
+              currentCourse={course}
+              currentUser={user}
+            />
           )}
         </main>
       </div>

@@ -9148,6 +9148,48 @@ h6,
   border-left-color: #5A70D3 !important;
 }
 
+/* WhatsApp Style Embedded Dashboard Hub */
+.ot-dashboard-community-hub {
+  height: calc(100vh - 120px) !important;
+  max-height: calc(100vh - 120px) !important;
+  min-height: 600px !important;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  background: #ffffff;
+}
+
+.ot-whatsapp-back-btn {
+  display: none !important;
+}
+
+@media (max-width: 1024px) {
+  .ot-dashboard-community-hub {
+    height: calc(100vh - 80px) !important;
+    max-height: calc(100vh - 80px) !important;
+    min-height: calc(100vh - 80px) !important;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    margin: 0 !important;
+  }
+
+  .ot-whatsapp-back-btn {
+    display: flex !important;
+  }
+
+  .ot-community-wrap.ot-dashboard-community-hub .ot-community-sidebar {
+    width: 100% !important;
+  }
+
+  .ot-community-wrap.ot-dashboard-community-hub.sc-chat-open .ot-community-sidebar {
+    display: none !important;
+  }
+
+  .ot-community-wrap.ot-dashboard-community-hub:not(.sc-chat-open) .ot-community-chat {
+    display: none !important;
+  }
+}
+
 @media (max-width: 767px) {
   .ot-community-sidebar {
     width: 100%;
