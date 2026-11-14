@@ -1623,14 +1623,6 @@ export default function StudentCourseDashboardPage() {
       {/* Modern Dedicated Course Workspace Sidebar */}
       <aside
         className={`ot-course-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'mobile-open' : ''}`}
-        style={{
-          position: 'fixed',
-          top: 0,
-          bottom: 0,
-          height: '100vh',
-          maxHeight: '100vh',
-          zIndex: mobileSidebarOpen ? 2500 : 100
-        }}
       >
 
         {/* 1. Sidebar Header: Brand + Title + Collapse/Close Toggle */}
@@ -1657,7 +1649,7 @@ export default function StudentCourseDashboardPage() {
           {/* Desktop Collapse Button */}
           <button
             type="button"
-            className="desktop-only"
+            className="ot-course-sidebar-collapse-btn desktop-only"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
@@ -1681,7 +1673,7 @@ export default function StudentCourseDashboardPage() {
           {/* Mobile Close Button */}
           <button
             type="button"
-            className="mobile-only"
+            className="ot-course-sidebar-close-btn mobile-only"
             onClick={() => setMobileSidebarOpen(false)}
             aria-label="Close menu"
             style={{
@@ -1864,8 +1856,8 @@ export default function StudentCourseDashboardPage() {
       >
 
         {/* Mobile Topbar Navigation Bar (Sticky on screens <= 1024px) */}
-        <header className="ot-course-mobile-header mobile-only">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+        <header className="ot-course-mobile-header">
+          <div className="ot-course-mobile-header-left">
             <button
               type="button"
               className="ot-course-mobile-menu-btn"
@@ -1875,42 +1867,13 @@ export default function StudentCourseDashboardPage() {
             >
               <i className="fa-solid fa-bars"></i>
             </button>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }} title="OneTutor Home">
-              <span className="ot-brand-logo-wrap" style={{ display: 'flex', alignItems: 'center' }}>
-                <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '26px' }} />
-              </span>
-            </Link>
-            <span style={{
-              fontSize: '0.64rem',
-              fontWeight: 800,
-              background: 'rgba(90, 112, 211, 0.12)',
-              color: '#5A70D3',
-              padding: '2px 8px',
-              borderRadius: '9999px',
-              letterSpacing: '0.4px',
-              whiteSpace: 'nowrap'
-            }}>
-              COURSE SPACE
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            <span style={{
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              color: '#5A70D3',
-              background: 'rgba(90, 112, 211, 0.08)',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              whiteSpace: 'nowrap',
-              border: '1px solid rgba(90, 112, 211, 0.2)'
-            }}>
+            <h1 className="ot-course-mobile-page-title">
               {activeTab === 'dashboard' ? 'Dashboard' :
-               activeTab === 'attendance' ? 'Attendance' :
-               activeTab === 'live' ? 'Live Classes' :
                activeTab === 'recordings' ? 'Recordings' :
-               activeTab === 'community' ? 'Community' : 'Course'}
-            </span>
+               activeTab === 'live' ? 'Live Classes' :
+               activeTab === 'attendance' ? 'Attendance' :
+               activeTab === 'community' ? 'Community Chat' : 'Dashboard'}
+            </h1>
           </div>
         </header>
 
