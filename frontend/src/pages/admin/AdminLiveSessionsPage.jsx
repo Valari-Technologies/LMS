@@ -200,7 +200,7 @@ export default function AdminLiveSessionsPage() {
   useEffect(() => {
     listAdminCourses({ size: 100 })
       .then((data) => setCourses(data.content || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Load batches for course/batch filter
