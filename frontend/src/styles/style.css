@@ -11771,7 +11771,7 @@ body:has(.ud-header) .ot-course-content-sidebar {
   .ot-course-mobile-header {
     display: flex !important;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     height: 56px;
     background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
@@ -11791,6 +11791,14 @@ body:has(.ud-header) .ot-course-content-sidebar {
     align-items: center;
     gap: 12px;
     min-width: 0;
+    flex: 1;
+  }
+
+  .ot-course-mobile-header-right {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   .ot-course-mobile-menu-btn {

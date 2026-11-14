@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { getCourse } from '../../api/courses';
 import { myCourses } from '../../api/enrollment';
@@ -85,7 +85,32 @@ export default function StudentCourseDashboardPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [avatarImgError, setAvatarImgError] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  const userInitials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+    : (user?.email ? user.email.substring(0, 2).toUpperCase() : 'U');
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [user?.profileImage]);
 
   // Active tab routing (if tab=details or tab=curriculum, route to community)
   const rawTab = searchParams.get('tab') || 'dashboard';
@@ -1875,6 +1900,174 @@ export default function StudentCourseDashboardPage() {
                activeTab === 'attendance' ? 'Attendance' :
                activeTab === 'community' ? 'Community Chat' : 'Dashboard'}
             </h1>
+          </div>
+
+          {/* Account Profile at Right Side Corner */}
+          <div className="ot-course-mobile-header-right" ref={profileMenuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu(prev => !prev)}
+              aria-label="Account Profile Menu"
+              title={user ? `${user.name || 'Account'} - Profile` : 'Account Profile'}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                border: '2px solid rgba(90, 112, 211, 0.35)',
+                background: '#5A70D3',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+                overflow: 'hidden',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                boxShadow: '0 2px 6px rgba(90, 112, 211, 0.2)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {user?.profileImage && !avatarImgError ? (
+                <img
+                  src={user.profileImage}
+                  alt={user.name || 'User'}
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarImgError(true)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : user ? (
+                userInitials
+              ) : (
+                <i className="fa-solid fa-user" style={{ fontSize: '0.9rem' }}></i>
+              )}
+            </button>
+
+            {/* Account Profile Dropdown */}
+            {showProfileMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: '230px',
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  boxShadow: '0 10px 30px rgba(15, 23, 42, 0.16)',
+                  border: '1px solid #e2e8f0',
+                  padding: '8px 0',
+                  zIndex: 2600,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {user ? (
+                  <>
+                    <div style={{ padding: '10px 16px 12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.name || 'Student'}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.email}
+                      </div>
+                      <div style={{ marginTop: '6px' }}>
+                        <span style={{ fontSize: '0.66rem', fontWeight: 800, background: 'rgba(90, 112, 211, 0.12)', color: '#5A70D3', padding: '2px 8px', borderRadius: '9999px', textTransform: 'uppercase' }}>
+                          {user.role || 'STUDENT'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Link
+                      to="/student/profile"
+                      onClick={() => setShowProfileMenu(false)}
+                      style={{
+                        padding: '10px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        color: '#334155',
+                        textDecoration: 'none',
+                        fontSize: '0.86rem',
+                        fontWeight: 600
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <i className="fa-solid fa-user-circle" style={{ color: '#5A70D3', width: '16px' }}></i>
+                      <span>Account Profile</span>
+                    </Link>
+
+                    <Link
+                      to="/student/my-courses"
+                      onClick={() => setShowProfileMenu(false)}
+                      style={{
+                        padding: '10px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        color: '#334155',
+                        textDecoration: 'none',
+                        fontSize: '0.86rem',
+                        fontWeight: 600
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <i className="fa-solid fa-graduation-cap" style={{ color: '#5A70D3', width: '16px' }}></i>
+                      <span>My Learning</span>
+                    </Link>
+
+                    <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0' }}></div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        logout();
+                        navigate('/');
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        color: '#ef4444',
+                        background: 'none',
+                        border: 'none',
+                        width: '100%',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '0.86rem',
+                        fontWeight: 600
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <i className="fa-solid fa-arrow-right-from-bracket" style={{ color: '#ef4444', width: '16px' }}></i>
+                      <span>Log Out</span>
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    onClick={() => setShowProfileMenu(false)}
+                    style={{
+                      padding: '10px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#5A70D3',
+                      textDecoration: 'none',
+                      fontSize: '0.86rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    <i className="fa-solid fa-right-to-bracket"></i>
+                    <span>Log In</span>
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
