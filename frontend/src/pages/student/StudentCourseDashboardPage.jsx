@@ -2907,11 +2907,11 @@ export default function StudentCourseDashboardPage() {
                     Clear Search
                   </button>
                 </div>
-              ) : (
-                <div style={recordingViewMode === 'grid'
-                  ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '18px' }
-                  : { display: 'flex', flexDirection: 'column', gap: '14px' }
-                }>
+              ) : recordingViewMode === 'list' ? (
+                /* =========================================================
+                   1. COMPACT PROFESSIONAL LIST VIEW (Modern Row - No Cover)
+                   ========================================================= */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {displayedRecordings.map((s, idx) => {
                     const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
                     const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
@@ -2919,7 +2919,6 @@ export default function StudentCourseDashboardPage() {
                     const avgRating = stats.averageRating;
                     const userRating = primaryRec.userRating;
                     const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
-                    const sessionThumb = resolveMediaUrl(s.thumbnail || primaryRec.thumbnail || course?.thumbnail || '');
                     const recResources = getRecordingResources(primaryRec.id, primaryRec.subtitleUrl, s.id);
 
                     const openPlayer = () => setSelectedRecording({
@@ -2936,94 +2935,100 @@ export default function StudentCourseDashboardPage() {
                     });
 
                     return (
-                      <div
-                        key={s.id}
-                        className={`ot-recording-card ${recordingViewMode === 'grid' ? 'view-grid' : 'view-list'}`}
-                      >
-                        {/* 16:9 Thumbnail Preview with Overlay & Badges */}
-                        <div className="ot-recording-thumb-wrap" onClick={openPlayer} title={`Play ${s.title}`}>
-                          {sessionThumb ? (
-                            <img src={sessionThumb} alt={s.title} className="ot-recording-thumb-img" />
-                          ) : (
-                            <div className="ot-recording-thumb-fallback">
-                              <i className="fa-solid fa-play"></i>
-                            </div>
-                          )}
-                          <div className="ot-recording-thumb-overlay">
-                            <div className="ot-recording-play-badge">
+                      <div key={s.id} className="ot-recording-row">
+                        {/* Top / Main Group */}
+                        <div className="ot-recording-top-mobile" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          {/* Left: Index & Play Icon Squircle */}
+                          <div className="ot-recording-left-group">
+                            <span className="ot-recording-index">
+                              #{idx + 1}
+                            </span>
+                            <div
+                              className="ot-recording-play-icon"
+                              onClick={openPlayer}
+                              title={`Watch ${s.title}`}
+                            >
                               <i className="fa-solid fa-play"></i>
                             </div>
                           </div>
-                          <span className="ot-recording-index-pill">#{idx + 1}</span>
-                          {primaryRec.subtitleUrl && <span className="ot-recording-cc-pill">CC</span>}
-                          {dur && (
-                            <span className="ot-recording-duration-pill">
-                              <i className="fa-regular fa-clock" style={{ marginRight: '4px', fontSize: '0.68rem' }}></i>
-                              {formatVideoDuration(dur)}
-                            </span>
-                          )}
-                        </div>
 
-                        {/* Card Content & Action Controls */}
-                        <div className="ot-recording-card-body">
-                          <div>
-                            <div className="ot-recording-meta-top">
-                              <span className="ot-recording-batch-pill">
-                                <i className="fa-solid fa-layer-group" style={{ fontSize: '0.65rem', marginRight: '4px' }}></i>
-                                {s.batchName || batchLabel}
+                          {/* Middle: Title, Badges, and Metadata */}
+                          <div className="ot-recording-main-info">
+                            <div className="ot-recording-title-line">
+                              <span
+                                className="ot-recording-title"
+                                onClick={openPlayer}
+                                title={s.title}
+                              >
+                                {s.title}
                               </span>
-                              <span className="ot-recording-date">
-                                <i className="fa-regular fa-calendar" style={{ marginRight: '4px' }}></i>
-                                {formatSessionDate(s.scheduledAt)}
-                              </span>
+
+                              {(s.batchName || batchLabel) && (
+                                <span className="ot-recording-badge-batch">
+                                  <i className="fa-solid fa-layer-group" style={{ fontSize: '0.62rem' }}></i>
+                                  {s.batchName || batchLabel}
+                                </span>
+                              )}
+
+                              {primaryRec.subtitleUrl && (
+                                <span className="ot-recording-badge-cc">
+                                  <i className="fa-solid fa-closed-captioning"></i>
+                                  CC
+                                </span>
+                              )}
                             </div>
 
-                            <h3 className="ot-recording-card-title" onClick={openPlayer} title={s.title}>
-                              {s.title}
-                            </h3>
+                            {/* Metadata Details Row */}
+                            <div className="ot-recording-meta-strip">
+                              <span className="ot-recording-meta-item">
+                                <i className="fa-regular fa-calendar" style={{ color: '#94a3b8' }}></i>
+                                {formatSessionDate(s.scheduledAt)}
+                              </span>
 
-                            {s.description && cleanDescription(s.description) && (
-                              <p className="ot-recording-desc">{cleanDescription(s.description)}</p>
-                            )}
+                              {dur ? (
+                                <span className="ot-recording-pill-duration">
+                                  <i className="fa-regular fa-clock" style={{ fontSize: '0.68rem', color: '#64748b' }}></i>
+                                  {formatVideoDuration(dur)}
+                                </span>
+                              ) : null}
 
-                            <div className="ot-recording-meta-bottom">
                               {totalRatings > 0 ? (
-                                <span className="ot-recording-rating-stat">
+                                <span className="ot-recording-pill-rating">
                                   <i className="fa-solid fa-star" style={{ color: '#eab308' }}></i>
-                                  <strong>{avgRating ? avgRating.toFixed(1) : '5.0'}</strong>
-                                  <span style={{ color: '#78350f', fontWeight: 600 }}>({totalRatings})</span>
+                                  <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
+                                  <span style={{ color: '#78350f', fontWeight: 500 }}>({totalRatings})</span>
                                 </span>
                               ) : userRating ? (
-                                <span className="ot-recording-rating-stat">
+                                <span className="ot-recording-pill-rating">
                                   <i className="fa-solid fa-star" style={{ color: '#eab308' }}></i>
                                   <span>Rated {userRating}★</span>
                                 </span>
                               ) : (
-                                <span className="ot-recording-unrated">
+                                <span className="ot-recording-pill-unrated">
                                   <i className="fa-regular fa-star"></i>
                                   <span>Unrated</span>
                                 </span>
                               )}
 
                               {recResources.length > 0 && (
-                                <span className="ot-recording-resource-tag">
+                                <span className="ot-recording-pill-resource">
                                   <i className="fa-solid fa-paperclip"></i>
                                   <span>{recResources.length} {recResources.length === 1 ? 'Resource' : 'Resources'}</span>
                                 </span>
                               )}
                             </div>
 
-                            {/* Multi-parts if session has multiple parts */}
+                            {/* Multi-parts if session has > 1 recordings */}
                             {s.recordings && s.recordings.length > 1 && (
-                              <div className="ot-recording-parts-row">
-                                <span className="ot-recording-parts-label">Parts:</span>
+                              <div className="ot-recording-parts-list">
+                                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>Parts:</span>
                                 {s.recordings.map((r, rIdx) => {
                                   const partDur = getAccurateDuration(r) || r.duration;
                                   return (
                                     <button
                                       key={r.id || rIdx}
                                       type="button"
-                                      className="ot-recording-part-btn"
+                                      className="ot-recording-part-chip"
                                       onClick={() => setSelectedRecording({
                                         ...r,
                                         id: r.id,
@@ -3037,7 +3042,7 @@ export default function StudentCourseDashboardPage() {
                                         batchName: s.batchName
                                       })}
                                     >
-                                      <i className="fa-solid fa-play" style={{ color: '#5A70D3', fontSize: '0.62rem' }}></i>
+                                      <i className="fa-solid fa-play" style={{ fontSize: '0.6rem', color: '#5A70D3' }}></i>
                                       <span>Part {rIdx + 1}</span>
                                       {partDur ? <span style={{ color: '#94a3b8' }}>({formatVideoDuration(partDur)})</span> : null}
                                     </button>
@@ -3046,23 +3051,158 @@ export default function StudentCourseDashboardPage() {
                               </div>
                             )}
                           </div>
+                        </div>
 
-                          {/* Action Buttons: Watch Replay + Rate Class */}
-                          <div className="ot-recording-card-actions">
-                            <button type="button" className="ot-recording-btn-watch" onClick={openPlayer}>
-                              <i className="fa-solid fa-circle-play"></i>
-                              <span>Watch Class Replay</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="ot-recording-btn-rate"
-                              onClick={() => handleOpenRatingModal(primaryRec, s.title)}
-                              title="Rate this class recording"
-                            >
-                              <i className="fa-solid fa-star" style={{ color: userRating ? '#eab308' : '#94a3b8' }}></i>
-                              <span>{userRating ? `${userRating}★` : 'Rate'}</span>
-                            </button>
+                        {/* Right: Actions Group */}
+                        <div className="ot-recording-actions-group">
+                          <button
+                            type="button"
+                            className="ot-recording-btn-play"
+                            onClick={openPlayer}
+                          >
+                            <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
+                            <span>Watch Replay</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="ot-recording-btn-rate-mini"
+                            onClick={() => handleOpenRatingModal(primaryRec, s.title)}
+                            title="Rate this class recording"
+                          >
+                            <i className="fa-solid fa-star" style={{ color: userRating ? '#eab308' : '#94a3b8' }}></i>
+                            <span>{userRating ? `${userRating}★` : 'Rate'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* =========================================================
+                   2. COMPACT MINIMAL GRID VIEW (No Cover Image)
+                   ========================================================= */
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                  {displayedRecordings.map((s, idx) => {
+                    const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
+                    const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
+                    const totalRatings = stats.totalRatings;
+                    const avgRating = stats.averageRating;
+                    const userRating = primaryRec.userRating;
+                    const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
+                    const recResources = getRecordingResources(primaryRec.id, primaryRec.subtitleUrl, s.id);
+
+                    const openPlayer = () => setSelectedRecording({
+                      ...primaryRec,
+                      id: primaryRec.id,
+                      sessionId: s.id,
+                      url: primaryRec.url || primaryRec.recordingUrl,
+                      sessionTitle: s.title,
+                      courseName: course?.name || course?.title,
+                      description: s.description,
+                      subtitleUrl: primaryRec.subtitleUrl || null,
+                      scheduledAt: s.scheduledAt,
+                      batchName: s.batchName
+                    });
+
+                    return (
+                      <div key={s.id} className="ot-recording-grid-card">
+                        <div>
+                          {/* Grid Card Top Header */}
+                          <div className="ot-recording-grid-header">
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              background: '#f1f5f9',
+                              color: '#475569',
+                              padding: '2px 8px',
+                              borderRadius: '6px'
+                            }}>
+                              #{idx + 1}
+                            </span>
+
+                            {dur ? (
+                              <span className="ot-recording-pill-duration">
+                                <i className="fa-regular fa-clock" style={{ fontSize: '0.68rem', color: '#64748b' }}></i>
+                                {formatVideoDuration(dur)}
+                              </span>
+                            ) : null}
                           </div>
+
+                          {/* Title & Batch */}
+                          <div style={{ margin: '10px 0 6px 0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                              {(s.batchName || batchLabel) && (
+                                <span className="ot-recording-badge-batch">
+                                  {s.batchName || batchLabel}
+                                </span>
+                              )}
+                              {primaryRec.subtitleUrl && (
+                                <span className="ot-recording-badge-cc">CC</span>
+                              )}
+                            </div>
+                            <h3
+                              className="ot-recording-title"
+                              onClick={openPlayer}
+                              title={s.title}
+                              style={{ margin: 0, fontSize: '0.98rem' }}
+                            >
+                              {s.title}
+                            </h3>
+                          </div>
+
+                          {/* Meta: Date & Rating */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.78rem', color: '#64748b', marginTop: '8px' }}>
+                            <span>
+                              <i className="fa-regular fa-calendar" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
+                              {formatSessionDate(s.scheduledAt)}
+                            </span>
+
+                            {totalRatings > 0 ? (
+                              <span className="ot-recording-pill-rating">
+                                <i className="fa-solid fa-star" style={{ color: '#eab308' }}></i>
+                                <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
+                                <span style={{ color: '#78350f', fontWeight: 500 }}>({totalRatings})</span>
+                              </span>
+                            ) : (
+                              <span className="ot-recording-pill-unrated">
+                                <i className="fa-regular fa-star"></i>
+                                <span>Unrated</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {recResources.length > 0 && (
+                            <div style={{ marginTop: '6px' }}>
+                              <span className="ot-recording-pill-resource">
+                                <i className="fa-solid fa-paperclip"></i>
+                                <span>{recResources.length} {recResources.length === 1 ? 'Resource' : 'Resources'}</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Grid Card Actions */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                          <button
+                            type="button"
+                            className="ot-recording-btn-play"
+                            onClick={openPlayer}
+                            style={{ flex: 1, justifyContent: 'center' }}
+                          >
+                            <i className="fa-solid fa-play" style={{ fontSize: '0.74rem' }}></i>
+                            <span>Watch Replay</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="ot-recording-btn-rate-mini"
+                            onClick={() => handleOpenRatingModal(primaryRec, s.title)}
+                            title="Rate this class recording"
+                          >
+                            <i className="fa-solid fa-star" style={{ color: userRating ? '#eab308' : '#94a3b8' }}></i>
+                            <span>{userRating ? `${userRating}★` : 'Rate'}</span>
+                          </button>
                         </div>
                       </div>
                     );
