@@ -2824,18 +2824,8 @@ export default function StudentCourseDashboardPage() {
                               {formatSessionDate(s.scheduledAt)}
                             </span>
 
-                            {primaryRec.duration && (
-                              <>
-                                <span style={{ color: '#cbd5e1' }}>•</span>
-                                <span>
-                                  <i className="fa-regular fa-clock" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
-                                  {formatDuration(primaryRec.duration)}
-                                </span>
-                              </>
-                            )}
-
                           {(() => {
-                            const dur = getAccurateDuration(primaryRec);
+                            const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
                             if (!dur) return null;
                             return (
                               <>
