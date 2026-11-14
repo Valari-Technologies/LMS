@@ -132,10 +132,9 @@ export default function StudentCourseDashboardPage() {
   const [videoPlayerTab, setVideoPlayerTab] = useState('overview'); // 'overview' | 'curriculum' | 'notes' | 'community' | 'resources'
   const [expandedSections, setExpandedSections] = useState({});
 
-  // Recordings tab state (Search, Sort, and View Mode for scalable list)
+  // Recordings tab state (Search & Sort)
   const [recordingSearch, setRecordingSearch] = useState('');
   const [recordingSort, setRecordingSort] = useState('newest'); // 'newest' | 'oldest'
-  const [recordingViewMode, setRecordingViewMode] = useState('list'); // 'list' | 'grid'
 
   // Sidebar responsive & collapse state for inside course card pages
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -2819,69 +2818,26 @@ export default function StudentCourseDashboardPage() {
                     )}
                   </div>
 
-                  {/* Right Controls: Sort & View Toggle */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* Sort selector */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700 }}>Sort:</span>
-                      <select
-                        value={recordingSort}
-                        onChange={(e) => setRecordingSort(e.target.value)}
-                        style={{
-                          fontSize: '0.8rem',
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          background: '#ffffff',
-                          color: '#334155',
-                          fontWeight: 600,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                      </select>
-                    </div>
-
-                    {/* View Mode Toggle */}
-                    <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setRecordingViewMode('list')}
-                        title="Compact List View"
-                        style={{
-                          border: 'none',
-                          background: recordingViewMode === 'list' ? '#ffffff' : 'transparent',
-                          color: recordingViewMode === 'list' ? '#5A70D3' : '#64748b',
-                          borderRadius: '6px',
-                          padding: '5px 9px',
-                          cursor: 'pointer',
-                          fontSize: '0.82rem',
-                          boxShadow: recordingViewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          fontWeight: 700
-                        }}
-                      >
-                        <i className="fa-solid fa-bars"></i>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRecordingViewMode('grid')}
-                        title="Grid Cards View"
-                        style={{
-                          border: 'none',
-                          background: recordingViewMode === 'grid' ? '#ffffff' : 'transparent',
-                          color: recordingViewMode === 'grid' ? '#5A70D3' : '#64748b',
-                          borderRadius: '6px',
-                          padding: '5px 9px',
-                          cursor: 'pointer',
-                          fontSize: '0.82rem',
-                          boxShadow: recordingViewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          fontWeight: 700
-                        }}
-                      >
-                        <i className="fa-solid fa-table-cells-large"></i>
-                      </button>
-                    </div>
+                  {/* Right Controls: Sort */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700 }}>Sort:</span>
+                    <select
+                      value={recordingSort}
+                      onChange={(e) => setRecordingSort(e.target.value)}
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: '#334155',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                    </select>
                   </div>
                 </div>
               )}
@@ -2907,9 +2863,9 @@ export default function StudentCourseDashboardPage() {
                     Clear Search
                   </button>
                 </div>
-              ) : recordingViewMode === 'list' ? (
+              ) : (
                 /* =========================================================
-                   1. SIMPLE & CLEAN LIST VIEW (Horizontal, Sleek, No Clutter)
+                   SIMPLE & CLEAN RECORDED CLASSES LIST
                    ========================================================= */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {displayedRecordings.map((s, idx) => {
@@ -3029,77 +2985,6 @@ export default function StudentCourseDashboardPage() {
                             <span>Watch</span>
                           </button>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                /* =========================================================
-                   2. SIMPLE & CLEAN GRID VIEW
-                   ========================================================= */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
-                  {displayedRecordings.map((s, idx) => {
-                    const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
-                    const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
-
-                    const openPlayer = () => setSelectedRecording({
-                      ...primaryRec,
-                      id: primaryRec.id,
-                      sessionId: s.id,
-                      url: primaryRec.url || primaryRec.recordingUrl,
-                      sessionTitle: s.title,
-                      courseName: course?.name || course?.title,
-                      description: s.description,
-                      subtitleUrl: primaryRec.subtitleUrl || null,
-                      scheduledAt: s.scheduledAt,
-                      batchName: s.batchName
-                    });
-
-                    return (
-                      <div
-                        key={s.id}
-                        className="ot-recording-grid-card-simple"
-                        onClick={openPlayer}
-                        title={`Watch ${s.title}`}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#94a3b8' }}>
-                            #{idx + 1}
-                          </span>
-                          {dur ? (
-                            <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
-                              <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
-                              {formatVideoDuration(dur)}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 10px 0' }}>
-                          <div className="ot-recording-row-play-icon">
-                            <i className="fa-solid fa-play"></i>
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {s.title}
-                            </h4>
-                            <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                              {formatSessionDate(s.scheduledAt)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="ot-recording-row-watch-btn"
-                          style={{ width: '100%', justifyContent: 'center', padding: '8px 12px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openPlayer();
-                          }}
-                        >
-                          <i className="fa-solid fa-play" style={{ fontSize: '0.65rem' }}></i>
-                          <span>Watch Replay</span>
-                        </button>
                       </div>
                     );
                   })}
