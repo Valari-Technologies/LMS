@@ -1621,7 +1621,17 @@ export default function StudentCourseDashboardPage() {
       )}
 
       {/* Modern Dedicated Course Workspace Sidebar */}
-      <aside className={`ot-course-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+      <aside
+        className={`ot-course-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'mobile-open' : ''}`}
+        style={{
+          position: 'fixed',
+          top: 0,
+          bottom: 0,
+          height: '100vh',
+          maxHeight: '100vh',
+          zIndex: 1000
+        }}
+      >
 
         {/* 1. Sidebar Header: Brand + Title + Collapse/Close Toggle */}
         <div className="ot-course-sidebar-header">
@@ -1844,7 +1854,14 @@ export default function StudentCourseDashboardPage() {
       </aside>
 
       {/* Right Main Area */}
-      <div className="ot-course-main-wrap">
+      <div
+        className="ot-course-main-wrap"
+        style={{
+          marginLeft: sidebarCollapsed ? '78px' : '270px',
+          width: sidebarCollapsed ? 'calc(100% - 78px)' : 'calc(100% - 270px)',
+          minHeight: '100vh'
+        }}
+      >
 
         {/* Mobile Sidebar Trigger (only on screens <= 1024px) */}
         <button
@@ -1876,7 +1893,7 @@ export default function StudentCourseDashboardPage() {
                     <span>Course Learning Dashboard</span>
                   </h2>
                   <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <span>Live session telemetry, attendance records, and syllabus progression</span>
+                    <span>Live session telemetry, attendance records, and class replays</span>
                     <span style={{ fontSize: '0.74rem', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
                       <i className="fa-solid fa-shield-halved" style={{ marginRight: '4px' }}></i>
                       {course?.name || course?.title} Only
@@ -2066,42 +2083,7 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 </div>
 
-                {/* Metric 5: Course Progress % */}
-                <div
-                  onClick={() => {
-                    const elem = document.getElementById('syllabus-section');
-                    if (elem) elem.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  style={{
-                    background: '#ffffff',
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Syllabus Progress
-                    </span>
-                    <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="fa-solid fa-chart-pie" style={{ fontSize: '0.84rem' }}></i>
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
-                    {progressPercent}%
-                  </div>
-                  <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{completedLessons}/{totalLessons} lessons done</span>
-                    <span style={{ color: '#5A70D3', fontWeight: 700 }}>Syllabus →</span>
-                  </div>
-                </div>
-
-                {/* Metric 6: Attendance Standing % */}
+                {/* Metric 5: Attendance Standing % */}
                 <div
                   onClick={() => setActiveTab('attendance')}
                   style={{
@@ -2134,176 +2116,11 @@ export default function StudentCourseDashboardPage() {
                 </div>
               </div>
 
-              {/* Attendance Telemetry Ratio Bar (Visualizing Present, Absent, Upcoming for this course) */}
-              <div style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                padding: '20px 24px',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fa-solid fa-chart-simple" style={{ color: '#5A70D3' }}></i>
-                    <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>Live Session Attendance Ratio</span>
-                    <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                      Separate Course Telemetry
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.8rem', fontWeight: 700 }}>
-                    <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-                      Present: {daysPresent}
-                    </span>
-                    <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}></span>
-                      Absent: {daysAbsent}
-                    </span>
-                    <span style={{ color: '#5A70D3', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#5A70D3', display: 'inline-block' }}></span>
-                      Upcoming: {upcomingLiveCount}
-                    </span>
-                  </div>
-                </div>
+              {/* Course Live Session Attendance Log & Video Replays Workspace */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                {/* Multi-segment ratio bar */}
-                <div style={{ height: '12px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden', display: 'flex' }}>
-                  {totalLiveClassSessions > 0 ? (
-                    <>
-                      <div style={{ width: `${(daysPresent / totalLiveClassSessions) * 100}%`, background: '#10b981', transition: 'width 0.3s ease' }} title={`Present: ${daysPresent}`} />
-                      <div style={{ width: `${(daysAbsent / totalLiveClassSessions) * 100}%`, background: '#ef4444', transition: 'width 0.3s ease' }} title={`Absent: ${daysAbsent}`} />
-                      <div style={{ width: `${(upcomingLiveCount / totalLiveClassSessions) * 100}%`, background: '#5A70D3', transition: 'width 0.3s ease' }} title={`Upcoming: ${upcomingLiveCount}`} />
-                    </>
-                  ) : (
-                    <div style={{ width: '100%', background: '#e2e8f0' }} />
-                  )}
-                </div>
-              </div>
-
-              {/* Split Workstation Layout:
-                Left Column: Curriculum Syllabus Tree
-                Right Column: Resume Learning Hero Box & Course Attendance Log */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '22px' }}>
-
-                {/* Left Column: Full Curriculum Syllabus Tree */}
-                <div id="syllabus-section" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="fa-solid fa-list-check" style={{ color: '#5A70D3' }}></i>
-                        <span>Curriculum Syllabus</span>
-                      </h3>
-                      <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 700, background: '#f8fafc', padding: '4px 12px', borderRadius: '9999px', border: '1px solid #e2e8f0' }}>
-                        {completedLessons} / {totalLessons} lessons completed
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {(course?.sections || []).map((sec, sIdx) => {
-                        const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
-                        const secTotal = sec.contents?.length || 0;
-                        return (
-                          <div key={sec.id || sIdx} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px 16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                              <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
-                                {sIdx + 1}. {sec.title}
-                              </span>
-                              <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 800, background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
-                                {secCompleted}/{secTotal} done
-                              </span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {sec.contents?.map((c, cIdx) => {
-                                const isDone = progress?.completedContentIds?.includes(c.id);
-                                return (
-                                  <div
-                                    key={c.id || cIdx}
-                                    onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      padding: '8px 10px',
-                                      borderRadius: '8px',
-                                      cursor: 'pointer',
-                                      transition: 'background 0.15s ease',
-                                      background: isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
-                                    onMouseLeave={e => e.currentTarget.style.background = isDone ? 'rgba(16, 185, 129, 0.05)' : 'transparent'}
-                                  >
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDone ? '#059669' : '#334155', fontWeight: isDone ? 700 : 500, fontSize: '0.88rem' }}>
-                                      <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ fontSize: '0.86rem', color: isDone ? '#10b981' : '#5A70D3' }}></i>
-                                      <span>{c.title}</span>
-                                    </span>
-                                    <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'capitalize' }}>
-                                      {c.contentType || 'video'}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column: Resume Learning Hero Box & Course Attendance Log */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {nextLesson && (
-                    <div style={{
-                      background: '#0f172a',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      color: '#ffffff',
-                      boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
-                      border: '1px solid #1e293b'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 800, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                        <i className="fa-solid fa-play"></i>
-                        <span>Resume Learning</span>
-                      </div>
-
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', color: '#ffffff' }}>
-                        {nextLesson.title}
-                      </h3>
-
-                      <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '0 0 18px 0', lineHeight: 1.45 }}>
-                        {nextLesson.description || 'Watch the next curriculum video lesson to keep making progress.'}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/student/learn/${courseId}?contentId=${nextLesson.id}`)}
-                        style={{
-                          background: '#5A70D3',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '10px',
-                          padding: '11px 22px',
-                          fontWeight: 800,
-                          fontSize: '0.92rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 14px rgba(90, 112, 211, 0.4)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <i className="fa-solid fa-play"></i>
-                        <span>Play Video Lesson</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Course Live Session Attendance Log (Strictly for THIS COURSE) */}
-                  <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                {/* Course Live Session Attendance Log (Strictly for THIS COURSE) */}
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                       <div>
                         <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2434,7 +2251,6 @@ export default function StudentCourseDashboardPage() {
                     </p>
                   </div>
 
-                </div>
               </div>
 
             </div>
