@@ -1610,7 +1610,7 @@ export default function StudentCourseDashboardPage() {
   //               Tab Workspace Content.
   // =========================================================================
   return (
-    <div className="ot-course-shell">
+    <div className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* Mobile Backdrop Overlay */}
       {mobileSidebarOpen && (
         <div

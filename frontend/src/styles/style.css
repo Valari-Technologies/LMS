@@ -11444,22 +11444,24 @@ body:has(.ud-header) .ot-course-content-sidebar {
   min-height: 100vh;
   background: #f8fafc;
   position: relative;
-  overflow-x: hidden;
+  width: 100%;
 }
 
 .ot-course-sidebar {
   width: 270px;
   min-width: 270px;
   height: 100vh;
-  position: sticky;
+  max-height: 100vh;
+  position: fixed;
   top: 0;
   left: 0;
+  bottom: 0;
   background: #ffffff;
   border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: width 0.25s ease, transform 0.25s ease;
+  transition: width 0.25s ease, min-width 0.25s ease, transform 0.25s ease;
   box-shadow: 2px 0 12px rgba(15, 23, 42, 0.03);
 }
 
@@ -11483,6 +11485,7 @@ body:has(.ud-header) .ot-course-content-sidebar {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
@@ -11633,6 +11636,16 @@ body:has(.ud-header) .ot-course-content-sidebar {
   min-width: 0;
   min-height: 100vh;
   background: #f8fafc;
+  margin-left: 270px;
+  width: calc(100% - 270px);
+  box-sizing: border-box;
+  transition: margin-left 0.25s ease, width 0.25s ease;
+}
+
+.ot-course-sidebar.collapsed + .ot-course-main-wrap,
+.ot-course-shell.sidebar-collapsed .ot-course-main-wrap {
+  margin-left: 78px;
+  width: calc(100% - 78px);
 }
 
 .ot-course-topbar {
@@ -11691,6 +11704,13 @@ body:has(.ud-header) .ot-course-content-sidebar {
 
   .ot-course-sidebar.mobile-open {
     transform: translateX(290px);
+  }
+
+  .ot-course-main-wrap,
+  .ot-course-sidebar.collapsed + .ot-course-main-wrap,
+  .ot-course-shell.sidebar-collapsed .ot-course-main-wrap {
+    margin-left: 0 !important;
+    width: 100% !important;
   }
 
   .ot-course-backdrop {
