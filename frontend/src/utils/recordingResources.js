@@ -581,3 +581,173 @@ export async function downloadResourceFile(fileUrl, fileName) {
     a.remove();
   }
 }
+
+// ============================================================
+// Accurate Video Duration Detection & Formatting
+// ============================================================
+const VIDEO_DURATIONS_KEY = 'onetutor_video_durations';
+
+export function getCachedVideoDurations() {
+  try {
+    const raw = localStorage.getItem(VIDEO_DURATIONS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveCachedVideoDuration(key, duration) {
+  if (!key || !duration || isNaN(duration) || duration <= 0) return;
+  try {
+    const raw = localStorage.getItem(VIDEO_DURATIONS_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[String(key)] = Number(duration);
+    localStorage.setItem(VIDEO_DURATIONS_KEY, JSON.stringify(map));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('recording-duration-updated', {
+        detail: { key: String(key), duration: Number(duration) }
+      }));
+    }
+  } catch (e) {}
+}
+
+/**
+ * Format seconds into standard M:SS or H:MM:SS format
+ * e.g. 126 => "2:06", 65 => "1:05", 3665 => "1:01:05"
+ */
+export function formatVideoDuration(seconds) {
+  if (!seconds || isNaN(seconds) || seconds <= 0) return '';
+  const total = Math.round(Number(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Format seconds into a friendly human-readable format e.g. "2m 6s" or "1h 12m"
+ */
+export function formatDetailedDuration(seconds) {
+  if (!seconds || isNaN(seconds) || seconds <= 0) return '';
+  const total = Math.round(Number(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return s > 0 ? `${h}h ${m}m ${s}s` : `${h}h ${m}m`;
+  }
+  if (m > 0) {
+    return s > 0 ? `${m}m ${s}s` : `${m} min`;
+  }
+  return `${s}s`;
+}
+
+/**
+ * Get accurate duration in seconds for a recording object.
+ * Returns cached probe duration, or existing duration if valid and NOT the fake 600s default.
+ */
+export function getAccurateVideoDuration(rec) {
+  if (!rec) return null;
+  const cached = getCachedVideoDurations();
+
+  // 1. Direct match by rec.id
+  if (rec.id && cached[String(rec.id)] && cached[String(rec.id)] > 0) {
+    return cached[String(rec.id)];
+  }
+
+  // 2. Direct match by URL
+  const targetUrl = rec.url || rec.recordingUrl;
+  if (targetUrl && cached[String(targetUrl)] && cached[String(targetUrl)] > 0) {
+    return cached[String(targetUrl)];
+  }
+
+  // 3. Fallback to rec.duration if valid and NOT the bogus 600s (10 min placeholder)
+  if (rec.duration && !isNaN(rec.duration) && Number(rec.duration) > 0 && Number(rec.duration) !== 600) {
+    return Number(rec.duration);
+  }
+
+  return null;
+}
+
+/**
+ * Pre-probe a video URL in the background using a lightweight detached video element.
+ * Reads the MP4 moov metadata atom in ~50ms without loading the full video stream.
+ */
+export function probeVideoDuration(rawUrl) {
+  if (!rawUrl || typeof window === 'undefined') return Promise.resolve(null);
+  const resolved = resolveMediaUrl(rawUrl);
+  const targetUrl = resolved || rawUrl;
+  if (!targetUrl || targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
+    return Promise.resolve(null);
+  }
+
+  // Return cached duration if already probed
+  const cached = getCachedVideoDurations();
+  if (cached[String(rawUrl)] && cached[String(rawUrl)] > 0) {
+    return Promise.resolve(cached[String(rawUrl)]);
+  }
+  if (cached[String(targetUrl)] && cached[String(targetUrl)] > 0) {
+    return Promise.resolve(cached[String(targetUrl)]);
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+
+      let timer = null;
+      let resolvedOnce = false;
+      const cleanUp = () => {
+        if (timer) clearTimeout(timer);
+        v.onloadedmetadata = null;
+        v.ondurationchange = null;
+        v.oncanplay = null;
+        v.onerror = null;
+        v.removeAttribute('src');
+        try { v.load(); } catch (e) {}
+      };
+
+      timer = setTimeout(() => {
+        if (!resolvedOnce) {
+          resolvedOnce = true;
+          cleanUp();
+          resolve(null);
+        }
+      }, 7000);
+
+      const handleMetadata = () => {
+        const dur = v.duration;
+        if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+          if (!resolvedOnce) {
+            resolvedOnce = true;
+            cleanUp();
+            saveCachedVideoDuration(rawUrl, dur);
+            saveCachedVideoDuration(targetUrl, dur);
+            resolve(dur);
+          }
+        }
+      };
+
+      v.onloadedmetadata = handleMetadata;
+      v.ondurationchange = handleMetadata;
+      v.oncanplay = handleMetadata;
+
+      v.onerror = () => {
+        if (!resolvedOnce) {
+          resolvedOnce = true;
+          cleanUp();
+          resolve(null);
+        }
+      };
+
+      v.src = targetUrl;
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}

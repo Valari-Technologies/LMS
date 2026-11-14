@@ -12,7 +12,13 @@ import {
   getResourceVisual,
   downloadResourceFile,
   cleanDescription,
-  parseSessionRecordingMetadata
+  parseSessionRecordingMetadata,
+  getCachedVideoDurations,
+  saveCachedVideoDuration,
+  formatVideoDuration,
+  formatDetailedDuration,
+  getAccurateVideoDuration,
+  probeVideoDuration
 } from '../../utils/recordingResources';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
@@ -281,6 +287,49 @@ export default function StudentCourseDashboardPage() {
     });
   });
 
+  // State to track exact video durations detected from metadata or probed in background
+  const [videoDurations, setVideoDurations] = useState(() => getCachedVideoDurations());
+
+  useEffect(() => {
+    const handleDurationUpdated = (e) => {
+      if (e.detail?.key && e.detail?.duration) {
+        setVideoDurations(prev => ({ ...prev, [e.detail.key]: e.detail.duration }));
+      }
+    };
+    window.addEventListener('recording-duration-updated', handleDurationUpdated);
+    return () => window.removeEventListener('recording-duration-updated', handleDurationUpdated);
+  }, []);
+
+  // Pro-actively probe video durations in background for all recordings in this course
+  useEffect(() => {
+    if (!allRecordings || allRecordings.length === 0) return;
+    allRecordings.forEach(rec => {
+      const targetUrl = rec.url;
+      if (!targetUrl) return;
+      if (!videoDurations[rec.id] && !videoDurations[targetUrl]) {
+        probeVideoDuration(targetUrl).then(dur => {
+          if (dur && dur > 0) {
+            saveCachedVideoDuration(rec.id, dur);
+            saveCachedVideoDuration(targetUrl, dur);
+            setVideoDurations(prev => ({ ...prev, [rec.id]: dur, [targetUrl]: dur }));
+          }
+        });
+      }
+    });
+  }, [allRecordings.length]);
+
+  const getAccurateDuration = (rec) => {
+    if (!rec) return null;
+    const fromState = videoDurations[rec.id] || videoDurations[rec.url];
+    if (fromState && fromState > 0) return fromState;
+    if (String(selectedRecording?.id) === String(rec.id) && videoDurations.current) {
+      return videoDurations.current;
+    }
+    const fromHelper = getAccurateVideoDuration(rec);
+    if (fromHelper && fromHelper > 0) return fromHelper;
+    return null;
+  };
+
   const currentRecordingIndex = allRecordings.findIndex(r => String(r.id) === String(selectedRecording?.id));
   const hasPrevRecording = currentRecordingIndex > 0;
   const hasNextRecording = currentRecordingIndex >= 0 && currentRecordingIndex < allRecordings.length - 1;
@@ -475,6 +524,18 @@ export default function StudentCourseDashboardPage() {
                 onClose={() => setSelectedRecording(null)}
                 onPrev={hasPrevRecording ? playPrevRecording : undefined}
                 onNext={hasNextRecording ? playNextRecording : undefined}
+                onDurationDetected={(exactSecs) => {
+                  if (exactSecs && exactSecs > 0) {
+                    if (selectedRecording?.id) saveCachedVideoDuration(selectedRecording.id, exactSecs);
+                    if (selectedRecording?.url) saveCachedVideoDuration(selectedRecording.url, exactSecs);
+                    setVideoDurations(prev => ({
+                      ...prev,
+                      ...(selectedRecording?.id ? { [selectedRecording.id]: exactSecs } : {}),
+                      ...(selectedRecording?.url ? { [selectedRecording.url]: exactSecs } : {}),
+                      current: exactSecs
+                    }));
+                  }
+                }}
               />
 
               {/* Action Bar below video */}
@@ -1034,7 +1095,10 @@ export default function StudentCourseDashboardPage() {
                                 </div>
                                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
                                   {rec.scheduledAt ? new Date(rec.scheduledAt).toLocaleDateString() : 'Live Class'}
-                                  {rec.duration ? ` • ${Math.round(rec.duration / 60)} mins` : ''}
+                                  {(() => {
+                                    const dur = getAccurateDuration(rec);
+                                    return dur ? ` • ${formatVideoDuration(dur)}` : '';
+                                  })()}
                                   {isCurrent ? (
                                     curTotalRatings > 0 && curAvgRating ? ` • ★ ${curAvgRating.toFixed(1)}` : ''
                                   ) : (
@@ -1412,14 +1476,18 @@ export default function StudentCourseDashboardPage() {
                                     <div className="ot-sidebar-lecture-meta">
                                       <i className="fa-solid fa-play" style={{ fontSize: '9px', color: isCurrent ? '#5A70D3' : '#94a3b8' }}></i>
                                       <span>VIDEO</span>
-                                      {rec.duration && (
-                                        <>
-                                          <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
-                                          <span className="ot-sidebar-lecture-duration">
-                                            {Math.round(rec.duration / 60)}m
-                                          </span>
-                                        </>
-                                      )}
+                                      {(() => {
+                                        const dur = getAccurateDuration(rec);
+                                        if (!dur) return null;
+                                        return (
+                                          <>
+                                            <span style={{ margin: '0 4px', color: '#cbd5e1' }}>•</span>
+                                            <span className="ot-sidebar-lecture-duration">
+                                              {formatVideoDuration(dur)}
+                                            </span>
+                                          </>
+                                        );
+                                      })()}
                                       {isCurrent ? (
                                         curTotalRatings > 0 && curAvgRating && (
                                           <>
@@ -1464,23 +1532,6 @@ export default function StudentCourseDashboardPage() {
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Bottom: Course Progress Card */}
-              <div className="ot-sidebar-bottom-actions">
-                <div className="ot-sidebar-progress-card">
-                  <div className="ot-sidebar-progress-top">
-                    <span className="ot-sidebar-progress-label">Course Progress</span>
-                    <span className="ot-sidebar-progress-val">{progressPercent}%</span>
-                  </div>
-                  <div className="ot-sidebar-progress-bar">
-                    <div className="ot-sidebar-progress-fill" style={{ width: `${progressPercent}%` }}></div>
-                  </div>
-                  <div className="ot-sidebar-progress-stats">
-                    <span>{completedLessons} of {totalLessons} completed</span>
-                    <span>{Math.max(0, totalLessons - completedLessons)} remaining</span>
-                  </div>
-                </div>
               </div>
             </aside>
 
@@ -3073,15 +3124,19 @@ export default function StudentCourseDashboardPage() {
                             {formatSessionDate(s.scheduledAt)}
                           </span>
 
-                          {primaryRec.duration && (
-                            <>
-                              <span style={{ color: '#cbd5e1' }}>•</span>
-                              <span>
-                                <i className="fa-regular fa-clock" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
-                                {formatDuration(primaryRec.duration)}
-                              </span>
-                            </>
-                          )}
+                          {(() => {
+                            const dur = getAccurateDuration(primaryRec);
+                            if (!dur) return null;
+                            return (
+                              <>
+                                <span style={{ color: '#cbd5e1' }}>•</span>
+                                <span>
+                                  <i className="fa-regular fa-clock" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
+                                  {formatVideoDuration(dur)}
+                                </span>
+                              </>
+                            );
+                          })()}
 
                           <span style={{ color: '#cbd5e1' }}>•</span>
                           {totalRatings > 0 ? (
@@ -3149,7 +3204,10 @@ export default function StudentCourseDashboardPage() {
                               >
                                 <i className="fa-solid fa-play" style={{ fontSize: '0.6rem', color: '#5A70D3' }}></i>
                                 <span>Part {rIdx + 1}</span>
-                                {r.duration ? <span style={{ color: '#94a3b8' }}>({Math.round(r.duration / 60)}m)</span> : null}
+                                {(() => {
+                                  const dur = getAccurateDuration(r);
+                                  return dur ? <span style={{ color: '#94a3b8' }}>({formatVideoDuration(dur)})</span> : null;
+                                })()}
                               </button>
                             ))}
                           </div>
@@ -3277,21 +3335,25 @@ export default function StudentCourseDashboardPage() {
                           #{idx + 1}
                         </span>
 
-                        {primaryRec.duration && (
-                          <span style={{
-                            position: 'absolute',
-                            bottom: '10px',
-                            right: '10px',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            background: 'rgba(0, 0, 0, 0.75)',
-                            color: '#ffffff',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            {formatDuration(primaryRec.duration)}
-                          </span>
-                        )}
+                        {(() => {
+                          const dur = getAccurateDuration(primaryRec);
+                          if (!dur) return null;
+                          return (
+                            <span style={{
+                              position: 'absolute',
+                              bottom: '10px',
+                              right: '10px',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              background: 'rgba(0, 0, 0, 0.75)',
+                              color: '#ffffff',
+                              padding: '2px 6px',
+                              borderRadius: '4px'
+                            }}>
+                              {formatVideoDuration(dur)}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Card Content */}

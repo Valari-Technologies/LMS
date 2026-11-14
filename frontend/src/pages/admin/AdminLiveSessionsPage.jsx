@@ -34,7 +34,13 @@ import {
   cleanDescription,
   parseSessionRecordingMetadata,
   syncSessionRecordingDataToBackend,
-  autoSyncLocalResourcesToBackend
+  autoSyncLocalResourcesToBackend,
+  getCachedVideoDurations,
+  saveCachedVideoDuration,
+  formatVideoDuration,
+  formatDetailedDuration,
+  probeVideoDuration,
+  getAccurateVideoDuration
 } from '../../utils/recordingResources';
 
 const getDirectMediaUrl = (asset) => {
@@ -330,7 +336,36 @@ export default function AdminLiveSessionsPage() {
     }
   }, [manageRecordingsModal]);
 
-    async function handleCreate(e) {
+  // Accurate video durations cache & background probe for recordings
+  const [adminVideoDurations, setAdminVideoDurations] = useState(() => getCachedVideoDurations());
+
+  useEffect(() => {
+    const handleDurationUpdated = (e) => {
+      if (e.detail?.key && e.detail?.duration) {
+        setAdminVideoDurations(prev => ({ ...prev, [e.detail.key]: e.detail.duration }));
+      }
+    };
+    window.addEventListener('recording-duration-updated', handleDurationUpdated);
+    return () => window.removeEventListener('recording-duration-updated', handleDurationUpdated);
+  }, []);
+
+  useEffect(() => {
+    if (!manageRecordingsModal?.recordings || manageRecordingsModal.recordings.length === 0) return;
+    manageRecordingsModal.recordings.forEach(r => {
+      const recUrl = r.url || r.recordingUrl;
+      if (recUrl) {
+        probeVideoDuration(recUrl).then(dur => {
+          if (dur && dur > 0) {
+            saveCachedVideoDuration(r.id, dur);
+            saveCachedVideoDuration(recUrl, dur);
+            setAdminVideoDurations(prev => ({ ...prev, [r.id]: dur, [recUrl]: dur }));
+          }
+        });
+      }
+    });
+  }, [manageRecordingsModal]);
+
+  async function handleCreate(e) {
     e.preventDefault();
     setSubmitting(true);
     try {
@@ -727,11 +762,12 @@ export default function AdminLiveSessionsPage() {
 
   function openEditRecordingModal(session, recording) {
     setShowEditRecordingModal({ session, recording });
+    const accurateDur = adminVideoDurations[recording.id] || adminVideoDurations[recording.url] || getAccurateVideoDuration(recording);
     setEditRecordingForm({
       title: getRecordingCustomTitle(recording.id, `Recording ${recording.id || 1}`),
       overview: getRecordingOverview(recording.id, recording.description || session.description || ''),
       url: recording.url || recording.recordingUrl || '',
-      duration: recording.duration || '',
+      duration: accurateDur || (recording.duration !== 600 ? recording.duration : '') || '',
       mediaAssetId: recording.mediaAssetId || null,
     });
     setEditRecordingTab(recording.mediaAssetId ? 'library' : 'url');
@@ -2170,6 +2206,17 @@ export default function AdminLiveSessionsPage() {
                               title={`Recording ${idx + 1}`}
                               subtitleUrl={r.subtitleUrl}
                               autoPlay={false}
+                              onDurationDetected={(exactSecs) => {
+                                if (exactSecs && exactSecs > 0) {
+                                  saveCachedVideoDuration(r.id, exactSecs);
+                                  if (recUrl) saveCachedVideoDuration(recUrl, exactSecs);
+                                  setAdminVideoDurations(prev => ({
+                                    ...prev,
+                                    [r.id]: exactSecs,
+                                    ...(recUrl ? { [recUrl]: exactSecs } : {})
+                                  }));
+                                }
+                              }}
                               style={{ width: '100%', maxHeight: '240px' }}
                             />
                           )}
@@ -2260,12 +2307,16 @@ export default function AdminLiveSessionsPage() {
                         <div style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
                           {getRecordingCustomTitle(r.id, `Recording ${idx + 1}`)} {manageRecordingsModal.recordings.length > 1 ? `(Part ${idx + 1})` : ''}
                         </div>
-                        {r.duration && (
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
-                            {Math.floor(r.duration / 3600) > 0 ? `${Math.floor(r.duration / 3600)}h ` : ''}{Math.round((r.duration % 3600) / 60)} min
-                          </div>
-                        )}
+                        {(() => {
+                          const dur = adminVideoDurations[r.id] || adminVideoDurations[r.url] || getAccurateVideoDuration(r);
+                          if (!dur) return null;
+                          return (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                              {formatDetailedDuration(dur)}
+                            </div>
+                          );
+                        })()}
                         {(() => {
                           const ov = getRecordingOverview(r.id, '');
                           if (!ov) return null;
@@ -2873,7 +2924,7 @@ export default function AdminLiveSessionsPage() {
                   />
                   {editRecordingForm.duration > 0 && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Formatted: {Math.floor(editRecordingForm.duration / 3600) > 0 ? `${Math.floor(editRecordingForm.duration / 3600)}h ` : ''}{Math.round((editRecordingForm.duration % 3600) / 60)} min
+                      Formatted: {formatDetailedDuration(editRecordingForm.duration)} ({formatVideoDuration(editRecordingForm.duration)})
                     </div>
                   )}
                 </div>
@@ -2942,6 +2993,17 @@ export default function AdminLiveSessionsPage() {
                 courseName={previewRecordingModal.courseName}
                 subtitleUrl={previewRecordingModal.subtitleUrl}
                 autoPlay={true}
+                onDurationDetected={(exactSecs) => {
+                  if (exactSecs && exactSecs > 0) {
+                    if (previewRecordingModal?.id) saveCachedVideoDuration(previewRecordingModal.id, exactSecs);
+                    if (previewRecordingModal?.url) saveCachedVideoDuration(previewRecordingModal.url, exactSecs);
+                    setAdminVideoDurations(prev => ({
+                      ...prev,
+                      ...(previewRecordingModal?.id ? { [previewRecordingModal.id]: exactSecs } : {}),
+                      ...(previewRecordingModal?.url ? { [previewRecordingModal.url]: exactSecs } : {})
+                    }));
+                  }
+                }}
                 onClose={() => setPreviewRecordingModal(null)}
               />
             </div>

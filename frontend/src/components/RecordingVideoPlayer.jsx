@@ -92,6 +92,7 @@ export default function RecordingVideoPlayer({
   onClose,
   onPrev,
   onNext,
+  onDurationDetected,
   className = '',
   style = {}
 }) {
@@ -688,8 +689,9 @@ export default function RecordingVideoPlayer({
         }}
         onLoadedMetadata={(e) => {
           const vid = e.target;
-          if (vid.duration && !isNaN(vid.duration)) {
+          if (vid.duration && !isNaN(vid.duration) && isFinite(vid.duration) && vid.duration > 0) {
             setVideoDuration(vid.duration);
+            onDurationDetected?.(vid.duration);
           }
           if (pendingQualityRestoreRef.current) {
             const { currentTime: cTime, wasPlaying: wPlay } = pendingQualityRestoreRef.current;
@@ -700,13 +702,17 @@ export default function RecordingVideoPlayer({
           updateActiveSubtitle(vid.currentTime || 0);
         }}
         onDurationChange={(e) => {
-          if (e.target.duration && !isNaN(e.target.duration)) {
-            setVideoDuration(e.target.duration);
+          const vid = e.target;
+          if (vid.duration && !isNaN(vid.duration) && isFinite(vid.duration) && vid.duration > 0) {
+            setVideoDuration(vid.duration);
+            onDurationDetected?.(vid.duration);
           }
         }}
         onLoadedData={(e) => {
-          if (e.target.duration && !isNaN(e.target.duration)) {
-            setVideoDuration(e.target.duration);
+          const vid = e.target;
+          if (vid.duration && !isNaN(vid.duration) && isFinite(vid.duration) && vid.duration > 0) {
+            setVideoDuration(vid.duration);
+            onDurationDetected?.(vid.duration);
           }
         }}
         onClick={(e) => {
@@ -720,8 +726,9 @@ export default function RecordingVideoPlayer({
         onCanPlay={(e) => {
           const vid = e.target;
           setIsVideoBuffering(false);
-          if (vid.duration && !isNaN(vid.duration)) {
+          if (vid.duration && !isNaN(vid.duration) && isFinite(vid.duration) && vid.duration > 0) {
             setVideoDuration(vid.duration);
+            onDurationDetected?.(vid.duration);
           }
           if (pendingQualityRestoreRef.current) {
             const { currentTime: cTime, wasPlaying: wPlay } = pendingQualityRestoreRef.current;
