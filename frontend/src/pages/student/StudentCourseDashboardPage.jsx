@@ -2870,6 +2870,10 @@ export default function StudentCourseDashboardPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {displayedRecordings.map((s, idx) => {
                     const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
+                    const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
+                    const totalRatings = stats.totalRatings;
+                    const avgRating = stats.averageRating;
+                    const userRating = primaryRec.userRating;
                     const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
 
                     const openPlayer = () => setSelectedRecording({
@@ -2902,7 +2906,7 @@ export default function StudentCourseDashboardPage() {
                           </div>
                         </div>
 
-                        {/* Middle: Title & Date / Duration */}
+                        {/* Middle: Title & Date / Duration / Rating */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <h4 style={{
                             fontSize: '0.94rem',
@@ -2916,7 +2920,7 @@ export default function StudentCourseDashboardPage() {
                           }}>
                             {s.title}
                           </h4>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#64748b' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#64748b', flexWrap: 'wrap' }}>
                             <span>{formatSessionDate(s.scheduledAt)}</span>
                             {dur ? (
                               <>
@@ -2924,6 +2928,37 @@ export default function StudentCourseDashboardPage() {
                                 <span>{formatVideoDuration(dur)}</span>
                               </>
                             ) : null}
+
+                            <span style={{ color: '#cbd5e1' }}>•</span>
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenRatingModal(primaryRec, s.title);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                cursor: 'pointer',
+                                color: totalRatings > 0 || userRating ? '#b45309' : '#64748b',
+                                background: totalRatings > 0 || userRating ? '#fef3c7' : 'rgba(15, 23, 42, 0.05)',
+                                padding: '1px 6px',
+                                borderRadius: '5px',
+                                fontWeight: 700,
+                                fontSize: '0.72rem',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title="Click to rate this class"
+                            >
+                              <i className="fa-solid fa-star" style={{ color: totalRatings > 0 || userRating ? '#f59e0b' : '#94a3b8', fontSize: '0.65rem' }}></i>
+                              <span>
+                                {totalRatings > 0
+                                  ? `${avgRating ? avgRating.toFixed(1) : '5.0'} (${totalRatings})`
+                                  : userRating
+                                  ? `${userRating}★`
+                                  : 'Rate'}
+                              </span>
+                            </span>
                           </div>
 
                           {/* Multiple Parts if session has > 1 recordings */}
