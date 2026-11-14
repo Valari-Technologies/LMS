@@ -11950,72 +11950,92 @@ body:has(.ud-header) .ot-course-content-sidebar {
   color: #0f172a;
 }
 
+/* ==========================================================================
+   SIMPLE & CLEAN RECORDING ROW CARDS
+   ========================================================================== */
 .ot-recording-row {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+  gap: 12px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  cursor: pointer;
 }
 
 .ot-recording-row:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  border-color: #5A70D3;
+  box-shadow: 0 4px 14px rgba(90, 112, 211, 0.08);
   transform: translateY(-1px);
 }
 
-.ot-recording-play-btn {
-  padding: 7px 16px;
-  border-radius: 8px;
+.ot-recording-row:hover .ot-recording-row-play-icon {
   background: #5A70D3;
   color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 800;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
+}
+
+.ot-recording-row-play-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(90, 112, 211, 0.08);
+  color: #5A70D3;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 6px rgba(90, 112, 211, 0.25);
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
   transition: all 0.15s ease;
-  white-space: nowrap;
 }
 
-.ot-recording-play-btn:hover {
-  background: #4a5dbf;
-  box-shadow: 0 4px 10px rgba(90, 112, 211, 0.35);
+.ot-recording-row-play-icon i {
+  margin-left: 2px;
 }
 
-.ot-recording-rate-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
+.ot-recording-row-watch-btn {
   font-size: 0.78rem;
   font-weight: 700;
+  color: #5A70D3;
+  background: rgba(90, 112, 211, 0.08);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   transition: all 0.15s ease;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
-.ot-recording-rate-btn:hover {
-  background: #f1f5f9;
+.ot-recording-row:hover .ot-recording-row-watch-btn,
+.ot-recording-row-watch-btn:hover {
+  background: #5A70D3;
+  color: #ffffff;
 }
 
-@media (max-width: 768px) {
-  .ot-recording-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .ot-recording-row-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
+/* Grid card minimal styling */
+.ot-recording-grid-card-simple {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  cursor: pointer;
+}
+
+.ot-recording-grid-card-simple:hover {
+  border-color: #5A70D3;
+  box-shadow: 0 4px 14px rgba(90, 112, 211, 0.08);
+  transform: translateY(-1px);
 }

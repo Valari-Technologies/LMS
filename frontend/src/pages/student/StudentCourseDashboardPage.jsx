@@ -2909,178 +2909,96 @@ export default function StudentCourseDashboardPage() {
                 </div>
               ) : recordingViewMode === 'list' ? (
                 /* =========================================================
-                   1. COMPACT PROFESSIONAL LIST VIEW (Default - Scalable)
+                   1. SIMPLE & CLEAN LIST VIEW (Horizontal, Sleek, No Clutter)
                    ========================================================= */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {displayedRecordings.map((s, idx) => {
                     const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
-                    const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
-                    const totalRatings = stats.totalRatings;
-                    const avgRating = stats.averageRating;
-                    const userRating = primaryRec.userRating;
+                    const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
+
+                    const openPlayer = () => setSelectedRecording({
+                      ...primaryRec,
+                      id: primaryRec.id,
+                      sessionId: s.id,
+                      url: primaryRec.url || primaryRec.recordingUrl,
+                      sessionTitle: s.title,
+                      courseName: course?.name || course?.title,
+                      description: s.description,
+                      subtitleUrl: primaryRec.subtitleUrl || null,
+                      scheduledAt: s.scheduledAt,
+                      batchName: s.batchName
+                    });
 
                     return (
                       <div
                         key={s.id}
                         className="ot-recording-row"
+                        onClick={openPlayer}
+                        title={`Watch ${s.title}`}
                       >
-                        {/* Left: Index & Play Icon Circle */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#94a3b8', width: '24px', textAlign: 'center' }}>
+                        {/* Left: Index & Play Icon */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#94a3b8', width: '22px', textAlign: 'center' }}>
                             #{idx + 1}
                           </span>
-                          <div
-                            onClick={() => setSelectedRecording({
-                              ...primaryRec,
-                              id: primaryRec.id,
-                              sessionId: s.id,
-                              url: primaryRec.url || primaryRec.recordingUrl,
-                              sessionTitle: s.title,
-                              courseName: course?.name || course?.title,
-                              description: s.description,
-                              subtitleUrl: primaryRec.subtitleUrl || null,
-                              scheduledAt: s.scheduledAt,
-                              batchName: s.batchName
-                            })}
-                            style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: '10px',
-                              background: 'rgba(90, 112, 211, 0.08)',
-                              color: '#5A70D3',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              flexShrink: 0
-                            }}
-                            title="Watch Class Replay"
-                          >
-                            <i className="fa-solid fa-play" style={{ fontSize: '0.9rem', marginLeft: '2px' }}></i>
+                          <div className="ot-recording-row-play-icon">
+                            <i className="fa-solid fa-play"></i>
                           </div>
                         </div>
 
-                        {/* Middle: Title & Inline Metadata Strip */}
+                        {/* Middle: Title & Date / Duration */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
-                            <span
-                              onClick={() => setSelectedRecording({
-                                ...primaryRec,
-                                id: primaryRec.id,
-                                sessionId: s.id,
-                                url: primaryRec.url || primaryRec.recordingUrl,
-                                sessionTitle: s.title,
-                                courseName: course?.name || course?.title,
-                                description: s.description,
-                                subtitleUrl: primaryRec.subtitleUrl || null,
-                                scheduledAt: s.scheduledAt,
-                                batchName: s.batchName
-                              })}
-                              style={{
-                                fontSize: '0.96rem',
-                                fontWeight: 800,
-                                color: '#0f172a',
-                                cursor: 'pointer',
-                                lineHeight: 1.3
-                              }}
-                              title={s.title}
-                            >
-                              {s.title}
-                            </span>
-
-                            {s.batchName && (
-                              <span style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                color: '#5A70D3',
-                                background: 'rgba(90, 112, 211, 0.08)',
-                                padding: '2px 8px',
-                                borderRadius: '9999px'
-                              }}>
-                                {s.batchName}
-                              </span>
-                            )}
-
-                            {primaryRec.subtitleUrl && (
-                              <span style={{
-                                fontSize: '0.66rem',
-                                fontWeight: 800,
-                                color: '#059669',
-                                background: '#ecfdf5',
-                                padding: '1px 6px',
-                                borderRadius: '4px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px'
-                              }}>
-                                <i className="fa-solid fa-closed-captioning"></i>
-                                CC
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Inline Meta Strip */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#64748b', flexWrap: 'wrap' }}>
-                            <span>
-                              <i className="fa-regular fa-calendar" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
-                              {formatSessionDate(s.scheduledAt)}
-                            </span>
-
-                          {(() => {
-                            const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
-                            if (!dur) return null;
-                            return (
+                          <h4 style={{
+                            fontSize: '0.94rem',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            margin: '0 0 3px 0',
+                            lineHeight: 1.35,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {s.title}
+                          </h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#64748b' }}>
+                            <span>{formatSessionDate(s.scheduledAt)}</span>
+                            {dur ? (
                               <>
                                 <span style={{ color: '#cbd5e1' }}>•</span>
-                                <span>
-                                  <i className="fa-regular fa-clock" style={{ marginRight: '4px', color: '#94a3b8' }}></i>
-                                  {formatVideoDuration(dur)}
-                                </span>
+                                <span>{formatVideoDuration(dur)}</span>
                               </>
-                            );
-                          })()}
-
-                            {userRating && (
-                              <span style={{
-                                color: '#b45309',
-                                fontWeight: 700,
-                                fontSize: '0.72rem',
-                                background: 'rgba(234, 179, 8, 0.1)',
-                                padding: '1px 6px',
-                                borderRadius: '4px'
-                              }}>
-                                Your Rating: {userRating}★ {totalRatings === 0 ? '(Pending Approval)' : ''}
-                              </span>
-                            )}
+                            ) : null}
                           </div>
 
                           {/* Multiple Parts if session has > 1 recordings */}
                           {s.recordings && s.recordings.length > 1 && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Parts:</span>
+                              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Parts:</span>
                               {s.recordings.map((r, rIdx) => (
                                 <button
                                   key={r.id || rIdx}
                                   type="button"
-                                  onClick={() => setSelectedRecording({
-                                    ...r,
-                                    id: r.id,
-                                    sessionId: s.id,
-                                    url: r.url || r.recordingUrl,
-                                    sessionTitle: `${s.title} (Part ${rIdx + 1})`,
-                                    courseName: course?.name || course?.title,
-                                    description: s.description,
-                                    subtitleUrl: r.subtitleUrl || null,
-                                    scheduledAt: s.scheduledAt,
-                                    batchName: s.batchName
-                                  })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedRecording({
+                                      ...r,
+                                      id: r.id,
+                                      sessionId: s.id,
+                                      url: r.url || r.recordingUrl,
+                                      sessionTitle: `${s.title} (Part ${rIdx + 1})`,
+                                      courseName: course?.name || course?.title,
+                                      description: s.description,
+                                      subtitleUrl: r.subtitleUrl || null,
+                                      scheduledAt: s.scheduledAt,
+                                      batchName: s.batchName
+                                    });
+                                  }}
                                   style={{
                                     padding: '2px 8px',
                                     borderRadius: '6px',
                                     background: '#f1f5f9',
                                     border: '1px solid #cbd5e1',
-                                    fontSize: '0.72rem',
+                                    fontSize: '0.7rem',
                                     fontWeight: 700,
                                     color: '#334155',
                                     cursor: 'pointer',
@@ -3089,251 +3007,99 @@ export default function StudentCourseDashboardPage() {
                                     gap: '4px'
                                   }}
                                 >
-                                  <i className="fa-solid fa-play" style={{ fontSize: '0.6rem', color: '#5A70D3' }}></i>
+                                  <i className="fa-solid fa-play" style={{ fontSize: '0.55rem', color: '#5A70D3' }}></i>
                                   <span>Part {rIdx + 1}</span>
-                                  {r.duration ? <span style={{ color: '#94a3b8' }}>({Math.round(r.duration / 60)}m)</span> : null}
                                 </button>
                               ))}
                             </div>
                           )}
                         </div>
 
-                        {/* Multiple Parts if session has > 1 recordings */}
-                        {s.recordings && s.recordings.length > 1 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Parts:</span>
-                            {s.recordings.map((r, rIdx) => (
-                              <button
-                                key={r.id || rIdx}
-                                type="button"
-                                onClick={() => setSelectedRecording({
-                                  ...r,
-                                  id: r.id,
-                                  sessionId: s.id,
-                                  url: r.url || r.recordingUrl,
-                                  sessionTitle: `${s.title} (Part ${rIdx + 1})`,
-                                  courseName: course?.name || course?.title,
-                                  description: s.description,
-                                  subtitleUrl: r.subtitleUrl || null,
-                                  scheduledAt: s.scheduledAt,
-                                  batchName: s.batchName
-                                })}
-                                style={{
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  background: '#f1f5f9',
-                                  border: '1px solid #cbd5e1',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 700,
-                                  color: '#334155',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                <i className="fa-solid fa-play" style={{ fontSize: '0.6rem', color: '#5A70D3' }}></i>
-                                <span>Part {rIdx + 1}</span>
-                                {(() => {
-                                  const dur = getAccurateDuration(r);
-                                  return dur ? <span style={{ color: '#94a3b8' }}>({formatVideoDuration(dur)})</span> : null;
-                                })()}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        {/* Right: Watch Replay Button */}
+                        <div style={{ flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            className="ot-recording-row-watch-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPlayer();
+                            }}
+                          >
+                            <i className="fa-solid fa-play" style={{ fontSize: '0.65rem' }}></i>
+                            <span>Watch</span>
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
                 /* =========================================================
-                   2. COMPACT MINIMAL GRID VIEW
+                   2. SIMPLE & CLEAN GRID VIEW
                    ========================================================= */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
                   {displayedRecordings.map((s, idx) => {
                     const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
-                    const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
-                    const totalRatings = stats.totalRatings;
-                    const avgRating = stats.averageRating;
-                    const userRating = primaryRec.userRating;
+                    const dur = getAccurateDuration(primaryRec) || primaryRec.duration;
+
+                    const openPlayer = () => setSelectedRecording({
+                      ...primaryRec,
+                      id: primaryRec.id,
+                      sessionId: s.id,
+                      url: primaryRec.url || primaryRec.recordingUrl,
+                      sessionTitle: s.title,
+                      courseName: course?.name || course?.title,
+                      description: s.description,
+                      subtitleUrl: primaryRec.subtitleUrl || null,
+                      scheduledAt: s.scheduledAt,
+                      batchName: s.batchName
+                    });
 
                     return (
                       <div
                         key={s.id}
-                        style={{
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-                        transition: 'all 0.18s ease'
-                      }}
-                    >
-                      {/* Video Banner */}
-                      <div
-                        onClick={() => setSelectedRecording({
-                          ...primaryRec,
-                          id: primaryRec.id,
-                          sessionId: s.id,
-                          url: primaryRec.url || primaryRec.recordingUrl,
-                          sessionTitle: s.title,
-                          courseName: course?.name || course?.title,
-                          description: s.description,
-                          subtitleUrl: primaryRec.subtitleUrl || null,
-                          scheduledAt: s.scheduledAt,
-                          batchName: s.batchName
-                        })}
-                        style={{
-                          height: '110px',
-                          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                          position: 'relative',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#ffffff'
-                        }}
+                        className="ot-recording-grid-card-simple"
+                        onClick={openPlayer}
+                        title={`Watch ${s.title}`}
                       >
-                        <div style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '50%',
-                          background: 'rgba(255, 255, 255, 0.2)',
-                          backdropFilter: 'blur(4px)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '1.1rem'
-                        }}>
-                          <i className="fa-solid fa-play" style={{ marginLeft: '2px' }}></i>
-                        </div>
-
-                        <span style={{
-                          position: 'absolute',
-                          top: '10px',
-                          left: '10px',
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          background: 'rgba(0, 0, 0, 0.65)',
-                          color: '#ffffff',
-                          padding: '2px 8px',
-                          borderRadius: '4px'
-                        }}>
-                          #{idx + 1}
-                        </span>
-
-                        {(() => {
-                          const dur = getAccurateDuration(primaryRec);
-                          if (!dur) return null;
-                          return (
-                            <span style={{
-                              position: 'absolute',
-                              bottom: '10px',
-                              right: '10px',
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              background: 'rgba(0, 0, 0, 0.75)',
-                              color: '#ffffff',
-                              padding: '2px 6px',
-                              borderRadius: '4px'
-                            }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#94a3b8' }}>
+                            #{idx + 1}
+                          </span>
+                          {dur ? (
+                            <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+                              <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
                               {formatVideoDuration(dur)}
                             </span>
-                          );
-                        })()}
-                      </div>
+                          ) : null}
+                        </div>
 
-                      {/* Card Content */}
-                        <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                              <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
-                                <i className="fa-regular fa-calendar" style={{ marginRight: '4px' }}></i>
-                                {formatSessionDate(s.scheduledAt)}
-                              </span>
-                              {s.batchName && (
-                                <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#5A70D3', background: 'rgba(90, 112, 211, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                                  {s.batchName}
-                                </span>
-                              )}
-                            </div>
-
-                            <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', lineHeight: 1.35 }}>
-                              {s.title}
-                            </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 10px 0' }}>
+                          <div className="ot-recording-row-play-icon">
+                            <i className="fa-solid fa-play"></i>
                           </div>
-
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid #f1f5f9', marginTop: '8px' }}>
-                              {totalRatings > 0 ? (
-                                <span style={{ fontSize: '0.76rem', color: '#0f172a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                  <i className="fa-solid fa-star" style={{ color: '#eab308', fontSize: '0.72rem' }}></i>
-                                  <span>{avgRating ? avgRating.toFixed(1) : '5.0'}</span>
-                                  <span style={{ color: '#94a3b8', fontWeight: 500 }}>({totalRatings})</span>
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                  <i className="fa-regular fa-star" style={{ fontSize: '0.7rem' }}></i>
-                                  <span>Unrated</span>
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleOpenRatingModal(primaryRec, s.title)}
-                                style={{
-                                  border: 'none',
-                                  background: 'transparent',
-                                  color: '#ca8a04',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  padding: '2px 4px'
-                                }}
-                              >
-                                {userRating ? `${userRating}★ Edit` : 'Rate Class'}
-                              </button>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setSelectedRecording({
-                                ...primaryRec,
-                                id: primaryRec.id,
-                                sessionId: s.id,
-                                url: primaryRec.url || primaryRec.recordingUrl,
-                                sessionTitle: s.title,
-                                courseName: course?.name || course?.title,
-                                description: s.description,
-                                subtitleUrl: primaryRec.subtitleUrl || null,
-                                scheduledAt: s.scheduledAt,
-                                batchName: s.batchName
-                              })}
-                              style={{
-                                width: '100%',
-                                height: '34px',
-                                borderRadius: '6px',
-                                background: '#5A70D3',
-                                color: '#ffffff',
-                                fontWeight: 800,
-                                fontSize: '0.8rem',
-                                border: 'none',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                marginTop: '8px'
-                              }}
-                            >
-                              <i className="fa-solid fa-play" style={{ fontSize: '0.7rem' }}></i>
-                              <span>Watch Replay</span>
-                            </button>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {s.title}
+                            </h4>
+                            <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                              {formatSessionDate(s.scheduledAt)}
+                            </span>
                           </div>
                         </div>
+
+                        <button
+                          type="button"
+                          className="ot-recording-row-watch-btn"
+                          style={{ width: '100%', justifyContent: 'center', padding: '8px 12px' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPlayer();
+                          }}
+                        >
+                          <i className="fa-solid fa-play" style={{ fontSize: '0.65rem' }}></i>
+                          <span>Watch Replay</span>
+                        </button>
                       </div>
                     );
                   })}
