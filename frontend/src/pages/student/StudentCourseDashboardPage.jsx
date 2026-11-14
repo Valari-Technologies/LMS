@@ -26,6 +26,8 @@ import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { useAuth } from '../../auth/AuthContext';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
+import { ChatPanel } from '../admin/AdminCommunityPage';
+import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
 
 function getLiveEffectiveStatus(session) {
   if (!session) return 'upcoming';
@@ -84,11 +86,13 @@ export default function StudentCourseDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
 
-  // Default active tab is now 'dashboard' (internal home page setup removed)
-  const activeTab = searchParams.get('tab') || 'dashboard';
+  // Active tab routing (if tab=details or tab=curriculum, route to community)
+  const rawTab = searchParams.get('tab') || 'dashboard';
+  const activeTab = (rawTab === 'details' || rawTab === 'curriculum') ? 'community' : rawTab;
   const setActiveTab = (tab) => {
     setSearchParams({ tab });
   };
+  const [, setChatMuteVersion] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
@@ -638,14 +642,6 @@ export default function StudentCourseDashboardPage() {
                 </button>
                 <button
                   type="button"
-                  className={`ot-learn-tab ${videoPlayerTab === 'course-details' ? 'active' : ''}`}
-                  onClick={() => setVideoPlayerTab('course-details')}
-                >
-                  <i className="fa-solid fa-circle-info"></i>
-                  <span>Course Details</span>
-                </button>
-                <button
-                  type="button"
                   className={`ot-learn-tab ${videoPlayerTab === 'notes' ? 'active' : ''}`}
                   onClick={() => setVideoPlayerTab('notes')}
                 >
@@ -1030,203 +1026,6 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 )}
 
-                {videoPlayerTab === 'course-details' && (
-                  <div className="ot-curriculum-panel-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Course Banner & Quick Meta Header */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '20px',
-                      alignItems: 'flex-start',
-                      flexWrap: 'wrap',
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%)',
-                      padding: '20px',
-                      borderRadius: '14px',
-                      border: '1px solid #e2e8f0'
-                    }}>
-                      {course?.thumbnail && (
-                        <img
-                          src={resolveMediaUrl(course.thumbnail)}
-                          alt={course.name || course.title}
-                          style={{
-                            width: '160px',
-                            height: '100px',
-                            objectFit: 'cover',
-                            borderRadius: '10px',
-                            border: '1px solid #cbd5e1',
-                            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
-                            flexShrink: 0
-                          }}
-                        />
-                      )}
-                      <div style={{ flex: 1, minWidth: '240px' }}>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                          {course?.category && (
-                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#5A70D3', background: 'rgba(90, 112, 211, 0.12)', padding: '2px 8px', borderRadius: '6px' }}>
-                              {course.category.name || course.category}
-                            </span>
-                          )}
-                          {course?.level && (
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '6px' }}>
-                              {course.level}
-                            </span>
-                          )}
-                          {course?.language && (
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>
-                              <i className="fa-solid fa-globe" style={{ marginRight: '4px' }}></i>{course.language}
-                            </span>
-                          )}
-                          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#16a34a', background: 'rgba(22, 163, 74, 0.12)', padding: '2px 8px', borderRadius: '6px' }}>
-                            <i className="fa-solid fa-circle-check" style={{ marginRight: '4px' }}></i>Enrolled
-                          </span>
-                        </div>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0', lineHeight: 1.3 }}>
-                          {course?.name || course?.title || 'Course Details'}
-                        </h2>
-                        {course?.shortDescription && (
-                          <p style={{ fontSize: '0.86rem', color: '#64748b', margin: '0 0 10px 0', lineHeight: 1.5 }}>
-                            {course.shortDescription}
-                          </p>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.82rem', color: '#475569' }}>
-                          <span><i className="fa-solid fa-user-tie" style={{ color: '#5A70D3', marginRight: '5px' }}></i>OneTutor Academy</span>
-                          <span><i className="fa-solid fa-users" style={{ color: '#5A70D3', marginRight: '5px' }}></i>Batch: <strong style={{ color: '#0f172a' }}>{selectedRecording.batchName || batchLabel}</strong></span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Key Course Stats Grid */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                      gap: '12px'
-                    }}>
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>
-                          <i className="fa-solid fa-layer-group"></i>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Curriculum Modules</div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>{course?.sections?.length || 0} Modules</div>
-                        </div>
-                      </div>
-
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>
-                          <i className="fa-solid fa-circle-play"></i>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Total Lessons</div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>{totalLessons} Lessons</div>
-                        </div>
-                      </div>
-
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.12)', color: '#ca8a04', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>
-                          <i className="fa-solid fa-video"></i>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Recorded Replays</div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>{allRecordings.length} Videos</div>
-                        </div>
-                      </div>
-
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>
-                          <i className="fa-solid fa-clock"></i>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Course Duration</div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>{course?.duration || 'Self-paced'}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Full Course Description */}
-                    {course?.description && (
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
-                        <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className="fa-solid fa-align-left" style={{ color: '#5A70D3' }}></i>
-                          <span>About This Course</span>
-                        </h3>
-                        <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
-                          {course.description}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* What You Will Learn / Highlights */}
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
-                      <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="fa-solid fa-star" style={{ color: '#eab308' }}></i>
-                        <span>Course Highlights & Features</span>
-                      </h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <i className="fa-solid fa-check" style={{ color: '#10b981', marginTop: '4px', fontSize: '0.85rem' }}></i>
-                          <span style={{ fontSize: '0.86rem', color: '#334155' }}>Live Interactive Sessions with Industry Mentors</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <i className="fa-solid fa-check" style={{ color: '#10b981', marginTop: '4px', fontSize: '0.85rem' }}></i>
-                          <span style={{ fontSize: '0.86rem', color: '#334155' }}>Lifetime Access to High-Definition Recorded Replays</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <i className="fa-solid fa-check" style={{ color: '#10b981', marginTop: '4px', fontSize: '0.85rem' }}></i>
-                          <span style={{ fontSize: '0.86rem', color: '#334155' }}>Downloadable Resource Files, Cheatsheets & Guides</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                          <i className="fa-solid fa-check" style={{ color: '#10b981', marginTop: '4px', fontSize: '0.85rem' }}></i>
-                          <span style={{ fontSize: '0.86rem', color: '#334155' }}>Collaborative Community Chat & Peer Discussions</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap', paddingTop: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/student/courses/${courseId}`)}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          color: '#475569',
-                          padding: '10px 18px',
-                          borderRadius: '8px',
-                          fontWeight: 700,
-                          fontSize: '0.84rem',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                        <span>View Full Course Page</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
-                        style={{
-                          background: '#5A70D3',
-                          border: 'none',
-                          color: '#ffffff',
-                          padding: '10px 20px',
-                          borderRadius: '8px',
-                          fontWeight: 700,
-                          fontSize: '0.84rem',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 8px rgba(90, 112, 211, 0.25)'
-                        }}
-                      >
-                        <i className="fa-solid fa-graduation-cap"></i>
-                        <span>Go to Lesson Classroom</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {videoPlayerTab === 'notes' && (
                   <div className="ot-curriculum-panel-card">
                     <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
@@ -1261,24 +1060,26 @@ export default function StudentCourseDashboardPage() {
                 )}
 
                 {videoPlayerTab === 'community' && (
-                  <div className="ot-curriculum-panel-card" style={{ textAlign: 'center', padding: '36px 20px' }}>
-                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', margin: '0 auto 14px auto' }}>
-                      <i className="fa-solid fa-comments"></i>
+                  <div className="ot-curriculum-panel-card" style={{ padding: 0, overflow: 'hidden', height: '520px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '12px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="fa-solid fa-comments" style={{ color: '#5A70D3' }}></i>
+                        <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
+                          Course Discussion Channel
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                        Live class chat with peers & instructors
+                      </span>
                     </div>
-                    <h3 className="ot-curriculum-panel-title" style={{ marginBottom: '8px' }}>
-                      Course Discussion Community
-                    </h3>
-                    <p style={{ color: '#64748b', fontSize: '0.92rem', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-                      Have questions about topics covered in this recording? Join the discussion forum to chat with peers and instructors.
-                    </p>
-                    <Link
-                      to={`/student/community/${courseId}`}
-                      className="ot-completed-btn is-completed"
-                      style={{ textDecoration: 'none', display: 'inline-flex' }}
-                    >
-                      <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                      <span>Open Course Community</span>
-                    </Link>
+                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                      <ChatPanel
+                        courseId={courseId}
+                        courseName={course?.name || course?.title}
+                        currentUser={user}
+                        placeholder="Discuss this recorded class with peers…"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1980,32 +1781,22 @@ export default function StudentCourseDashboardPage() {
               )}
             </button>
 
-            {/* Course Details Link */}
-            <button
-              type="button"
-              className={`ot-course-nav-link ${(activeTab === 'details' || activeTab === 'curriculum') ? 'active' : ''}`}
-              onClick={() => { setActiveTab('details'); setMobileSidebarOpen(false); }}
-              title="Course Details & Syllabus"
-            >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-circle-info"></i></span>
-              <span className="ot-course-nav-text">Course Details</span>
-            </button>
           </div>
 
           {/* Nav Section 2: Collaboration & Learning */}
           <div className="ot-course-nav-section">
             <div className="ot-course-section-label">Connect & Study</div>
 
-            {/* Course Community Chat */}
-            <Link
-              to={`/student/community/${courseId}`}
-              className="ot-course-nav-link"
-              title="Course Community & Discussion"
-              onClick={() => setMobileSidebarOpen(false)}
+            {/* Course Community Chat Tab */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'community' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('community'); setMobileSidebarOpen(false); }}
+              title="Course Community Chat"
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-comments"></i></span>
               <span className="ot-course-nav-text">Community Chat</span>
-            </Link>
+            </button>
 
             {/* Full Video Learning Classroom */}
             <button
@@ -3543,227 +3334,115 @@ export default function StudentCourseDashboardPage() {
           )}
 
           {/* ===================================================================
-            TAB 5: COURSE DETAILS & SYLLABUS
+            TAB: COMMUNITY CHAT (Embedded in Course Dashboard)
             =================================================================== */}
-          {(activeTab === 'details' || activeTab === 'curriculum') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-              {/* Course Overview Card */}
-              {course && (
-                <div style={{
-                  background: '#ffffff',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '1px solid #cbd5e1',
-                  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
-                  display: 'flex',
-                  gap: '24px',
-                  alignItems: 'flex-start',
-                  flexWrap: 'wrap'
-                }}>
-                  {course.thumbnail && (
-                    <img
-                      src={resolveMediaUrl(course.thumbnail)}
-                      alt={course.name || course.title}
-                      style={{
-                        width: '200px',
-                        height: '130px',
-                        objectFit: 'cover',
-                        borderRadius: '12px',
-                        border: '1px solid #cbd5e1',
-                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
-                        flexShrink: 0
-                      }}
-                    />
-                  )}
-                  <div style={{ flex: 1, minWidth: '260px' }}>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                      {course.category && (
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#5A70D3', background: 'rgba(90, 112, 211, 0.12)', padding: '3px 10px', borderRadius: '6px' }}>
-                          {course.category.name || course.category}
-                        </span>
-                      )}
-                      {course.level && (
-                        <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '3px 10px', borderRadius: '6px' }}>
-                          {course.level}
-                        </span>
-                      )}
-                      {course.language && (
-                        <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '3px 10px', borderRadius: '6px' }}>
-                          <i className="fa-solid fa-globe" style={{ marginRight: '4px' }}></i>{course.language}
-                        </span>
-                      )}
-                      <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16a34a', background: 'rgba(22, 163, 74, 0.12)', padding: '3px 10px', borderRadius: '6px' }}>
-                        <i className="fa-solid fa-circle-check" style={{ marginRight: '4px' }}></i>Active Enrolled
-                      </span>
-                    </div>
-                    <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', margin: '0 0 8px 0', lineHeight: 1.3 }}>
-                      {course.name || course.title}
-                    </h1>
-                    {course.shortDescription && (
-                      <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0 0 14px 0', lineHeight: 1.55 }}>
-                        {course.shortDescription}
-                      </p>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', fontSize: '0.84rem', color: '#475569', marginBottom: '16px' }}>
-                      <span><i className="fa-solid fa-user-tie" style={{ color: '#5A70D3', marginRight: '6px' }}></i>OneTutor Academy</span>
-                      <span><i className="fa-solid fa-users" style={{ color: '#5A70D3', marginRight: '6px' }}></i>Batch: <strong style={{ color: '#0f172a' }}>{batchLabel}</strong></span>
-                      {course.duration && (
-                        <span><i className="fa-regular fa-clock" style={{ color: '#5A70D3', marginRight: '6px' }}></i>{course.duration}</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/student/courses/${courseId}`)}
-                        style={{
-                          background: '#f8fafc',
-                          color: '#5A70D3',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '8px 16px',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                        <span>View Public Course Details Page</span>
-                      </button>
-                    </div>
+          {activeTab === 'community' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Channel Header Banner */}
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '18px 24px',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: 'rgba(90, 112, 211, 0.1)',
+                    color: '#5A70D3',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem'
+                  }}>
+                    <i className="fa-solid fa-comments"></i>
                   </div>
-                </div>
-              )}
-
-              {/* Course Syllabus & Modules Card */}
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <i className="fa-solid fa-layer-group" style={{ color: '#5A70D3' }}></i>
-                      <span>Course Modules & Syllabus</span>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>
+                      {course?.name || course?.title || 'Course Community'} Channel
                     </h2>
-                    <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
-                      {course?.sections?.length || 0} modules • {totalLessons} lessons • {completedLessons} completed ({progressPercent}%)
+                    <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                      Collaborate, discuss lectures, and ask questions with your batch peers and tutors
                     </span>
                   </div>
+                </div>
 
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`)}
+                    onClick={() => {
+                      toggleMuteChat(courseId);
+                      setChatMuteVersion(v => v + 1);
+                    }}
+                    title={isChatMuted(courseId) ? 'Unmute chat notifications' : 'Mute chat notifications'}
                     style={{
-                      background: '#5A70D3',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '10px 20px',
-                      fontSize: '0.86rem',
-                      fontWeight: 800,
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      background: isChatMuted(courseId) ? '#f1f5f9' : 'rgba(90, 112, 211, 0.08)',
+                      border: '1px solid #cbd5e1',
+                      color: isChatMuted(courseId) ? '#64748b' : '#5A70D3',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)'
+                      gap: '6px'
                     }}
                   >
-                    <i className="fa-solid fa-play"></i>
-                    <span>Resume Learning</span>
+                    <i className={`fa-solid ${isChatMuted(courseId) ? 'fa-bell-slash' : 'fa-bell'}`}></i>
+                    <span>{isChatMuted(courseId) ? 'Notifications Muted' : 'Mute Notifications'}</span>
                   </button>
+
+                  <Link
+                    to={`/student/community/${courseId}`}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#475569',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title="Open in standalone full screen hub"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Full Screen</span>
+                  </Link>
                 </div>
+              </div>
 
-                {/* Progress Bar */}
-                <div style={{ marginBottom: '22px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', fontWeight: 700, marginBottom: '6px' }}>
-                    <span>Overall Curriculum Progress</span>
-                    <span style={{ color: '#5A70D3', fontWeight: 800 }}>{progressPercent}%</span>
-                  </div>
-                  <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${progressPercent}%`, background: '#5A70D3', borderRadius: '9999px', transition: 'width 0.4s ease' }}></div>
-                  </div>
-                </div>
-
-                {/* Sections list */}
-                {(!course?.sections || course.sections.length === 0) ? (
-                  <div style={{ textAlign: 'center', padding: '40px 16px', color: '#64748b' }}>
-                    <i className="fa-solid fa-book" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '10px', display: 'block' }}></i>
-                    No curriculum modules uploaded yet for this course.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {course.sections.map((sec, secIdx) => {
-                      const secCompleted = (sec.contents || []).filter(c => progress?.completedContentIds?.includes(c.id)).length;
-                      const secTotal = sec.contents?.length || 0;
-                      return (
-                        <div key={sec.id || secIdx} style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          padding: '16px 18px'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span style={{
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '8px',
-                                background: '#5A70D3',
-                                color: '#ffffff',
-                                fontWeight: 800,
-                                fontSize: '0.82rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}>
-                                {secIdx + 1}
-                              </span>
-                              <span style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>
-                                {sec.title}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 800, background: 'rgba(90, 112, 211, 0.1)', padding: '2px 8px', borderRadius: '9999px' }}>
-                              {secCompleted} / {secTotal} completed
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {sec.contents?.map((c, cIdx) => {
-                              const isDone = progress?.completedContentIds?.includes(c.id);
-                              return (
-                                <div
-                                  key={c.id || cIdx}
-                                  onClick={() => navigate(`/student/learn/${courseId}?contentId=${c.id}`)}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '10px 14px',
-                                    borderRadius: '8px',
-                                    background: isDone ? 'rgba(16, 185, 129, 0.05)' : '#ffffff',
-                                    border: '1px solid #edf2f7',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                  onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
-                                  onMouseLeave={e => e.currentTarget.style.background = isDone ? 'rgba(16, 185, 129, 0.05)' : '#ffffff'}
-                                >
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDone ? '#059669' : '#1e293b', fontWeight: isDone ? 700 : 600, fontSize: '0.9rem' }}>
-                                    <i className={`fa-solid ${isDone ? 'fa-circle-check' : 'fa-circle-play'}`} style={{ color: isDone ? '#10b981' : '#5A70D3', fontSize: '0.92rem' }}></i>
-                                    <span>{c.title}</span>
-                                  </span>
-                                  <span style={{ fontSize: '0.74rem', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 700 }}>
-                                    {c.contentType || 'VIDEO'}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              {/* Embedded Chat Container */}
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+                height: 'calc(100vh - 270px)',
+                minHeight: '560px',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}>
+                <ChatPanel
+                  key={courseId}
+                  courseId={courseId}
+                  courseName={course?.name || course?.title}
+                  currentUser={user}
+                  placeholder="Share ideas or ask classmates a question…"
+                />
               </div>
             </div>
           )}
