@@ -9149,7 +9149,8 @@ h6,
 }
 
 /* WhatsApp Style Embedded Dashboard Hub - Edge-to-Edge Full Viewport */
-.ot-course-content-main.community-tab-active {
+.ot-course-content-main.community-tab-active,
+.ot-course-content-main.community-tab-fullbleed {
   padding: 0 !important;
   margin: 0 !important;
   max-width: 100% !important;
@@ -9163,14 +9164,16 @@ h6,
 }
 
 .ot-dashboard-community-hub,
-.ot-course-content-main.community-tab-active .ot-dashboard-community-hub {
+.ot-dashboard-community-fullbleed,
+.ot-course-content-main.community-tab-active .ot-dashboard-community-hub,
+.ot-course-content-main.community-tab-fullbleed .ot-dashboard-community-fullbleed {
   height: 100vh !important;
   max-height: 100vh !important;
   min-height: 100vh !important;
   border-radius: 0 !important;
   border: none !important;
   box-shadow: none !important;
-  background: #ffffff;
+  background: #ffffff !important;
   width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -9182,7 +9185,8 @@ h6,
 }
 
 @media (max-width: 1024px) {
-  .ot-course-content-main.community-tab-active {
+  .ot-course-content-main.community-tab-active,
+  .ot-course-content-main.community-tab-fullbleed {
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
@@ -9196,7 +9200,9 @@ h6,
   }
 
   .ot-dashboard-community-hub,
-  .ot-course-content-main.community-tab-active .ot-dashboard-community-hub {
+  .ot-dashboard-community-fullbleed,
+  .ot-course-content-main.community-tab-active .ot-dashboard-community-hub,
+  .ot-course-content-main.community-tab-fullbleed .ot-dashboard-community-fullbleed {
     height: 100% !important;
     max-height: 100% !important;
     min-height: 100% !important;
@@ -9212,20 +9218,24 @@ h6,
     display: flex !important;
   }
 
-  .ot-community-wrap.ot-dashboard-community-hub .ot-community-sidebar {
+  .ot-community-wrap.ot-dashboard-community-hub .ot-community-sidebar,
+  .ot-community-wrap.ot-dashboard-community-fullbleed .ot-community-sidebar {
     width: 100% !important;
     height: 100% !important;
   }
 
-  .ot-community-wrap.ot-dashboard-community-hub.sc-chat-open .ot-community-sidebar {
+  .ot-community-wrap.ot-dashboard-community-hub.sc-chat-open .ot-community-sidebar,
+  .ot-community-wrap.ot-dashboard-community-fullbleed.sc-chat-open .ot-community-sidebar {
     display: none !important;
   }
 
-  .ot-community-wrap.ot-dashboard-community-hub:not(.sc-chat-open) .ot-community-chat {
+  .ot-community-wrap.ot-dashboard-community-hub:not(.sc-chat-open) .ot-community-chat,
+  .ot-community-wrap.ot-dashboard-community-fullbleed:not(.sc-chat-open) .ot-community-chat {
     display: none !important;
   }
 
-  .ot-community-wrap.ot-dashboard-community-hub .ot-community-chat {
+  .ot-community-wrap.ot-dashboard-community-hub .ot-community-chat,
+  .ot-community-wrap.ot-dashboard-community-fullbleed .ot-community-chat {
     width: 100% !important;
     height: 100% !important;
   }

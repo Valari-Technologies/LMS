@@ -144,9 +144,24 @@ export default function CourseCommunityWhatsAppView({
   }
 
   return (
-    <div className={`ot-community-wrap ot-dashboard-community-hub ${mobileShowChat ? 'sc-chat-open' : ''}`}>
+    <div
+      className={`ot-community-wrap ot-dashboard-community-fullbleed ot-dashboard-community-hub ${mobileShowChat ? 'sc-chat-open' : ''}`}
+      style={{
+        height: '100vh',
+        maxHeight: '100vh',
+        minHeight: '100vh',
+        width: '100%',
+        margin: 0,
+        padding: 0,
+        borderRadius: 0,
+        border: 'none',
+        boxShadow: 'none',
+        background: '#ffffff',
+        flex: 1
+      }}
+    >
       {/* 1. Left Channels / Chats Sidebar (WhatsApp Chats List) */}
-      <div className="ot-community-sidebar">
+      <div className="ot-community-sidebar" style={{ borderRadius: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
         {/* Header */}
         <div style={{
           padding: '16px 18px 12px',
@@ -299,7 +314,7 @@ export default function CourseCommunityWhatsAppView({
       </div>
 
       {/* 2. Right Conversation Area (WhatsApp Chat Screen) */}
-      <div className="ot-community-chat">
+      <div className="ot-community-chat" style={{ borderRadius: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
         {selectedCourse ? (
           <>
             {/* WhatsApp Style Top Header Bar */}

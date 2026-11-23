@@ -1637,7 +1637,7 @@ export default function StudentCourseDashboardPage() {
   // =========================================================================
   return (
     <div
-      className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${activeTab === 'community' ? 'community-tab-active' : ''}`}
+      className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${activeTab === 'community' ? 'community-tab-fullbleed community-tab-active' : ''}`}
       style={activeTab === 'community' ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}}
     >
       {/* Mobile Backdrop Overlay */}
@@ -2078,12 +2078,12 @@ export default function StudentCourseDashboardPage() {
         </header>
 
         <main
-          className={`ot-course-content-main ${activeTab === 'community' ? 'community-tab-active' : ''}`}
+          className={`ot-course-content-main ${activeTab === 'community' ? 'community-tab-fullbleed community-tab-active' : ''}`}
           style={{
             flex: 1,
             maxWidth: activeTab === 'community' ? '100%' : '1360px',
             width: '100%',
-            margin: '0 auto',
+            margin: activeTab === 'community' ? '0' : '0 auto',
             padding: activeTab === 'community' ? '0' : '24px 20px 60px 20px',
             height: activeTab === 'community' ? '100%' : 'auto',
             maxHeight: activeTab === 'community' ? '100%' : 'none',
