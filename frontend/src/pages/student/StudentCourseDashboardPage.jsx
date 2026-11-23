@@ -1752,46 +1752,62 @@ export default function StudentCourseDashboardPage() {
       >
 
         {/* 1. Sidebar Header: Brand + Title + Collapse/Close Toggle */}
-        <div className="ot-course-sidebar-header">
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }} title="OneTutor Home">
-            <span className="ot-brand-logo-wrap">
-              <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '30px' }} />
-            </span>
-            {!sidebarCollapsed && (
-              <span style={{
-                fontSize: '0.68rem',
-                fontWeight: 800,
-                background: 'rgba(90, 112, 211, 0.12)',
+        <div className="ot-course-sidebar-header" style={{ position: 'relative' }}>
+          <Link
+            to="/"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textDecoration: 'none',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              width: sidebarCollapsed ? '100%' : 'auto'
+            }}
+            title="OneTutor Home"
+          >
+            {sidebarCollapsed ? (
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'rgba(90, 112, 211, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 color: '#5A70D3',
-                padding: '3px 8px',
-                borderRadius: '9999px',
-                letterSpacing: '0.5px'
+                fontSize: '1.2rem',
+                flexShrink: 0,
+                boxShadow: '0 1px 3px rgba(90, 112, 211, 0.15)'
               }}>
-                COURSE SPACE
-              </span>
+                <i className="fa-solid fa-graduation-cap"></i>
+              </div>
+            ) : (
+              <>
+                <span className="ot-brand-logo-wrap">
+                  <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '30px' }} />
+                </span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  background: 'rgba(90, 112, 211, 0.12)',
+                  color: '#5A70D3',
+                  padding: '3px 8px',
+                  borderRadius: '9999px',
+                  letterSpacing: '0.5px'
+                }}>
+                  COURSE SPACE
+                </span>
+              </>
             )}
           </Link>
 
-          {/* Desktop Collapse Button */}
+          {/* Desktop Floating Border Collapse/Expand Button */}
           <button
             type="button"
             className="ot-course-sidebar-collapse-btn desktop-only"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              width: '28px',
-              height: '28px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#64748b',
-              fontSize: '0.75rem',
-              transition: 'all 0.15s ease'
-            }}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <i className={`fa-solid fa-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
           </button>

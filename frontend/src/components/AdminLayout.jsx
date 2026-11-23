@@ -326,25 +326,51 @@ export default function AdminLayout() {
       {/* Modern Admin Sidebar */}
       <aside className={`admin-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         {/* Sidebar Header */}
-        <div className="admin-sidebar-header">
-          <Link to="/admin" className="admin-sidebar-brand" title="One Tutor Super Admin">
-            <span className="ot-brand-logo-wrap">
-              <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '32px' }} />
-            </span>
-            {!collapsed && (
-              <span
-                className="brand-role-pill"
-                style={{
-                  marginLeft: '6px',
-                  background: isReadOnlyAdmin
-                    ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                    : isContentCreator
-                    ? 'linear-gradient(135deg, #0284c7, #0369a1)'
-                    : 'var(--accent-gradient)'
-                }}
-              >
-                {isReadOnlyAdmin ? 'READ-ONLY ADMIN' : isContentCreator ? 'CONTENT CREATOR' : 'SUPER ADMIN'}
-              </span>
+        <div className="admin-sidebar-header" style={{ position: 'relative' }}>
+          <Link
+            to="/admin"
+            className="admin-sidebar-brand"
+            title="One Tutor Super Admin"
+            style={{
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              width: collapsed ? '100%' : 'auto'
+            }}
+          >
+            {collapsed ? (
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'rgba(90, 112, 211, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#5A70D3',
+                fontSize: '1.2rem',
+                flexShrink: 0,
+                boxShadow: '0 1px 3px rgba(90, 112, 211, 0.15)'
+              }}>
+                <i className="fa-solid fa-graduation-cap"></i>
+              </div>
+            ) : (
+              <>
+                <span className="ot-brand-logo-wrap">
+                  <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '32px' }} />
+                </span>
+                <span
+                  className="brand-role-pill"
+                  style={{
+                    marginLeft: '6px',
+                    background: isReadOnlyAdmin
+                      ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                      : isContentCreator
+                      ? 'linear-gradient(135deg, #0284c7, #0369a1)'
+                      : 'var(--accent-gradient)'
+                  }}
+                >
+                  {isReadOnlyAdmin ? 'READ-ONLY ADMIN' : isContentCreator ? 'CONTENT CREATOR' : 'SUPER ADMIN'}
+                </span>
+              </>
             )}
           </Link>
           <button

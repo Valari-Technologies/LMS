@@ -11572,6 +11572,7 @@ body:has(.ud-header) .ot-course-content-sidebar {
   border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
   gap: 10px;
+  position: relative !important;
 }
 
 .ot-course-sidebar-body {
@@ -11777,7 +11778,37 @@ body:has(.ud-header) .ot-course-content-sidebar {
 }
 
 .ot-course-sidebar-collapse-btn {
+  position: absolute !important;
+  top: 21px !important;
+  right: -13px !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12) !important;
   display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  z-index: 120 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 !important;
+}
+
+.ot-course-sidebar-collapse-btn:hover {
+  background: #5A70D3 !important;
+  color: #ffffff !important;
+  border-color: #5A70D3 !important;
+  box-shadow: 0 4px 12px rgba(90, 112, 211, 0.4) !important;
+  transform: scale(1.1) !important;
+}
+
+.ot-course-sidebar.collapsed .ot-course-sidebar-header {
+  padding: 0 12px !important;
+  justify-content: center !important;
 }
 
 @media (max-width: 1024px) {
