@@ -427,6 +427,62 @@ export default function StudentCourseDashboardPage() {
     }
   }
 
+  // Open Lecture Classroom in-page player (matching Recording class player)
+  const handleOpenLectureClassroom = () => {
+    setMobileSidebarOpen(false);
+
+    // 1. If any recording classes exist in this course, open the current or first recording class
+    if (allRecordings && allRecordings.length > 0) {
+      const targetRec = selectedRecording || allRecordings[0];
+      setSelectedRecording({
+        ...targetRec,
+        sessionId: targetRec.sessionId,
+        url: targetRec.url || targetRec.recordingUrl,
+        sessionTitle: targetRec.sessionTitle || targetRec.title,
+        courseName: course?.name || course?.title,
+        description: targetRec.sessionDescription || targetRec.description,
+        subtitleUrl: targetRec.subtitleUrl || null,
+        scheduledAt: targetRec.scheduledAt,
+        batchName: targetRec.batchName || batchLabel
+      });
+      return;
+    }
+
+    // 2. If the course has syllabus video lessons (nextLesson or course.sections)
+    const syllabusVideo = nextLesson || course?.sections?.[0]?.contents?.[0];
+    if (syllabusVideo && (syllabusVideo.mediaReference || syllabusVideo.videoUrl || syllabusVideo.url)) {
+      setSelectedRecording({
+        id: syllabusVideo.id,
+        sessionId: 'syllabus-' + syllabusVideo.id,
+        url: syllabusVideo.mediaReference || syllabusVideo.videoUrl || syllabusVideo.url,
+        sessionTitle: syllabusVideo.title || syllabusVideo.name || 'Lecture Classroom',
+        courseName: course?.name || course?.title,
+        description: syllabusVideo.description || nextSectionTitle || '',
+        subtitleUrl: syllabusVideo.subtitleUrl || null,
+        scheduledAt: null,
+        batchName: batchLabel
+      });
+      return;
+    }
+
+    // 3. Fallback: switch to recordings tab and notify student
+    setActiveTab('recordings');
+    toast.info('No recorded lectures or class videos available yet for this course.');
+  };
+
+  const handleClosePlayer = () => {
+    setSelectedRecording(null);
+    if (searchParams.get('tab') === 'lecture' || searchParams.get('tab') === 'classroom') {
+      setActiveTab('dashboard');
+    }
+  };
+
+  useEffect(() => {
+    if ((rawTab === 'lecture' || rawTab === 'classroom') && !selectedRecording) {
+      handleOpenLectureClassroom();
+    }
+  }, [rawTab, allRecordings.length]);
+
   // Open rating modal
   const handleOpenRatingModal = (recording, sessionTitle) => {
     setRatingModalRecording({ ...recording, sessionTitle });
@@ -536,7 +592,48 @@ export default function StudentCourseDashboardPage() {
 
     return (
       <div className="ot-learn-page ot-dashboard-learn-page">
-        <div className="ot-learn-container" style={{ paddingTop: '20px' }}>
+        <div className="ot-learn-container" style={{ paddingTop: '16px' }}>
+          {/* Top Bar: Return to Course Space button & Course Title */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              type="button"
+              onClick={handleClosePlayer}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontSize: '0.86rem',
+                fontWeight: 700,
+                color: '#334155',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#5A70D3'; e.currentTarget.style.color = '#5A70D3'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
+            >
+              <i className="fa-solid fa-arrow-left"></i>
+              <span>Back to Course Space</span>
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#64748b' }}>
+              <span style={{ fontWeight: 800, color: '#0f172a' }}>{course?.name || course?.title}</span>
+              <span>•</span>
+              <span style={{ color: '#5A70D3', fontWeight: 700 }}>Lecture Classroom</span>
+            </div>
+          </div>
+
           {/* 2-Column Responsive Grid Layout matching LearningPage */}
           <div className="ot-learn-layout">
 
@@ -551,7 +648,7 @@ export default function StudentCourseDashboardPage() {
                 courseName={course?.name || course?.title}
                 subtitleUrl={selectedRecording.subtitleUrl}
                 autoPlay={true}
-                onClose={() => setSelectedRecording(null)}
+                onClose={handleClosePlayer}
                 onPrev={hasPrevRecording ? playPrevRecording : undefined}
                 onNext={hasNextRecording ? playNextRecording : undefined}
                 onDurationDetected={(exactSecs) => {
@@ -694,7 +791,7 @@ export default function StudentCourseDashboardPage() {
 
                 <button
                   type="button"
-                  onClick={() => setSelectedRecording(null)}
+                  onClick={handleClosePlayer}
                   style={{
                     marginLeft: 'auto',
                     border: 'none',
@@ -1832,12 +1929,9 @@ export default function StudentCourseDashboardPage() {
             {/* Full Video Learning Classroom */}
             <button
               type="button"
-              className="ot-course-nav-link"
-              onClick={() => {
-                setMobileSidebarOpen(false);
-                navigate(`/student/learn/${courseId}${nextLesson ? `?contentId=${nextLesson.id}` : ''}`);
-              }}
-              title="Video Lecture Classroom"
+              className={`ot-course-nav-link ${selectedRecording ? 'active' : ''}`}
+              onClick={handleOpenLectureClassroom}
+              title="Lecture Classroom"
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-play"></i></span>
               <span className="ot-course-nav-text">Lecture Classroom</span>
