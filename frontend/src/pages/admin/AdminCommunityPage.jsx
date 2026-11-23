@@ -804,7 +804,20 @@ export function ChatPanel({ courseId, courseName, currentUser, availableCourses 
             const ids = new Set(prev.map(m => m.id));
             const fresh = newMsgs.filter(m => !ids.has(m.id));
             if (!fresh.length) return prev;
-            return [...prev, ...fresh];
+            let updated = [...prev];
+            fresh.forEach(freshMsg => {
+              const tempIndex = updated.findIndex(m =>
+                typeof m.id === 'string' && m.id.startsWith('temp_') &&
+                m.senderId === freshMsg.senderId &&
+                m.content === freshMsg.content
+              );
+              if (tempIndex !== -1) {
+                updated[tempIndex] = freshMsg;
+              } else {
+                updated.push(freshMsg);
+              }
+            });
+            return updated;
           });
 
           // Dispatch event outside state updater on next tick
@@ -892,54 +905,114 @@ export function ChatPanel({ courseId, courseName, currentUser, availableCourses 
     if (editingMsg) {
       const hasText = text.trim().length > 0;
       if (!hasText) return;
-      if (sending) return;
-      setSending(true);
+      const updatedText = text.trim();
+      const currentEditing = editingMsg;
+      cancelEdit();
+      // Instantly update message in local UI
+      setMessages(prev => prev.map(m => m.id === currentEditing.id ? { ...m, content: updatedText, edited: true } : m));
       try {
-        const updated = await editCommunityMessage(courseId, editingMsg.id, text.trim());
+        const updated = await editCommunityMessage(courseId, currentEditing.id, updatedText);
         setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
-        cancelEdit();
       } catch (err) {
         alert(err?.response?.data?.error?.message || 'Failed to edit message');
-      } finally {
-        setSending(false);
       }
       return;
     }
 
     // Normal message sending
-    const hasText = text.trim().length > 0;
-    const hasFile = !!selectedFile;
+    const outgoingText = text.trim();
+    const hasText = outgoingText.length > 0;
+    const fileToSend = selectedFile;
+    const hasFile = !!fileToSend;
     if (!hasText && !hasFile) return;
-    if (sending || uploading) return;
-    setSending(true);
-    try {
-      let mediaAssetId = null;
-      let messageType = 'text';
-      if (hasFile) {
-        setUploading(true);
-        const asset = await uploadCommunityMedia(selectedFile, setUploadProgress);
-        mediaAssetId = asset.id;
-        messageType = asset.fileType || 'file';
-        setUploading(false);
-        setUploadProgress(0);
-        setSelectedFile(null);
+
+    // Instantly clear the input field and reset textarea so user can type next message immediately
+    setText('');
+    setSelectedFile(null);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
+    // Instant Optimistic Send for normal text messages (Zero loading delay)
+    if (!hasFile) {
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const optimisticMsg = {
+        id: tempId,
+        courseId,
+        content: outgoingText,
+        messageType: 'text',
+        senderId: currentUser?.id,
+        senderName: currentUser?.name || 'You',
+        senderRole: currentUser?.role || 'student',
+        senderAvatar: currentUser?.avatar || null,
+        createdAt: new Date().toISOString(),
+        isOptimistic: true,
+      };
+
+      // Add to messages and scroll down immediately
+      setMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => scrollToBottom(false), 30);
+
+      // Instantly update lastMessage preview / custom event
+      window.dispatchEvent(new CustomEvent('community-new-message', {
+        detail: { courseId, lastMessage: outgoingText }
+      }));
+
+      // Send to server in background
+      try {
+        const newMsg = await sendCommunityMessage(courseId, {
+          content: outgoingText,
+          messageType: 'text',
+          mediaAssetId: null,
+        });
+
+        // Reconcile optimistic message with real server message
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) {
+            return prev.filter(m => m.id !== tempId);
+          }
+          return prev.map(m => m.id === tempId ? newMsg : m);
+        });
+
+        if (typeof newMsg.id === 'number') {
+          lastMsgIdRef.current = Math.max(lastMsgIdRef.current, newMsg.id);
+        }
+      } catch (e) {
+        // Rollback optimistic message on failure and restore text
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setText(outgoingText);
+        alert(e?.response?.data?.error?.message || 'Failed to send message');
       }
+      return;
+    }
+
+    // Attachment flow with file upload
+    setUploading(true);
+    try {
+      const asset = await uploadCommunityMedia(fileToSend, setUploadProgress);
+      const mediaAssetId = asset.id;
+      const messageType = asset.fileType || 'file';
+      setUploading(false);
+      setUploadProgress(0);
+
       const newMsg = await sendCommunityMessage(courseId, {
-        content: hasText ? text.trim() : null,
+        content: hasText ? outgoingText : null,
         messageType,
         mediaAssetId,
       });
+
       setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
-      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, newMsg.id);
-      setText('');
+      if (typeof newMsg.id === 'number') {
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, newMsg.id);
+      }
       const snippet = newMsg.content || (newMsg.messageType === 'image' ? '📷 Photo' : newMsg.messageType === 'video' ? '🎥 Video' : (newMsg.messageType === 'pdf' || newMsg.messageType === 'file') ? '📄 Attachment' : 'Attachment');
       window.dispatchEvent(new CustomEvent('community-new-message', { detail: { courseId, lastMessage: snippet } }));
       setTimeout(() => scrollToBottom(false), 50);
     } catch (e) {
       alert(e?.response?.data?.error?.message || 'Failed to send message');
     } finally {
-      setSending(false);
       setUploading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -1131,14 +1204,26 @@ export function ChatPanel({ courseId, courseName, currentUser, availableCourses 
               onFocus={e => e.target.style.borderColor = 'var(--border-focus)'}
               onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
               onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }} />
-            <button type="submit" disabled={sending || uploading || (!text.trim() && !selectedFile)}
+            <button type="submit" disabled={uploading || (!text.trim() && !selectedFile)}
               title={editingMsg ? 'Save changes' : 'Send'}
-              style={{ width: '38px', height: '38px', borderRadius: '50%', border: 'none', background: (sending || uploading || (!text.trim() && !selectedFile)) ? 'var(--border-default)' : 'var(--accent-gradient)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '14px' }}>
-              {sending || uploading
-                ? <i className="fa-solid fa-spinner fa-spin" />
-                : editingMsg
-                  ? <i className="fa-solid fa-check" />
-                  : <i className="fa-solid fa-paper-plane" />}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                border: 'none',
+                background: (uploading || (!text.trim() && !selectedFile)) ? 'var(--border-default)' : 'var(--accent-gradient)',
+                color: '#fff',
+                cursor: (uploading || (!text.trim() && !selectedFile)) ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: '14px',
+                transition: 'all 0.15s ease'
+              }}>
+              {editingMsg
+                ? <i className="fa-solid fa-check" />
+                : <i className="fa-solid fa-paper-plane" />}
             </button>
           </form>
         </div>

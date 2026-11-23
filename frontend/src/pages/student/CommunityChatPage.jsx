@@ -265,8 +265,23 @@ export default function CommunityChatPage() {
             const ids   = new Set(prev.map(m => m.id));
             const fresh = newMsgs.filter(m => !ids.has(m.id));
             if (!fresh.length) return prev;
-            lastMsgIdRef.current = fresh[fresh.length - 1].id;
-            return [...prev, ...fresh];
+            if (typeof fresh[fresh.length - 1].id === 'number') {
+              lastMsgIdRef.current = fresh[fresh.length - 1].id;
+            }
+            let updated = [...prev];
+            fresh.forEach(freshMsg => {
+              const tempIndex = updated.findIndex(m =>
+                typeof m.id === 'string' && m.id.startsWith('temp_') &&
+                m.senderId === freshMsg.senderId &&
+                m.content === freshMsg.content
+              );
+              if (tempIndex !== -1) {
+                updated[tempIndex] = freshMsg;
+              } else {
+                updated.push(freshMsg);
+              }
+            });
+            return updated;
           });
         }
       } catch {
@@ -342,59 +357,110 @@ export default function CommunityChatPage() {
   // ── Send ──────────────────────────────────────────────────────────────────
   async function handleSend(e) {
     e?.preventDefault();
-    const hasText = text.trim().length > 0;
-    const hasFile = !editingMsg && !!selectedFile;
+    const outgoingText = text.trim();
+    const hasText = outgoingText.length > 0;
+    const fileToSend = selectedFile;
+    const hasFile = !editingMsg && !!fileToSend;
     if (!hasText && !hasFile) return;
-    if (sending || uploading) return;
 
     // Handle Edit
     if (editingMsg) {
-      setSending(true);
+      const currentEditing = editingMsg;
+      cancelEdit();
+      // Instantly update local UI
+      setMessages(prev => prev.map(m => m.id === currentEditing.id ? { ...m, content: outgoingText, edited: true } : m));
       try {
-        const updated = await editCommunityMessage(courseId, editingMsg.id, text.trim());
+        const updated = await editCommunityMessage(courseId, currentEditing.id, outgoingText);
         setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
-        cancelEdit();
       } catch (err) {
         alert(err?.response?.data?.error?.message || 'Failed to edit message');
-      } finally {
-        setSending(false);
       }
       return;
     }
 
-    setSending(true);
-    try {
-      let mediaAssetId = null;
-      let messageType  = 'text';
+    // Instantly clear input field and reset textarea
+    setText('');
+    setSelectedFile(null);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
-      if (hasFile) {
-        setUploading(true);
-        const asset = await uploadCommunityMedia(selectedFile, setUploadPct);
-        mediaAssetId = asset.id;
-        messageType  = asset.fileType || 'file';
-        setUploading(false);
-        setUploadPct(0);
-        setSelectedFile(null);
+    // Instant Optimistic Send for normal text messages (Zero loading delay)
+    if (!hasFile) {
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const optimisticMsg = {
+        id: tempId,
+        courseId,
+        content: outgoingText,
+        messageType: 'text',
+        senderId: currentUser?.id,
+        senderName: currentUser?.name || 'You',
+        senderRole: currentUser?.role || 'student',
+        senderAvatar: currentUser?.avatar || null,
+        createdAt: new Date().toISOString(),
+        isOptimistic: true,
+      };
+
+      // Add to messages and scroll down immediately
+      setMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => scrollToBottom(false), 30);
+
+      window.dispatchEvent(new CustomEvent('community-new-message', { detail: { courseId, lastMessage: outgoingText } }));
+
+      // Send to server in background
+      try {
+        const newMsg = await sendCommunityMessage(courseId, {
+          content: outgoingText,
+          messageType: 'text',
+          mediaAssetId: null,
+        });
+
+        // Reconcile optimistic message with real server message
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) {
+            return prev.filter(m => m.id !== tempId);
+          }
+          return prev.map(m => m.id === tempId ? newMsg : m);
+        });
+
+        if (typeof newMsg.id === 'number') {
+          lastMsgIdRef.current = Math.max(lastMsgIdRef.current, newMsg.id);
+        }
+      } catch (err) {
+        // Rollback optimistic message on failure and restore text
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setText(outgoingText);
+        alert(err?.response?.data?.error?.message || 'Failed to send message');
       }
+      return;
+    }
+
+    // Attachment flow with file upload
+    setUploading(true);
+    try {
+      const asset = await uploadCommunityMedia(fileToSend, setUploadPct);
+      const mediaAssetId = asset.id;
+      const messageType  = asset.fileType || 'file';
+      setUploading(false);
+      setUploadPct(0);
 
       const newMsg = await sendCommunityMessage(courseId, {
-        content: hasText ? text.trim() : null,
+        content: hasText ? outgoingText : null,
         messageType,
         mediaAssetId,
       });
 
       setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
-      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, newMsg.id);
-      setText('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+      if (typeof newMsg.id === 'number') {
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, newMsg.id);
       }
       window.dispatchEvent(new CustomEvent('community-new-message', { detail: { courseId } }));
+      setTimeout(() => scrollToBottom(false), 50);
     } catch (err) {
       alert(err?.response?.data?.error?.message || 'Failed to send message');
     } finally {
-      setSending(false);
       setUploading(false);
+      setUploadPct(0);
     }
   }
 
@@ -485,7 +551,7 @@ export default function CommunityChatPage() {
     return acc;
   }, []);
 
-  const canSend = !sending && !uploading && (text.trim().length > 0 || !!selectedFile);
+  const canSend = !uploading && (text.trim().length > 0 || !!selectedFile);
 
   return (
     <>
@@ -988,11 +1054,9 @@ export default function CommunityChatPage() {
                 aria-label={editingMsg ? 'Save changes' : 'Send message'}
                 title={editingMsg ? 'Save changes' : 'Send'}
               >
-                {sending || uploading
-                  ? <i className="fa-solid fa-spinner fa-spin" />
-                  : editingMsg
-                    ? <i className="fa-solid fa-check" />
-                    : <i className="fa-solid fa-paper-plane" />
+                {editingMsg
+                  ? <i className="fa-solid fa-check" />
+                  : <i className="fa-solid fa-paper-plane" />
                 }
               </button>
             </div>
