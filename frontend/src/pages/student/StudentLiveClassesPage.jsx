@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getLiveSessions } from '../../api/live';
+import { useAuth } from '../../auth/AuthContext';
+import { recordStudentAttendance } from '../../utils/attendanceStorage';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import {
   isLiveNotificationMuted,
@@ -35,6 +37,7 @@ function getEffectiveStatus(session) {
 }
 
 export default function StudentLiveClassesPage() {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [liveMuted, setLiveMuted] = useState(() => isLiveNotificationMuted());
@@ -266,6 +269,7 @@ export default function StudentLiveClassesPage() {
                         {s.enrolled ? (
                           <Link
                             to={`/student/live-classroom/${s.id}`}
+                            onClick={() => recordStudentAttendance(s.id, user, { courseId: s.courseId, batchId: s.batchId, sessionTitle: s.title })}
                             className={`ot-live-btn-primary ${eff === 'live' ? 'live-pulse' : ''}`}
                           >
                             <i className={`fa-solid ${eff === 'live' ? 'fa-bolt' : 'fa-video'}`}></i>

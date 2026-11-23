@@ -24,6 +24,7 @@ import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { toast } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { useAuth } from '../../auth/AuthContext';
+import { recordStudentAttendance } from '../../utils/attendanceStorage';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
 import CourseCommunityWhatsAppView from '../../components/CourseCommunityWhatsAppView';
@@ -2401,6 +2402,7 @@ export default function StudentCourseDashboardPage() {
                                 {isUpcoming ? (
                                   <Link
                                     to={`/student/live-classroom/${s.sessionId}`}
+                                    onClick={() => recordStudentAttendance(s.sessionId, user, { courseId: course?.id, sessionTitle: s.sessionTitle })}
                                     style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, textDecoration: 'none' }}
                                   >
                                     Join →
@@ -2607,6 +2609,7 @@ export default function StudentCourseDashboardPage() {
                                 {isUpcoming ? (
                                   <Link
                                     to={`/student/live-classroom/${s.sessionId}`}
+                                    onClick={() => recordStudentAttendance(s.sessionId, user, { courseId: course?.id, sessionTitle: s.sessionTitle })}
                                     style={{ color: '#5A70D3', fontWeight: 700, textDecoration: 'none' }}
                                   >
                                     Join Class
@@ -2730,6 +2733,7 @@ export default function StudentCourseDashboardPage() {
 
                         <Link
                           to={`/student/live-classroom/${s.id}`}
+                          onClick={() => recordStudentAttendance(s.id, user, { courseId: s.courseId || course?.id, batchId: s.batchId, sessionTitle: s.title })}
                           style={{
                             width: '100%',
                             height: '44px',

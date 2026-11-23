@@ -205,3 +205,31 @@ export async function checkInAttendance(sessionId) {
   const res = await api.post(`/live-sessions/${sessionId}/attendance/check-in`);
   return res.data.data;
 }
+
+export async function getSessionAttendance(sessionId) {
+  try {
+    const res = await api.get(`/admin/live-sessions/${sessionId}/attendance`);
+    return res.data.data;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function markAdminSessionAttendance(sessionId, studentId, status) {
+  try {
+    const res = await api.post(`/admin/live-sessions/${sessionId}/attendance/mark`, { studentId, status });
+    return res.data.data;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function getBatchAttendance(batchId) {
+  try {
+    const res = await api.get(`/admin/batches/${batchId}/attendance`);
+    return res.data.data;
+  } catch (err) {
+    return null;
+  }
+}
+

@@ -116,4 +116,17 @@ public class AdminLiveSessionController {
             @AuthenticationPrincipal User actor) {
         return ApiResponse.ok(liveSessionService.getRecordingRatings(recordingId, actor));
     }
+
+    @GetMapping("/{id}/attendance")
+    public ApiResponse<SessionAttendanceSheetResponse> getSessionAttendance(@PathVariable Long id) {
+        return ApiResponse.ok(liveSessionService.getSessionAttendanceSheet(id));
+    }
+
+    @PostMapping("/{id}/attendance/mark")
+    public ApiResponse<Void> markAttendance(@PathVariable Long id,
+                                            @Valid @RequestBody MarkAttendanceRequest req,
+                                            @AuthenticationPrincipal User actor) {
+        liveSessionService.markAdminAttendance(id, req, actor);
+        return ApiResponse.ok("Attendance recorded successfully", null);
+    }
 }

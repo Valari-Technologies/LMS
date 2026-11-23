@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { getLiveClassroomJoinInfo } from '../api/live';
+import { recordStudentAttendance } from '../utils/attendanceStorage';
 import JitsiMeetClassroom from '../components/JitsiMeetClassroom';
 
 export default function LiveClassroomPage({ role = 'student' }) {
@@ -26,6 +27,13 @@ export default function LiveClassroomPage({ role = 'student' }) {
         const data = await getLiveClassroomJoinInfo(sessionId);
         if (active) {
           setJoinInfo(data);
+          // Automatically record attendance for student on live join
+          if (role !== 'admin' && role !== 'super_admin' && role !== 'superadmin') {
+            recordStudentAttendance(sessionId, user, {
+              courseId: data?.courseId,
+              sessionTitle: data?.sessionTitle || data?.title
+            });
+          }
         }
       } catch (err) {
         if (active) {

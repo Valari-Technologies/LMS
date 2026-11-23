@@ -937,5 +937,102 @@ public class LiveSessionService {
                 items
         );
     }
+
+    @Transactional(readOnly = true)
+    public com.onetutor.live.dto.SessionAttendanceSheetResponse getSessionAttendanceSheet(Long sessionId) {
+        LiveSession session = liveSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("SESSION_NOT_FOUND", "Live session not found"));
+
+        List<Enrollment> enrollments;
+        if (session.getBatch() != null) {
+            enrollments = enrollmentRepository.findBatchStudentsWithUser(session.getBatch().getId(), EnrollmentStatus.active, org.springframework.data.domain.Pageable.unpaged()).getContent();
+        } else {
+            enrollments = enrollmentRepository.findByCourseIdAndStatus(session.getCourse().getId(), EnrollmentStatus.active);
+        }
+
+        List<LiveSessionAttendance> attendances = liveSessionAttendanceRepository.findBySessionId(sessionId);
+        Map<Long, LiveSessionAttendance> attMap = attendances.stream()
+                .collect(Collectors.toMap(a -> a.getStudent().getId(), a -> a, (k1, k2) -> k1));
+
+        Instant now = Instant.now();
+        boolean isHeld = session.getStatus() == LiveSessionStatus.completed || (session.getScheduledAt() != null && session.getScheduledAt().isBefore(now));
+
+        List<com.onetutor.live.dto.SessionAttendanceSheetResponse.StudentAttendanceItem> studentItems = new ArrayList<>();
+        int presentCount = 0;
+
+        for (Enrollment e : enrollments) {
+            User student = e.getStudent();
+            LiveSessionAttendance att = attMap.get(student.getId());
+            boolean isPresent = att != null && "PRESENT".equalsIgnoreCase(att.getStatus());
+            if (isPresent) {
+                presentCount++;
+            }
+            String status = isPresent ? "PRESENT" : (isHeld ? "ABSENT" : "UPCOMING");
+
+            studentItems.add(new com.onetutor.live.dto.SessionAttendanceSheetResponse.StudentAttendanceItem(
+                    student.getId(),
+                    student.getName(),
+                    student.getEmail(),
+                    student.getProfileImage(),
+                    status,
+                    att != null ? att.getAttendedAt() : null,
+                    att != null ? att.getJoinTime() : null
+            ));
+        }
+
+        int total = studentItems.size();
+        int absentCount = Math.max(0, total - presentCount);
+        double rate = total > 0 ? Math.round((presentCount * 100.0 / total) * 10.0) / 10.0 : 100.0;
+
+        return new com.onetutor.live.dto.SessionAttendanceSheetResponse(
+                session.getId(),
+                session.getTitle(),
+                session.getCourse().getId(),
+                session.getCourse().getName(),
+                session.getBatch() != null ? session.getBatch().getId() : null,
+                session.getBatch() != null ? session.getBatch().getName() : null,
+                session.getScheduledAt(),
+                session.getStatus().name(),
+                total,
+                presentCount,
+                absentCount,
+                rate,
+                studentItems
+        );
+    }
+
+    @Transactional
+    public void markAdminAttendance(Long sessionId, com.onetutor.live.dto.MarkAttendanceRequest req, User actor) {
+        LiveSession session = liveSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("SESSION_NOT_FOUND", "Live session not found"));
+
+        var attOpt = liveSessionAttendanceRepository.findBySessionIdAndStudentId(sessionId, req.studentId());
+        String newStatus = (req.status() != null && !req.status().isBlank()) ? req.status().toUpperCase() : "PRESENT";
+
+        if (attOpt.isPresent()) {
+            LiveSessionAttendance att = attOpt.get();
+            att.setStatus(newStatus);
+            if ("PRESENT".equalsIgnoreCase(newStatus) && att.getAttendedAt() == null) {
+                att.setAttendedAt(Instant.now());
+                att.setJoinTime(Instant.now());
+            }
+            liveSessionAttendanceRepository.save(att);
+        } else {
+            Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseIdAndStatus(req.studentId(), session.getCourse().getId(), EnrollmentStatus.active)
+                    .orElseThrow(() -> new BadRequestException("STUDENT_NOT_ENROLLED", "Student is not enrolled in this course"));
+
+            LiveSessionAttendance att = new LiveSessionAttendance();
+            att.setSession(session);
+            att.setStudent(enrollment.getStudent());
+            att.setCourse(session.getCourse());
+            att.setBatch(session.getBatch());
+            att.setStatus(newStatus);
+            if ("PRESENT".equalsIgnoreCase(newStatus)) {
+                att.setAttendedAt(Instant.now());
+                att.setJoinTime(Instant.now());
+            }
+            liveSessionAttendanceRepository.save(att);
+        }
+    }
 }
 

@@ -16,7 +16,12 @@ import {
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
-import { getCourseBatches, getAdminBatches } from '../../api/batches';
+import { getCourseBatches, getAdminBatches, getBatchStudents } from '../../api/batches';
+import {
+  getStoredAttendanceRecords,
+  getSessionAttendanceSheet,
+  markStudentAttendanceOverride
+} from '../../utils/attendanceStorage';
 import { useNotification, confirmDialog } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
@@ -135,7 +140,44 @@ export default function AdminLiveSessionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(null);
   const [showRecordingModal, setShowRecordingModal] = useState(null);
+  const [sessionAttendanceModal, setSessionAttendanceModal] = useState(null);
+  const [sessionAttendanceFilter, setSessionAttendanceFilter] = useState('ALL');
+  const [sessionAttendanceSearch, setSessionAttendanceSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  async function openSessionAttendance(session) {
+    const sBatchId = session.batchId || session.batch?.id;
+    setSessionAttendanceModal({
+      session,
+      loading: true,
+      students: [],
+      error: null
+    });
+    setSessionAttendanceFilter('ALL');
+    setSessionAttendanceSearch('');
+
+    try {
+      let batchStudentsList = [];
+      if (sBatchId) {
+        const res = await getBatchStudents(sBatchId, { size: 100 });
+        batchStudentsList = res?.content || (Array.isArray(res) ? res : []);
+      }
+      setSessionAttendanceModal({
+        session,
+        loading: false,
+        students: batchStudentsList,
+        error: null
+      });
+    } catch (err) {
+      console.error('Failed to load batch students for attendance sheet', err);
+      setSessionAttendanceModal({
+        session,
+        loading: false,
+        students: [],
+        error: 'Failed to load batch students'
+      });
+    }
+  }
 
   const [createForm, setCreateForm] = useState({
     courseId: '',
@@ -1070,6 +1112,15 @@ export default function AdminLiveSessionsPage() {
                           >
                             <i className="fa-solid fa-video"></i> Launch Classroom
                           </Link>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#10b981', fontWeight: 700 }}
+                            onClick={() => openSessionAttendance(s)}
+                            title="View student attendance sheet for this live session"
+                          >
+                            <i className="fa-solid fa-clipboard-user"></i> Attendance Sheet
+                          </button>
                           {s.meetingUrl && (
                             <a
                               href={s.meetingUrl}
@@ -3154,6 +3205,219 @@ export default function AdminLiveSessionsPage() {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE SESSION ATTENDANCE SHEET MODAL */}
+      {sessionAttendanceModal && (
+        <div className="modal-backdrop" onClick={() => setSessionAttendanceModal(null)}>
+          <div className="modal-dialog" style={{ maxWidth: '780px', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <i className="fa-solid fa-clipboard-user" style={{ color: '#10b981', fontSize: '1.3rem' }}></i>
+                <div>
+                  <h2 className="modal-title" style={{ margin: 0 }}>Live Session Attendance Sheet</h2>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {sessionAttendanceModal.session.title} • {sessionAttendanceModal.session.courseName || sessionAttendanceModal.session.course?.name}
+                    {sessionAttendanceModal.session.batchName ? ` • ${sessionAttendanceModal.session.batchName}` : ''}
+                  </div>
+                </div>
+              </div>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSessionAttendanceModal(null)}>✕</button>
+            </div>
+
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {(() => {
+                const sheet = getSessionAttendanceSheet(
+                  sessionAttendanceModal.session,
+                  sessionAttendanceModal.students,
+                  getStoredAttendanceRecords()
+                );
+
+                const filter = sessionAttendanceFilter;
+                const search = sessionAttendanceSearch.toLowerCase().trim();
+
+                const filteredStudents = sheet.students.filter(st => {
+                  if (filter === 'PRESENT' && st.status !== 'PRESENT') return false;
+                  if (filter === 'ABSENT' && st.status !== 'ABSENT') return false;
+                  if (search) {
+                    const matchName = st.studentName?.toLowerCase().includes(search);
+                    const matchEmail = st.studentEmail?.toLowerCase().includes(search);
+                    return matchName || matchEmail;
+                  }
+                  return true;
+                });
+
+                return (
+                  <>
+                    {/* Stat Badges */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                      <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-default)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Enrolled Students</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>{sheet.summary.total}</div>
+                      </div>
+                      <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase' }}>Present (Joined)</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>{sheet.summary.present}</div>
+                      </div>
+                      <div style={{ background: 'rgba(239, 68, 68, 0.08)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.25)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 700, textTransform: 'uppercase' }}>Absent (Missed)</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ef4444', marginTop: '4px' }}>{sheet.summary.absent}</div>
+                      </div>
+                      <div style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#6366f1', fontWeight: 700, textTransform: 'uppercase' }}>Attendance Rate</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: sheet.summary.rate >= 80 ? '#10b981' : sheet.summary.rate > 40 ? '#6366f1' : '#ef4444', marginTop: '4px' }}>
+                          {sheet.summary.rate}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                      <i className="fa-solid fa-circle-info" style={{ color: 'var(--primary)', marginRight: '6px' }}></i>
+                      Students who clicked the live join button are automatically marked <strong>Present</strong> with join timestamps. Balance students are recorded as <strong>Absent</strong>.
+                    </div>
+
+                    {/* Filter and Search Bar */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${sessionAttendanceFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setSessionAttendanceFilter('ALL')}
+                        >
+                          All ({sheet.summary.total})
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${sessionAttendanceFilter === 'PRESENT' ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setSessionAttendanceFilter('PRESENT')}
+                        >
+                          Present ({sheet.summary.present})
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${sessionAttendanceFilter === 'ABSENT' ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setSessionAttendanceFilter('ABSENT')}
+                        >
+                          Absent ({sheet.summary.absent})
+                        </button>
+                      </div>
+
+                      <div style={{ minWidth: '220px' }}>
+                        <input
+                          type="text"
+                          className="form-control"
+                          style={{ padding: '6px 12px', fontSize: '0.84rem' }}
+                          placeholder="Search student by name or email…"
+                          value={sessionAttendanceSearch}
+                          onChange={(e) => setSessionAttendanceSearch(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Students Table */}
+                    <div className="table-responsive" style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                      <table className="modern-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '55px', textAlign: 'center' }}>#</th>
+                            <th>Student</th>
+                            <th>Email</th>
+                            <th style={{ textAlign: 'center' }}>Status</th>
+                            <th>Join Time</th>
+                            {!isReadOnly && <th style={{ textAlign: 'right' }}>Actions</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sessionAttendanceModal.loading ? (
+                            <tr>
+                              <td colSpan={isReadOnly ? 5 : 6} className="table-empty">Loading enrolled students…</td>
+                            </tr>
+                          ) : filteredStudents.length === 0 ? (
+                            <tr>
+                              <td colSpan={isReadOnly ? 5 : 6} className="table-empty">
+                                {sheet.students.length === 0 ? 'No enrolled batch students found for this session.' : 'No students match the current filter.'}
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredStudents.map((st, idx) => {
+                              const isPresent = st.status === 'PRESENT';
+                              return (
+                                <tr key={st.studentId || idx}>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <div
+                                        style={{
+                                          width: '28px',
+                                          height: '28px',
+                                          borderRadius: '50%',
+                                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                          color: '#fff',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '0.76rem',
+                                          fontWeight: 700,
+                                          flexShrink: 0
+                                        }}
+                                      >
+                                        {st.studentName ? st.studentName.charAt(0).toUpperCase() : 'S'}
+                                      </div>
+                                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{st.studentName}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{st.studentEmail}</td>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <span
+                                      style={{
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        padding: '2px 8px',
+                                        borderRadius: '9999px',
+                                        background: isPresent ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.1)',
+                                        color: isPresent ? '#10b981' : '#ef4444'
+                                      }}
+                                    >
+                                      {st.status}
+                                    </span>
+                                  </td>
+                                  <td style={{ fontSize: '0.82rem', color: isPresent ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                    {st.attendedAt ? new Date(st.attendedAt).toLocaleString() : '—'}
+                                  </td>
+                                  {!isReadOnly && (
+                                    <td style={{ textAlign: 'right' }}>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ fontSize: '0.74rem', padding: '3px 8px' }}
+                                        onClick={() => {
+                                          const next = isPresent ? 'ABSENT' : 'PRESENT';
+                                          markStudentAttendanceOverride(sessionAttendanceModal.session.id, st, next, sessionAttendanceModal.session);
+                                          toast.success(`Attendance updated to ${next} for ${st.studentName}`);
+                                        }}
+                                        title={isPresent ? "Mark student as Absent" : "Mark student as Present"}
+                                      >
+                                        {isPresent ? 'Set Absent' : 'Set Present'}
+                                      </button>
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setSessionAttendanceModal(null)}>Close</button>
+            </div>
           </div>
         </div>
       )}
