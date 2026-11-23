@@ -810,41 +810,24 @@ export default function AdminBatchDetailsPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '0.76rem',
-                            fontWeight: 800,
-                            padding: '3px 9px',
-                            borderRadius: '9999px',
-                            background: s.resolvedPlan?.bgColor || 'rgba(90, 112, 211, 0.1)',
-                            color: s.resolvedPlan?.color || '#5A70D3',
-                            border: `1px solid ${s.resolvedPlan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          <i className={s.resolvedPlan?.icon || 'fa-solid fa-layer-group'} style={{ fontSize: '0.7rem' }}></i>
-                          <span>{s.resolvedPlan?.shortName || s.resolvedPlan?.name || 'Full Access'}</span>
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, paddingLeft: '4px' }}>
-                          {s.planType === PLAN_TYPES.RECORDED_ONLY ? (
-                            <span style={{ color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <i className="fa-solid fa-film" style={{ fontSize: '0.62rem' }}></i> Recordings Only
-                            </span>
-                          ) : s.planType === PLAN_TYPES.LIVE_ONLY ? (
-                            <span style={{ color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.62rem' }}></i> Live Only
-                            </span>
-                          ) : (
-                            <span style={{ color: '#4f46e5', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <i className="fa-solid fa-crown" style={{ fontSize: '0.62rem' }}></i> Live + Recordings
-                            </span>
-                          )}
-                        </span>
-                      </div>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          padding: '4px 10px',
+                          borderRadius: '9999px',
+                          background: s.resolvedPlan?.bgColor || 'rgba(90, 112, 211, 0.1)',
+                          color: s.resolvedPlan?.color || '#5A70D3',
+                          border: `1px solid ${s.resolvedPlan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <i className={s.resolvedPlan?.icon || 'fa-solid fa-layer-group'} style={{ fontSize: '0.72rem' }}></i>
+                        <span>{s.resolvedPlan?.shortName || s.resolvedPlan?.name || 'Full Access'}</span>
+                      </span>
                     </td>
                     <td>
                       {(() => {
