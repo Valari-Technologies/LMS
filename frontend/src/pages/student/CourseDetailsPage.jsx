@@ -11,6 +11,7 @@ import CoursePaymentModal from '../../components/CoursePaymentModal';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { validateAndApplyCoupon, AVAILABLE_COUPONS } from '../../utils/couponUtils';
 import { validateCoupon, getAvailableCoupons } from '../../api/coupons';
+import { getAvailablePlanList, PLAN_TYPES } from '../../utils/courseSellingPlans';
 import {
   getCourseReviews,
   getCourseRatingSummary,
@@ -46,6 +47,36 @@ export default function CourseDetailsPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [showCouponInput, setShowCouponInput] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
+
+  // Selling Plans / Tiers State
+  const availablePlans = useMemo(() => {
+    return getAvailablePlanList(course);
+  }, [course]);
+
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+
+  useEffect(() => {
+    if (availablePlans.length > 0 && !selectedPlanId) {
+      const rec = availablePlans.find(p => p.id === PLAN_TYPES.FULL_ACCESS) || availablePlans[0];
+      setSelectedPlanId(rec.id);
+    }
+  }, [availablePlans, selectedPlanId]);
+
+  const selectedPlan = useMemo(() => {
+    if (!availablePlans || availablePlans.length === 0) return null;
+    return availablePlans.find(p => p.id === selectedPlanId) || availablePlans[0];
+  }, [availablePlans, selectedPlanId]);
+
+  const currentPlanPrice = selectedPlan ? selectedPlan.price : (Number(course?.price) || 0);
+
+  const effectiveFinalPrice = useMemo(() => {
+    if (!appliedCoupon) return currentPlanPrice;
+    if (appliedCoupon.discountType === 'PERCENTAGE' || appliedCoupon.percent) {
+      const pct = appliedCoupon.percent || appliedCoupon.discountValue || 0;
+      return Math.max(0, Math.round(currentPlanPrice * (1 - pct / 100)));
+    }
+    return Math.max(0, currentPlanPrice - (appliedCoupon.discount || 0));
+  }, [appliedCoupon, currentPlanPrice]);
 
   // Reviews & Ratings state
   const [reviews, setReviews] = useState([]);
@@ -270,8 +301,9 @@ export default function CourseDetailsPage() {
       return;
     }
     setCouponLoading(true);
+    const baseToUse = currentPlanPrice || course?.price || 0;
     try {
-      const res = await validateCoupon(code, course?.price || 0, course?.id);
+      const res = await validateCoupon(code, baseToUse, course?.id);
       if (!res.valid) {
         setCouponError(res.message || 'Invalid or expired coupon.');
         return;
@@ -281,12 +313,14 @@ export default function CourseDetailsPage() {
         code: res.code,
         discount: Number(res.discount),
         finalPrice: Number(res.finalPrice),
+        discountType: res.discountType,
+        discountValue: res.discountValue,
         label: res.discountType === 'PERCENTAGE' ? `${res.discountValue}% OFF` : `₹${res.discountValue} OFF`,
         description: res.description
       });
       setCouponCode(res.code);
     } catch (err) {
-      const fallback = validateAndApplyCoupon(code, course?.price, course?.currency);
+      const fallback = validateAndApplyCoupon(code, baseToUse, course?.currency);
       if (fallback.valid) {
         setAppliedCoupon(fallback);
         setCouponCode(fallback.code);
@@ -2549,11 +2583,11 @@ export default function CourseDetailsPage() {
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {currencySymbol}{appliedCoupon ? appliedCoupon.finalPrice.toLocaleString() : Number(course.price).toLocaleString()}
+                            {currencySymbol}{appliedCoupon ? effectiveFinalPrice.toLocaleString() : currentPlanPrice.toLocaleString()}
                           </span>
-                          {appliedCoupon && (
+                          {(appliedCoupon || (selectedPlan && selectedPlan.price !== Number(course.price))) && (
                             <span style={{ fontSize: '1.1rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: 600 }}>
-                              {currencySymbol}{Number(course.price).toLocaleString()}
+                              {currencySymbol}{appliedCoupon ? currentPlanPrice.toLocaleString() : Number(course.price).toLocaleString()}
                             </span>
                           )}
                           {course.pricingType === 'subscription' && (
@@ -2563,7 +2597,7 @@ export default function CourseDetailsPage() {
                           )}
                         </div>
                         <span style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {course.pricingType === 'subscription' ? 'Subscription Access' : 'One-time Payment'}
+                          {selectedPlan ? selectedPlan.name : (course.pricingType === 'subscription' ? 'Subscription Access' : 'One-time Payment')}
                         </span>
                       </div>
                       {appliedCoupon ? (
@@ -2586,6 +2620,143 @@ export default function CourseDetailsPage() {
                     </>
                   )}
                 </div>
+
+                {/* 3 Course Selling Plans / Tiers Selector */}
+                {isPaidCourse && !isEnrolled && isPublished && availablePlans.length > 0 && (
+                  <div style={{ marginBottom: '18px', marginTop: '14px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '10px'
+                    }}>
+                      <label style={{
+                        fontSize: '0.86rem',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <i className="fa-solid fa-layer-group" style={{ color: '#5A70D3' }}></i>
+                        <span>Choose Access Option</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                        {availablePlans.length} plans available
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {availablePlans.map((plan) => {
+                        const isSelected = selectedPlan?.id === plan.id;
+                        return (
+                          <div
+                            key={plan.id}
+                            onClick={() => setSelectedPlanId(plan.id)}
+                            style={{
+                              padding: '11px 13px',
+                              borderRadius: '12px',
+                              border: isSelected ? `2px solid ${plan.color || '#5A70D3'}` : '1.5px solid #e2e8f0',
+                              background: isSelected ? (plan.bgColor || 'rgba(90, 112, 211, 0.06)') : '#ffffff',
+                              cursor: 'pointer',
+                              transition: 'all 0.18s ease',
+                              position: 'relative',
+                              boxShadow: isSelected ? '0 4px 12px rgba(90, 112, 211, 0.12)' : 'none'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  border: isSelected ? `5px solid ${plan.color || '#5A70D3'}` : '2px solid #cbd5e1',
+                                  background: '#ffffff',
+                                  flexShrink: 0,
+                                  transition: 'all 0.15s ease'
+                                }} />
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span style={{
+                                      fontWeight: 800,
+                                      fontSize: '0.88rem',
+                                      color: isSelected ? (plan.color || '#0f172a') : '#1e293b'
+                                    }}>
+                                      {plan.name}
+                                    </span>
+                                    {plan.isRecommended && (
+                                      <span style={{
+                                        fontSize: '0.64rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.04em',
+                                        padding: '2px 7px',
+                                        borderRadius: '9999px',
+                                        background: '#5A70D3',
+                                        color: '#ffffff',
+                                        textTransform: 'uppercase'
+                                      }}>
+                                        Best Value
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                                    {plan.description}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{
+                                  fontSize: '1.1rem',
+                                  fontWeight: 900,
+                                  color: isSelected ? (plan.color || '#0f172a') : '#0f172a',
+                                  letterSpacing: '-0.02em'
+                                }}>
+                                  {plan.currencySymbol}{plan.price.toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+
+                            {isSelected && (
+                              <div style={{
+                                marginTop: '8px',
+                                paddingTop: '8px',
+                                borderTop: '1px dashed rgba(100, 116, 139, 0.2)',
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '6px'
+                              }}>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  color: plan.allowsLive ? '#0284c7' : '#94a3b8',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}>
+                                  <i className={plan.allowsLive ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: plan.allowsLive ? '#10b981' : '#94a3b8' }}></i>
+                                  Live Classroom
+                                </span>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  color: plan.allowsRecordings ? '#059669' : '#94a3b8',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  marginLeft: '8px'
+                                }}>
+                                  <i className={plan.allowsRecordings ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: plan.allowsRecordings ? '#10b981' : '#94a3b8' }}></i>
+                                  Recording Replays
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Enrolled Batch Info - ONLY shown after student is enrolled */}
                 {isEnrolled && (enrolledBatch || batches[0]) && (
@@ -2771,7 +2942,7 @@ export default function CourseDetailsPage() {
                   >
                     <i className="fa-solid fa-lock-open"></i>
                     <span>
-                      {course.pricingType === 'subscription' ? 'Subscribe Now' : 'Buy Now'} • {currencySymbol}{appliedCoupon ? appliedCoupon.finalPrice.toLocaleString() : Number(course.price).toLocaleString()}
+                      {course.pricingType === 'subscription' ? 'Subscribe Now' : 'Buy Now'} • {currencySymbol}{appliedCoupon ? effectiveFinalPrice.toLocaleString() : currentPlanPrice.toLocaleString()}
                     </span>
                   </button>
                 ) : (
@@ -2858,6 +3029,7 @@ export default function CourseDetailsPage() {
         batchId={selectedBatchId}
         isOpen={showPaymentModal}
         initialCoupon={appliedCoupon}
+        selectedPlan={selectedPlan}
         onClose={() => setShowPaymentModal(false)}
         onSuccess={() => {
           setIsEnrolled(true);

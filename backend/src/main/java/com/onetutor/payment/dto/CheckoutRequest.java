@@ -20,5 +20,7 @@ public record CheckoutRequest(
 
         String couponCode,
 
-        Double couponDiscount
+        Double couponDiscount,
+
+        String planType
 ) {}

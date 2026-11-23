@@ -12,5 +12,7 @@ public record RazorpayOrderRequest(
 
         String currency,
 
-        String couponCode
+        String couponCode,
+
+        String planType
 ) {}

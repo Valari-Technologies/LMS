@@ -30,6 +30,8 @@ import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
 import CourseCommunityWhatsAppView from '../../components/CourseCommunityWhatsAppView';
 import { ChatPanel } from '../admin/AdminCommunityPage';
 import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
+import CoursePaymentModal from '../../components/CoursePaymentModal';
+import { getStudentEnrolledPlan, PLAN_TYPES, PLAN_DEFINITIONS } from '../../utils/courseSellingPlans';
 
 function getLiveEffectiveStatus(session) {
   if (!session) return 'upcoming';
@@ -147,6 +149,14 @@ export default function StudentCourseDashboardPage() {
   const [modalComment, setModalComment] = useState('');
   const [hoverRating, setHoverRating] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
+
+  // Selling Plan Access & Upgrade Modal State
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeTargetPlan, setUpgradeTargetPlan] = useState(null);
+
+  const enrolledPlan = useMemo(() => {
+    return getStudentEnrolledPlan(courseId, user?.id || user?.email, enrollment);
+  }, [courseId, user, enrollment]);
 
   // Real student reviews for the active player recording
   const [recordingReviews, setRecordingReviews] = useState([]);
@@ -1838,7 +1848,7 @@ export default function StudentCourseDashboardPage() {
         {/* 2. Sidebar Body */}
         <div className="ot-course-sidebar-body">
 
-          {/* Active Course Title Only */}
+          {/* Active Course Title & Plan Badge */}
           {!sidebarCollapsed && (
             <div style={{
               padding: '6px 8px 14px 8px',
@@ -1857,6 +1867,25 @@ export default function StudentCourseDashboardPage() {
               >
                 {course?.name || course?.title || 'Enrolled Course'}
               </div>
+              {enrolledPlan && (
+                <div style={{
+                  marginTop: '6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.3px',
+                  background: enrolledPlan.bgColor || 'rgba(90, 112, 211, 0.1)',
+                  color: enrolledPlan.color || '#5A70D3',
+                  border: `1px solid ${enrolledPlan.borderColor || 'rgba(90, 112, 211, 0.2)'}`
+                }}>
+                  <i className={enrolledPlan.icon} style={{ fontSize: '0.68rem' }}></i>
+                  <span>{enrolledPlan.shortName || enrolledPlan.name}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1896,11 +1925,15 @@ export default function StudentCourseDashboardPage() {
               type="button"
               className={`ot-course-nav-link ${activeTab === 'live' ? 'active' : ''}`}
               onClick={() => { setActiveTab('live'); setMobileSidebarOpen(false); }}
-              title="Live Online Classroom"
+              title={!enrolledPlan?.allowsLive ? "Live Classes (Upgrade required)" : "Live Online Classroom"}
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-tower-broadcast"></i></span>
               <span className="ot-course-nav-text">Live Classes</span>
-              {isSessionLiveNow ? (
+              {!enrolledPlan?.allowsLive ? (
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>
+                  <i className="fa-solid fa-lock"></i>
+                </span>
+              ) : isSessionLiveNow ? (
                 <span className="ot-course-badge live-pulse">LIVE</span>
               ) : upcomingLiveCount > 0 ? (
                 <span className={`ot-course-badge ${activeTab === 'live' ? 'active' : ''}`}>
@@ -1914,15 +1947,19 @@ export default function StudentCourseDashboardPage() {
               type="button"
               className={`ot-course-nav-link ${activeTab === 'recordings' ? 'active' : ''}`}
               onClick={() => { setActiveTab('recordings'); setMobileSidebarOpen(false); }}
-              title="Recorded Sessions"
+              title={!enrolledPlan?.allowsRecordings ? "Recordings (Upgrade required)" : "Recorded Sessions"}
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-video"></i></span>
               <span className="ot-course-nav-text">Recordings</span>
-              {recordingSessions.length > 0 && (
+              {!enrolledPlan?.allowsRecordings ? (
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>
+                  <i className="fa-solid fa-lock"></i>
+                </span>
+              ) : recordingSessions.length > 0 ? (
                 <span className={`ot-course-badge ${activeTab === 'recordings' ? 'active' : ''}`}>
                   {recordingSessions.length}
                 </span>
-              )}
+              ) : null}
             </button>
 
           </div>
@@ -2769,6 +2806,85 @@ export default function StudentCourseDashboardPage() {
             TAB 3: LIVE CLASSES
             =================================================================== */}
           {activeTab === 'live' && (
+            !enrolledPlan?.allowsLive ? (
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '20px',
+                padding: '48px 32px',
+                textAlign: 'center',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+                maxWidth: '680px',
+                margin: '20px auto'
+              }}>
+                <div style={{
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.8rem',
+                  margin: '0 auto 20px auto'
+                }}>
+                  <i className="fa-solid fa-tower-broadcast"></i>
+                </div>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  background: '#fee2e2',
+                  color: '#b91c1c',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  marginBottom: '10px'
+                }}>
+                  Plan Restriction · {enrolledPlan?.name || 'Recordings Only'}
+                </span>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: '0 0 10px 0' }}>
+                  Live Interactive Classes are Locked
+                </h2>
+                <p style={{ fontSize: '0.92rem', color: '#64748b', lineHeight: 1.6, margin: '0 0 24px 0' }}>
+                  Your current enrollment is on the <strong>{enrolledPlan?.name || 'Recording Videos Only'}</strong> plan. To join scheduled live classes, interact with your tutor in real-time, and get live attendance credit, upgrade to a plan that includes live classroom sessions.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = PLAN_DEFINITIONS.find(p => p.id === PLAN_TYPES.FULL_ACCESS);
+                      setUpgradeTargetPlan(target);
+                      setShowUpgradeModal(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                      padding: '12px 24px',
+                      fontWeight: 800,
+                      borderRadius: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <i className="fa-solid fa-crown"></i>
+                    <span>Upgrade to Live + Recordings</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('recordings')}
+                    className="btn btn-secondary"
+                    style={{ padding: '12px 20px', borderRadius: '12px' }}
+                  >
+                    <i className="fa-solid fa-video" style={{ marginRight: '6px' }}></i>
+                    <span>Watch Recordings</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
@@ -2879,12 +2995,92 @@ export default function StudentCourseDashboardPage() {
                 </div>
               )}
             </div>
-          )}
+          )
+        )}
 
           {/* ===================================================================
             TAB 4: RECORDINGS (MINIMAL & PROFESSIONAL SCALABLE RECORDED CLASSES)
             =================================================================== */}
           {activeTab === 'recordings' && (
+            !enrolledPlan?.allowsRecordings ? (
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '20px',
+                padding: '48px 32px',
+                textAlign: 'center',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+                maxWidth: '680px',
+                margin: '20px auto'
+              }}>
+                <div style={{
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '50%',
+                  background: 'rgba(90, 112, 211, 0.1)',
+                  color: '#5A70D3',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.8rem',
+                  margin: '0 auto 20px auto'
+                }}>
+                  <i className="fa-solid fa-film"></i>
+                </div>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  background: '#e0f2fe',
+                  color: '#0369a1',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  marginBottom: '10px'
+                }}>
+                  Plan Restriction · {enrolledPlan?.name || 'Live Sessions Only'}
+                </span>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: '0 0 10px 0' }}>
+                  Lecture Video Recordings are Locked
+                </h2>
+                <p style={{ fontSize: '0.92rem', color: '#64748b', lineHeight: 1.6, margin: '0 0 24px 0' }}>
+                  Your current enrollment is on the <strong>{enrolledPlan?.name || 'Live Sessions Only'}</strong> plan. To access all on-demand Full HD video replays, lesson notes, and study recordings at your own pace, upgrade your enrollment to a plan with recording access.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = PLAN_DEFINITIONS.find(p => p.id === PLAN_TYPES.FULL_ACCESS);
+                      setUpgradeTargetPlan(target);
+                      setShowUpgradeModal(true);
+                    }}
+                    className="btn btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                      padding: '12px 24px',
+                      fontWeight: 800,
+                      borderRadius: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <i className="fa-solid fa-crown"></i>
+                    <span>Upgrade to Live + Recordings</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('live')}
+                    className="btn btn-secondary"
+                    style={{ padding: '12px 20px', borderRadius: '12px' }}
+                  >
+                    <i className="fa-solid fa-tower-broadcast" style={{ marginRight: '6px' }}></i>
+                    <span>Go to Live Classes</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Header Strip with Counter */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -3149,7 +3345,8 @@ export default function StudentCourseDashboardPage() {
                 </div>
               )}
             </div>
-          )}
+          )
+        )}
 
           {/* ===================================================================
             TAB: COMMUNITY CHAT (WhatsApp Style Hub: All Chats + Opens this course first)
@@ -3324,6 +3521,20 @@ export default function StudentCourseDashboardPage() {
             </form>
           </div>
         </div>
+      )}
+      {/* Course Selling Plan Upgrade Modal */}
+      {showUpgradeModal && course && (
+        <CoursePaymentModal
+          course={course}
+          isOpen={showUpgradeModal}
+          selectedPlan={upgradeTargetPlan}
+          onClose={() => setShowUpgradeModal(false)}
+          onSuccess={() => {
+            setShowUpgradeModal(false);
+            toast.success('Your plan has been upgraded successfully!');
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );

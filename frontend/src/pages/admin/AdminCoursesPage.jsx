@@ -11,6 +11,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import AlertBanner from '../../components/AlertBanner';
 import { usePermission } from '../../hooks/usePermission';
+import { getCourseSellingPlans } from '../../utils/courseSellingPlans';
 
 export default function AdminCoursesPage() {
   const { isReadOnly } = usePermission();
@@ -331,45 +332,60 @@ export default function AdminCoursesPage() {
                       </span>
                     </td>
                     <td>
-                      {(c.pricingType === 'subscription' || c.pricingType === 'paid') && Number(c.price) > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{
-                            fontSize: '0.84rem',
-                            fontWeight: 800,
-                            color: '#4f46e5',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            <i className="fa-solid fa-gem" style={{ fontSize: '0.7rem' }}></i>
-                            {c.currency === 'USD' ? '$' : '₹'}{Number(c.price).toLocaleString()}
-                            {c.pricingType === 'subscription' && (
-                              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                                /{c.subscriptionPeriod === 'yearly' ? 'yr' : 'mo'}
-                              </span>
-                            )}
-                          </span>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-                            {c.pricingType}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          color: '#059669',
-                          background: '#ecfdf5',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          border: '1px solid #a7f3d0'
-                        }}>
-                          <i className="fa-solid fa-gift" style={{ fontSize: '0.7rem' }}></i>
-                          Free
-                        </span>
-                      )}
+                      {(() => {
+                        const plans = getCourseSellingPlans(c.id, c);
+                        const isPaid = (c.pricingType === 'subscription' || c.pricingType === 'paid') && Number(c.price) > 0;
+                        if (!isPaid) {
+                          return (
+                            <span style={{
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              color: '#059669',
+                              background: '#ecfdf5',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              border: '1px solid #a7f3d0'
+                            }}>
+                              <i className="fa-solid fa-gift" style={{ fontSize: '0.7rem' }}></i>
+                              Free
+                            </span>
+                          );
+                        }
+
+                        const activePlans = plans
+                          ? Object.entries(plans).filter(([, p]) => p?.enabled !== false && Number(p?.price) > 0)
+                          : [];
+                        const minPrice = activePlans.length > 0
+                          ? Math.min(...activePlans.map(([, p]) => Number(p.price)))
+                          : Number(c.price);
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{
+                              fontSize: '0.84rem',
+                              fontWeight: 800,
+                              color: '#4f46e5',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <i className="fa-solid fa-gem" style={{ fontSize: '0.7rem' }}></i>
+                              {activePlans.length > 1 ? `From ${c.currency === 'USD' ? '$' : '₹'}${minPrice.toLocaleString()}` : `${c.currency === 'USD' ? '$' : '₹'}${minPrice.toLocaleString()}`}
+                            </span>
+                            <span style={{
+                              fontSize: '0.68rem',
+                              color: activePlans.length > 1 ? '#0284c7' : 'var(--text-muted)',
+                              fontWeight: 700,
+                              letterSpacing: '0.02em'
+                            }}>
+                              {activePlans.length > 1 ? `${activePlans.length} Selling Plans` : c.pricingType}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>
                       <span style={{

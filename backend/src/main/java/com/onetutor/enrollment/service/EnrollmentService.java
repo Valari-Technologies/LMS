@@ -236,7 +236,8 @@ public class EnrollmentService {
                     pct, null,
                     e.getBatch() != null ? e.getBatch().getId() : null,
                     e.getBatch() != null ? e.getBatch().getName() : null,
-                    e.getCourse().getLevel()
+                    e.getCourse().getLevel(),
+                    e.getPlanType() != null ? e.getPlanType() : "FULL_ACCESS"
             );
         }));
     }

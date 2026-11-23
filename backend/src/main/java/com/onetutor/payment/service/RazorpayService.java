@@ -217,6 +217,7 @@ public class RazorpayService {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPricingType(pricingType);
         payment.setSubscriptionPeriod(period);
+        payment.setPlanType(req.planType() != null && !req.planType().isBlank() ? req.planType() : "FULL_ACCESS");
         payment.setPaymentDetails("Razorpay Order: " + req.razorpayOrderId() + " | Payment ID: " + req.razorpayPaymentId() + couponNote);
         payment.setCreatedAt(Instant.now());
 
@@ -234,6 +235,8 @@ public class RazorpayService {
 
         Enrollment enrollment = enrollmentRepository.findById(enrResponse.id()).orElse(null);
         if (enrollment != null) {
+            enrollment.setPlanType(payment.getPlanType() != null ? payment.getPlanType() : "FULL_ACCESS");
+            enrollmentRepository.save(enrollment);
             payment.setEnrollment(enrollment);
             payment = paymentRepository.save(payment);
         }

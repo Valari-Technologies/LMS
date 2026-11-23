@@ -13,12 +13,13 @@ public record CourseCardResponse(
         String pricingType,
         Double price,
         String currency,
-        String subscriptionPeriod
+        String subscriptionPeriod,
+        String sellingPlans
 ) {
     public CourseCardResponse(
             Long id, String name, String shortDesc, String thumbnail,
             String categoryName, String level, String duration, String language) {
         this(id, name, shortDesc, thumbnail, categoryName, level, duration, language,
-             "free", 0.0, "INR", "lifetime");
+             "free", 0.0, "INR", "lifetime", null);
     }
 }

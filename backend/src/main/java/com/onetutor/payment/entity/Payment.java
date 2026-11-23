@@ -49,6 +49,9 @@ public class Payment {
     @Column(name = "subscription_period", length = 30)
     private String subscriptionPeriod = "lifetime";
 
+    @Column(name = "plan_type", length = 50)
+    private String planType;
+
     @Column(name = "payment_details", columnDefinition = "TEXT")
     private String paymentDetails;
 
@@ -85,6 +88,8 @@ public class Payment {
     public void setPricingType(String pricingType) { this.pricingType = pricingType; }
     public String getSubscriptionPeriod() { return subscriptionPeriod; }
     public void setSubscriptionPeriod(String subscriptionPeriod) { this.subscriptionPeriod = subscriptionPeriod; }
+    public String getPlanType() { return planType; }
+    public void setPlanType(String planType) { this.planType = planType; }
     public String getPaymentDetails() { return paymentDetails; }
     public void setPaymentDetails(String paymentDetails) { this.paymentDetails = paymentDetails; }
     public Instant getCreatedAt() { return createdAt; }

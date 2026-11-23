@@ -20,5 +20,7 @@ public record RazorpayVerifyRequest(
 
         String razorpaySignature,
 
-        String couponCode
+        String couponCode,
+
+        String planType
 ) {}

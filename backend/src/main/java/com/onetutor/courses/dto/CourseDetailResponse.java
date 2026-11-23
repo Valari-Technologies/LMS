@@ -30,7 +30,8 @@ public record CourseDetailResponse(
         String pricingType,
         Double price,
         String currency,
-        String subscriptionPeriod
+        String subscriptionPeriod,
+        String sellingPlans
 ) {
     public CourseDetailResponse(
             Long id, String name, String shortDesc, String description,
@@ -48,6 +49,6 @@ public record CourseDetailResponse(
              sequentialVideoEnabled, requireVideoCompletion, sequentialLessonUnlocking,
              pauseOnTabInactive, videoCompletionThreshold, progressSaveInterval,
              pendingApproval, pendingEdits, createdAt, updatedAt,
-             "free", 0.0, "INR", "lifetime");
+             "free", 0.0, "INR", "lifetime", null);
     }
 }

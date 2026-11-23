@@ -42,6 +42,9 @@ public class Enrollment {
     @Column(name = "pricing_type", length = 30)
     private String pricingType = "free";
 
+    @Column(name = "plan_type", length = 50)
+    private String planType = "FULL_ACCESS";
+
     @Column(name = "amount_paid")
     private java.math.BigDecimal amountPaid = java.math.BigDecimal.ZERO;
 
@@ -65,6 +68,8 @@ public class Enrollment {
     public void setPaymentId(Long paymentId) { this.paymentId = paymentId; }
     public String getPricingType() { return pricingType; }
     public void setPricingType(String pricingType) { this.pricingType = pricingType; }
+    public String getPlanType() { return planType; }
+    public void setPlanType(String planType) { this.planType = planType; }
     public java.math.BigDecimal getAmountPaid() { return amountPaid; }
     public void setAmountPaid(java.math.BigDecimal amountPaid) { this.amountPaid = amountPaid != null ? amountPaid : java.math.BigDecimal.ZERO; }
     public void setAmountPaid(Double amountPaid) { this.amountPaid = amountPaid != null ? java.math.BigDecimal.valueOf(amountPaid) : java.math.BigDecimal.ZERO; }

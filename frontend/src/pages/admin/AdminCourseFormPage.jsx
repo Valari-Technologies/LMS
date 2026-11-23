@@ -9,6 +9,12 @@ import AlertBanner from '../../components/AlertBanner';
 import AdminSectionManager from './AdminSectionManager';
 import { usePermission } from '../../hooks/usePermission';
 import { useAuth } from '../../auth/AuthContext';
+import {
+  getCourseSellingPlans,
+  saveCourseSellingPlans,
+  getDefaultSellingPlans,
+  PLAN_DEFINITIONS
+} from '../../utils/courseSellingPlans';
 
 const emptyForm = {
   name: '',
@@ -31,6 +37,7 @@ const emptyForm = {
   price: 0,
   currency: 'INR',
   subscriptionPeriod: 'lifetime', // 'lifetime' | 'monthly' | 'yearly'
+  sellingPlans: getDefaultSellingPlans(499, 'INR'),
 };
 
 const DURATION_PRESETS = ['4 weeks', '8 weeks', '12 Hours', '24 Hours', 'Self-Paced'];
@@ -146,6 +153,7 @@ export default function AdminCourseFormPage() {
           price: data.price !== undefined ? data.price : (c.price !== undefined ? c.price : 0),
           currency: data.currency || c.currency || 'INR',
           subscriptionPeriod: data.subscriptionPeriod || c.subscriptionPeriod || 'lifetime',
+          sellingPlans: getCourseSellingPlans(id, data || c) || getDefaultSellingPlans(data?.price || c?.price || 499, data?.currency || c?.currency || 'INR'),
         });
       }).catch((err) => {
         const msg = 'Failed to load course details.';
@@ -182,15 +190,32 @@ export default function AdminCourseFormPage() {
       return;
     }
 
+    const isPaid = form.pricingType === 'subscription' || form.pricingType === 'paid';
+    let minPrice = Number(form.price) || 0;
+    if (isPaid && form.sellingPlans) {
+      const activeTiers = Object.values(form.sellingPlans).filter(t => t.enabled !== false && Number(t.price) > 0);
+      if (activeTiers.length === 0) {
+        const msg = 'Please enable at least one selling plan with a price greater than 0.';
+        setError(msg);
+        toast.error(msg);
+        setLoading(false);
+        return;
+      }
+      minPrice = Math.min(...activeTiers.map(t => Number(t.price)));
+    }
+
     setLoading(true);
     const payload = {
       ...form,
+      price: minPrice,
+      sellingPlans: form.sellingPlans ? JSON.stringify(form.sellingPlans) : null,
       categoryId: form.categoryId ? Number(form.categoryId) : null,
     };
 
     try {
       if (isEdit) {
         await updateCourse(id, payload);
+        saveCourseSellingPlans(id, form.sellingPlans);
         const msg = isContentCreator
           ? 'Course details saved! Changes are pending approval from Super Admin before updating live on student pages.'
           : 'Course details saved successfully!';
@@ -199,6 +224,7 @@ export default function AdminCourseFormPage() {
       } else {
         const created = await createCourse(payload);
         setSavedCourseId(created.id);
+        saveCourseSellingPlans(created.id, form.sellingPlans);
         const msg = isContentCreator
           ? 'Course created! It is saved as draft and will require Super Admin approval before going live to students.'
           : 'Course created successfully! You can now build sections & lessons.';
@@ -773,38 +799,15 @@ export default function AdminCourseFormPage() {
                     </div>
                   </div>
 
-                  {/* Expandable pricing configuration if paid/subscription */}
+                  {/* Expandable pricing configuration with 3 Selling Types if paid/subscription */}
                   {(form.pricingType === 'subscription' || form.pricingType === 'paid') && (
-                    <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '10px', padding: '16px', marginBottom: '14px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.5fr', gap: '12px' }}>
-                        {/* Amount */}
+                    <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                      
+                      {/* Currency and Billing Period Controls */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle, #f1f5f9)' }}>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>
-                            Course Amount / Fee *
-                          </label>
-                          <div style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                              {form.currency === 'USD' ? '$' : form.currency === 'EUR' ? '€' : form.currency === 'GBP' ? '£' : '₹'}
-                            </span>
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              name="price"
-                              value={form.price}
-                              onChange={(e) => setForm(prev => ({ ...prev, price: Math.max(0, Number(e.target.value)) }))}
-                              className="form-control"
-                              style={{ paddingLeft: '28px', fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}
-                              placeholder="499"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        {/* Currency */}
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>
-                            Currency
+                            Base Currency
                           </label>
                           <select
                             name="currency"
@@ -820,7 +823,6 @@ export default function AdminCourseFormPage() {
                           </select>
                         </div>
 
-                        {/* Subscription / Access Type */}
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>
                             Billing / Access Period
@@ -840,28 +842,163 @@ export default function AdminCourseFormPage() {
                         </div>
                       </div>
 
-                      {/* Quick price presets */}
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginTop: '12px' }}>
-                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Quick Presets:</span>
-                        {[299, 499, 999, 1499, 1999, 2999].map(presetVal => (
-                          <button
-                            key={presetVal}
-                            type="button"
-                            onClick={() => setForm(prev => ({ ...prev, price: presetVal }))}
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              border: form.price === presetVal ? '1px solid var(--accent-primary, #5A70D3)' : '1px solid var(--border-default, #cbd5e1)',
-                              background: form.price === presetVal ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'var(--bg-card, #ffffff)',
-                              color: form.price === presetVal ? 'var(--accent-primary, #5A70D3)' : 'var(--text-secondary, #475569)',
-                              fontSize: '0.74rem',
-                              cursor: 'pointer',
-                              fontWeight: 700
-                            }}
-                          >
-                            {form.currency === 'USD' ? '$' : form.currency === 'EUR' ? '€' : form.currency === 'GBP' ? '£' : '₹'}{presetVal}
-                          </button>
-                        ))}
+                      {/* Header for 3 Selling Types */}
+                      <div style={{ marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: 'var(--accent-subtle, rgba(90, 112, 211, 0.12))',
+                              color: 'var(--accent-primary, #5A70D3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: '0.75rem'
+                            }}>3</span>
+                            <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                              Configure 3 Selling Options &amp; Tier Pricing *
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                            Enable the options available for students to buy and set individual prices
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3 Selling Types Grid */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {PLAN_DEFINITIONS.map((def) => {
+                          const planConfig = form.sellingPlans?.[def.key] || {
+                            enabled: true,
+                            price: def.defaultPrice
+                          };
+                          const isEnabled = planConfig.enabled !== false;
+                          const currentPrice = planConfig.price !== undefined ? planConfig.price : def.defaultPrice;
+
+                          return (
+                            <div
+                              key={def.id}
+                              style={{
+                                background: isEnabled ? '#ffffff' : '#f8fafc',
+                                border: `2px solid ${isEnabled ? def.borderColor : 'var(--border-default, #e2e8f0)'}`,
+                                borderRadius: '12px',
+                                padding: '16px',
+                                transition: 'all 0.2s ease',
+                                boxShadow: isEnabled ? '0 2px 8px rgba(0,0,0,0.04)' : 'none'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                                {/* Left Info */}
+                                <div style={{ flex: 1, minWidth: '220px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isEnabled}
+                                        onChange={() => {
+                                          setForm(prev => {
+                                            const currentPlans = prev.sellingPlans || getDefaultSellingPlans(prev.price, prev.currency);
+                                            return {
+                                              ...prev,
+                                              sellingPlans: {
+                                                ...currentPlans,
+                                                [def.key]: {
+                                                  ...currentPlans[def.key],
+                                                  enabled: !isEnabled
+                                                }
+                                              }
+                                            };
+                                          });
+                                        }}
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                      />
+                                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: isEnabled ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                        <i className={def.icon} style={{ color: def.color, marginRight: '8px' }}></i>
+                                        {def.name}
+                                      </span>
+                                    </label>
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      fontWeight: 800,
+                                      background: def.bgColor,
+                                      color: def.color,
+                                      padding: '2px 8px',
+                                      borderRadius: '9999px',
+                                      letterSpacing: '0.5px'
+                                    }}>
+                                      {def.badge}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem', color: isEnabled ? 'var(--text-secondary)' : 'var(--text-muted)', lineHeight: 1.4, paddingLeft: '24px' }}>
+                                    {def.description}
+                                  </div>
+                                </div>
+
+                                {/* Right: Price Input */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                      Selling Price
+                                    </span>
+                                    <div style={{ position: 'relative', width: '140px' }}>
+                                      <span style={{
+                                        position: 'absolute',
+                                        left: '10px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        fontWeight: 800,
+                                        color: isEnabled ? def.color : 'var(--text-muted)'
+                                      }}>
+                                        {form.currency === 'USD' ? '$' : form.currency === 'EUR' ? '€' : form.currency === 'GBP' ? '£' : '₹'}
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        disabled={!isEnabled}
+                                        value={currentPrice}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, Number(e.target.value) || 0);
+                                          setForm(prev => {
+                                            const currentPlans = prev.sellingPlans || getDefaultSellingPlans(prev.price, prev.currency);
+                                            return {
+                                              ...prev,
+                                              sellingPlans: {
+                                                ...currentPlans,
+                                                [def.key]: {
+                                                  ...currentPlans[def.key],
+                                                  price: val
+                                                }
+                                              }
+                                            };
+                                          });
+                                        }}
+                                        className="form-control"
+                                        style={{
+                                          paddingLeft: '28px',
+                                          fontWeight: 800,
+                                          fontSize: '0.98rem',
+                                          color: isEnabled ? 'var(--text-primary)' : 'var(--text-muted)',
+                                          background: isEnabled ? '#ffffff' : '#f1f5f9',
+                                          borderColor: isEnabled ? def.borderColor : 'var(--border-default)'
+                                        }}
+                                        placeholder={String(def.defaultPrice)}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ marginTop: '14px', padding: '10px 14px', background: 'rgba(90, 112, 211, 0.06)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#4355B9' }}>
+                        <i className="fa-solid fa-circle-info" style={{ fontSize: '0.9rem' }}></i>
+                        <span>Students will see these enabled selling options on the course page and can choose their preferred plan at checkout.</span>
                       </div>
                     </div>
                   )}
@@ -913,10 +1050,13 @@ export default function AdminCourseFormPage() {
                       <span><i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>{form.duration || '4 weeks'}</span>
                       {form.pricingType === 'subscription' || form.pricingType === 'paid' ? (
                         <span style={{ fontWeight: 800, color: 'var(--accent-primary, #5A70D3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <i className="fa-solid fa-lock" style={{ fontSize: '0.7rem' }}></i>
+                          <i className="fa-solid fa-layer-group" style={{ fontSize: '0.7rem' }}></i>
                           <span>
-                            {form.currency === 'USD' ? '$' : form.currency === 'EUR' ? '€' : form.currency === 'GBP' ? '£' : '₹'}{form.price || 0}
-                            {form.subscriptionPeriod === 'monthly' ? ' /mo' : form.subscriptionPeriod === 'yearly' ? ' /yr' : ''}
+                            From {form.currency === 'USD' ? '$' : form.currency === 'EUR' ? '€' : form.currency === 'GBP' ? '£' : '₹'}{
+                              form.sellingPlans
+                                ? Math.min(...Object.values(form.sellingPlans).filter(t => t.enabled !== false && Number(t.price) > 0).map(t => Number(t.price)).concat([form.price || 499]))
+                                : (form.price || 499)
+                            }
                           </span>
                         </span>
                       ) : (

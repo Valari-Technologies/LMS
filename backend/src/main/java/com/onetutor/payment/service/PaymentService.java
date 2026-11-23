@@ -108,6 +108,7 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPricingType(pricingType);
         payment.setSubscriptionPeriod(period);
+        payment.setPlanType(req.planType() != null && !req.planType().isBlank() ? req.planType() : "FULL_ACCESS");
         payment.setPaymentDetails(req.paymentDetails());
         payment.setCreatedAt(Instant.now());
 
@@ -125,6 +126,8 @@ public class PaymentService {
 
         Enrollment enrollment = enrollmentRepository.findById(enrResponse.id()).orElse(null);
         if (enrollment != null) {
+            enrollment.setPlanType(payment.getPlanType() != null ? payment.getPlanType() : "FULL_ACCESS");
+            enrollmentRepository.save(enrollment);
             payment.setEnrollment(enrollment);
             payment = paymentRepository.save(payment);
         }

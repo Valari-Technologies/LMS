@@ -452,6 +452,9 @@ public class CourseService {
         if (req.subscriptionPeriod() != null && !req.subscriptionPeriod().isBlank()) {
             course.setSubscriptionPeriod(req.subscriptionPeriod().trim().toLowerCase());
         }
+        if (req.sellingPlans() != null) {
+            course.setSellingPlans(req.sellingPlans());
+        }
     }
 
     public Course findOrThrow(Long id) {
@@ -463,7 +466,8 @@ public class CourseService {
         return new CourseCardResponse(c.getId(), c.getName(), c.getShortDesc(), c.getThumbnail(),
                 c.getCategory() != null ? c.getCategory().getName() : null,
                 c.getLevel(), c.getDuration(), c.getLanguage(),
-                c.getPricingType(), c.getPriceDouble(), c.getCurrency(), c.getSubscriptionPeriod());
+                c.getPricingType(), c.getPriceDouble(), c.getCurrency(), c.getSubscriptionPeriod(),
+                c.getSellingPlans());
     }
 
     private CourseDetailResponse toDetail(Course c) {
@@ -477,6 +481,7 @@ public class CourseService {
                 c.getVideoCompletionThreshold(), c.getProgressSaveInterval(),
                 c.isPendingApproval(), c.getPendingEdits(),
                 c.getCreatedAt(), c.getUpdatedAt(),
-                c.getPricingType(), c.getPriceDouble(), c.getCurrency(), c.getSubscriptionPeriod());
+                c.getPricingType(), c.getPriceDouble(), c.getCurrency(), c.getSubscriptionPeriod(),
+                c.getSellingPlans());
     }
 }

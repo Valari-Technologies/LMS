@@ -141,6 +141,9 @@ public class Course {
     @Column(name = "subscription_period", nullable = false, length = 30)
     private String subscriptionPeriod = "lifetime";
 
+    @Column(name = "selling_plans", columnDefinition = "TEXT")
+    private String sellingPlans;
+
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
     public Instant getCreatedAt() { return createdAt; }
@@ -156,4 +159,7 @@ public class Course {
     public void setCurrency(String currency) { this.currency = currency; }
     public String getSubscriptionPeriod() { return subscriptionPeriod; }
     public void setSubscriptionPeriod(String subscriptionPeriod) { this.subscriptionPeriod = subscriptionPeriod; }
+
+    public String getSellingPlans() { return sellingPlans; }
+    public void setSellingPlans(String sellingPlans) { this.sellingPlans = sellingPlans; }
 }

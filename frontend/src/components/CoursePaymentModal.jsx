@@ -6,8 +6,9 @@ import { useAuth } from '../auth/AuthContext';
 import { resolveMediaUrl } from '../utils/mediaUtils';
 import { validateAndApplyCoupon, AVAILABLE_COUPONS } from '../utils/couponUtils';
 import { validateCoupon, getAvailableCoupons } from '../api/coupons';
+import { saveStudentEnrolledPlan, PLAN_DEFINITIONS, PLAN_TYPES } from '../utils/courseSellingPlans';
 
-export default function CoursePaymentModal({ course, batchId, isOpen, onClose, onSuccess, initialCoupon = null }) {
+export default function CoursePaymentModal({ course, batchId, isOpen, onClose, onSuccess, initialCoupon = null, selectedPlan = null }) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -73,11 +74,13 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
 
   if (!isOpen || !course) return null;
 
+  const activePlan = selectedPlan || PLAN_DEFINITIONS.find(p => p.id === PLAN_TYPES.FULL_ACCESS);
+
   const currencySymbol = course.currency === 'USD' ? '$' : course.currency === 'EUR' ? '€' : course.currency === 'GBP' ? '£' : '₹';
-  const originalPrice = Number(course.price) || 0;
+  const originalPrice = (activePlan && activePlan.price !== undefined) ? Number(activePlan.price) : (Number(course.price) || 0);
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const finalPrice = appliedCoupon ? appliedCoupon.finalPrice : originalPrice;
-  const isMonthly = course.subscriptionPeriod === 'monthly';
+  const isMonthly = course.pricingType === 'subscription';
   const isYearly = course.subscriptionPeriod === 'yearly';
 
   const handleApplyCoupon = async (codeToUse) => {
@@ -155,7 +158,8 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
           batchId: batchId ? Number(batchId) : null,
           amount: finalPrice,
           currency: course.currency || 'INR',
-          couponCode: appliedCoupon?.code || null
+          couponCode: appliedCoupon?.code || null,
+          planType: activePlan?.id || 'FULL_ACCESS'
         });
 
         if (!orderData || !orderData.orderId) {
@@ -179,11 +183,13 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
             razorpayOrderId: orderData.orderId,
             razorpayPaymentId: 'pay_sim_' + Math.random().toString(36).substring(2, 12),
             razorpaySignature: 'simulated_test_signature',
-            couponCode: appliedCoupon?.code || null
+            couponCode: appliedCoupon?.code || null,
+            planType: activePlan?.id || 'FULL_ACCESS'
           };
 
           setProcessingStep('Enrolling student into course…');
           const verified = await verifyRazorpayPayment(verifyPayload);
+          saveStudentEnrolledPlan(course.id, user?.id || user?.email, activePlan?.id || 'FULL_ACCESS');
           setCompletedOrder(verified);
           if (onSuccess) onSuccess(verified);
           return;
@@ -211,9 +217,11 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                 razorpayOrderId: response.razorpay_order_id || orderData.orderId,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
-                couponCode: appliedCoupon?.code || null
+                couponCode: appliedCoupon?.code || null,
+                planType: activePlan?.id || 'FULL_ACCESS'
               };
               const verified = await verifyRazorpayPayment(verifyPayload);
+              saveStudentEnrolledPlan(course.id, user?.id || user?.email, activePlan?.id || 'FULL_ACCESS');
               setCompletedOrder(verified);
               if (onSuccess) onSuccess(verified);
             } catch (verifyErr) {
@@ -314,10 +322,12 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
         paymentMethod,
         paymentDetails: paymentDetailsStr + couponNote,
         couponCode: appliedCoupon?.code || null,
-        couponDiscount: appliedCoupon ? appliedCoupon.discount : 0
+        couponDiscount: appliedCoupon ? appliedCoupon.discount : 0,
+        planType: activePlan?.id || 'FULL_ACCESS'
       };
 
       const result = await checkoutPayment(payload);
+      saveStudentEnrolledPlan(course.id, user?.id || user?.email, activePlan?.id || 'FULL_ACCESS');
       setCompletedOrder(result);
       if (onSuccess) onSuccess(result);
     } catch (err) {
@@ -559,6 +569,24 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                         {course.categoryName || 'Technical Course'} • {course.level || 'All Levels'}
                       </div>
+                      {activePlan && (
+                        <div style={{
+                          marginTop: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: activePlan.bgColor || 'rgba(90, 112, 211, 0.1)',
+                          border: `1px solid ${activePlan.borderColor || '#5A70D3'}`,
+                          color: activePlan.color || '#5A70D3',
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800
+                        }}>
+                          <i className={activePlan.icon || 'fa-solid fa-layer-group'}></i>
+                          <span>{activePlan.name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -35,7 +35,8 @@ public record CourseRequest(
         String pricingType,
         Double price,
         String currency,
-        String subscriptionPeriod
+        String subscriptionPeriod,
+        String sellingPlans
 ) {
     public CourseRequest(
             String name, String shortDesc, String description, String thumbnail,
@@ -47,6 +48,6 @@ public record CourseRequest(
         this(name, shortDesc, description, thumbnail, categoryId, level, duration, language,
              prerequisites, learningOutcomes, sequentialVideoEnabled, requireVideoCompletion,
              sequentialLessonUnlocking, pauseOnTabInactive, videoCompletionThreshold, progressSaveInterval,
-             "free", 0.0, "INR", "lifetime");
+             "free", 0.0, "INR", "lifetime", null);
     }
 }
