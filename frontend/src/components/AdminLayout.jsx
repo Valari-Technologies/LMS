@@ -355,17 +355,32 @@ export default function AdminLayout() {
             ) : (
               <>
                 <span className="ot-brand-logo-wrap">
-                  <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '32px' }} />
+                  <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '30px' }} />
                 </span>
                 <span
                   className="brand-role-pill"
                   style={{
-                    marginLeft: '6px',
+                    marginLeft: '8px',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.5px',
+                    padding: '3px 9px',
+                    borderRadius: '9999px',
                     background: isReadOnlyAdmin
-                      ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                      ? 'rgba(245, 158, 11, 0.12)'
                       : isContentCreator
-                      ? 'linear-gradient(135deg, #0284c7, #0369a1)'
-                      : 'var(--accent-gradient)'
+                      ? 'rgba(2, 132, 199, 0.12)'
+                      : 'rgba(90, 112, 211, 0.12)',
+                    color: isReadOnlyAdmin
+                      ? '#d97706'
+                      : isContentCreator
+                      ? '#0284c7'
+                      : '#5A70D3',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    lineHeight: 1,
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {isReadOnlyAdmin ? 'READ-ONLY ADMIN' : isContentCreator ? 'CONTENT CREATOR' : 'SUPER ADMIN'}
@@ -374,12 +389,13 @@ export default function AdminLayout() {
             )}
           </Link>
           <button
+            type="button"
             className="sidebar-toggle-btn desktop-only"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label="Toggle sidebar collapse"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <i className="fa-solid fa-chevron-right"></i> : <i className="fa-solid fa-chevron-left"></i>}
+            <i className={`fa-solid fa-chevron-${collapsed ? 'right' : 'left'}`}></i>
           </button>
           <button
             className="sidebar-close-btn mobile-only"

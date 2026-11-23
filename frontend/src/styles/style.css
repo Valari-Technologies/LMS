@@ -11777,7 +11777,8 @@ body:has(.ud-header) .ot-course-content-sidebar {
   display: none !important;
 }
 
-.ot-course-sidebar-collapse-btn {
+.ot-course-sidebar-collapse-btn,
+.sidebar-toggle-btn {
   position: absolute !important;
   top: 21px !important;
   right: -13px !important;
@@ -11798,7 +11799,8 @@ body:has(.ud-header) .ot-course-content-sidebar {
   padding: 0 !important;
 }
 
-.ot-course-sidebar-collapse-btn:hover {
+.ot-course-sidebar-collapse-btn:hover,
+.sidebar-toggle-btn:hover {
   background: #5A70D3 !important;
   color: #ffffff !important;
   border-color: #5A70D3 !important;
@@ -11806,9 +11808,31 @@ body:has(.ud-header) .ot-course-content-sidebar {
   transform: scale(1.1) !important;
 }
 
-.ot-course-sidebar.collapsed .ot-course-sidebar-header {
+.ot-course-sidebar.collapsed .ot-course-sidebar-header,
+.admin-sidebar.collapsed .admin-sidebar-header {
   padding: 0 12px !important;
   justify-content: center !important;
+}
+
+.admin-sidebar-header {
+  position: relative !important;
+}
+
+.brand-role-pill {
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  background: rgba(90, 112, 211, 0.12) !important;
+  color: #5A70D3 !important;
+  border: none !important;
+  padding: 3px 9px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+  width: fit-content !important;
+  white-space: nowrap !important;
 }
 
 @media (max-width: 1024px) {
