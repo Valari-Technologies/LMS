@@ -2665,7 +2665,7 @@ export default function CourseDetailsPage() {
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                                 <div style={{
                                   width: '18px',
                                   height: '18px',
@@ -2675,7 +2675,7 @@ export default function CourseDetailsPage() {
                                   flexShrink: 0,
                                   transition: 'all 0.15s ease'
                                 }} />
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                     <span style={{
                                       fontWeight: 800,

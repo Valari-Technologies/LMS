@@ -24,6 +24,7 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -342,34 +343,192 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        overflowY: 'auto'
-      }}
+      className="ot-cpm-overlay"
       onClick={!submitting ? onClose : undefined}
     >
+      <style>{`
+        @keyframes modalSlideUp {
+          from {
+            opacity: 0;
+            transform: translateY(16px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .ot-cpm-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(15, 23, 42, 0.78);
+          backdrop-filter: blur(8px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .ot-cpm-modal {
+          background: var(--bg-card, #ffffff);
+          border-radius: 20px;
+          width: 100%;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+          overflow: hidden;
+          border: 1px solid var(--border-default, #e2e8f0);
+          animation: modalSlideUp 0.25s ease-out;
+          color: var(--text-primary);
+          margin: auto 0;
+          position: relative;
+        }
+        .ot-cpm-receipt-view {
+          padding: 36px 32px;
+          text-align: center;
+        }
+        .ot-cpm-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 24px;
+          border-bottom: 1px solid var(--border-default, #e2e8f0);
+          background: linear-gradient(to right, #0f172a, #1e293b);
+          color: #ffffff;
+        }
+        .ot-cpm-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.08fr;
+        }
+        .ot-cpm-summary-col {
+          padding: 24px;
+          background: var(--bg-surface, #f8fafc);
+          border-right: 1px solid var(--border-default, #e2e8f0);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .ot-cpm-payment-col {
+          padding: 24px;
+        }
+        .ot-cpm-method-tabs {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 6px;
+          margin-bottom: 20px;
+        }
+        .ot-cpm-tab-btn {
+          padding: 10px 4px;
+          border-radius: 10px;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.72rem;
+          transition: all 0.15s ease;
+          position: relative;
+        }
+        .ot-cpm-razorpay-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          font-size: 0.8rem;
+          color: #475569;
+        }
+        .ot-cpm-mobile-bar {
+          display: none;
+        }
+        .ot-cpm-desktop-course-card {
+          display: flex;
+        }
+        .ot-cpm-summary-details {
+          display: block;
+        }
+
+        @media (max-width: 768px) {
+          .ot-cpm-overlay {
+            padding: 8px 6px;
+            align-items: flex-start;
+          }
+          .ot-cpm-modal {
+            border-radius: 16px;
+            margin: 0;
+            max-width: 100% !important;
+          }
+          .ot-cpm-receipt-view {
+            padding: 24px 16px;
+          }
+          .ot-cpm-header {
+            padding: 12px 14px;
+          }
+          .ot-cpm-grid {
+            display: flex;
+            flex-direction: column;
+          }
+          .ot-cpm-summary-col {
+            padding: 12px 14px;
+            border-right: none;
+            border-bottom: 1px solid var(--border-default, #e2e8f0);
+          }
+          .ot-cpm-payment-col {
+            padding: 14px 14px 22px 14px;
+          }
+          .ot-cpm-method-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 6px;
+            margin-bottom: 14px;
+            padding-bottom: 6px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .ot-cpm-method-tabs::-webkit-scrollbar {
+            display: none;
+          }
+          .ot-cpm-tab-btn {
+            min-width: 72px;
+            flex: 1 0 auto;
+            padding: 8px 6px;
+          }
+          .ot-cpm-razorpay-grid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+          }
+
+          .ot-cpm-desktop-course-card {
+            display: none !important;
+          }
+          .ot-cpm-mobile-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #ffffff;
+            border: 1px solid var(--border-default, #cbd5e1);
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+          }
+          .ot-cpm-summary-details {
+            display: none;
+          }
+          .ot-cpm-summary-details.is-mobile-open {
+            display: block;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #cbd5e1;
+            animation: modalSlideUp 0.2s ease-out;
+          }
+        }
+      `}</style>
       <div
+        className="ot-cpm-modal"
         style={{
-          background: 'var(--bg-card, #ffffff)',
-          borderRadius: '20px',
-          width: '100%',
-          maxWidth: completedOrder ? '540px' : '880px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-          overflow: 'hidden',
-          border: '1px solid var(--border-default, #e2e8f0)',
-          animation: 'modalSlideUp 0.25s ease-out',
-          color: 'var(--text-primary)'
+          maxWidth: completedOrder ? '540px' : '880px'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -467,17 +626,7 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
           /* ================= ACTIVE CHECKOUT FLOW ================= */
           <div>
             {/* Modal Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '18px 24px',
-                borderBottom: '1px solid var(--border-default, #e2e8f0)',
-                background: 'linear-gradient(to right, #0f172a, #1e293b)',
-                color: '#ffffff'
-              }}
-            >
+            <div className="ot-cpm-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div
                   style={{
@@ -495,11 +644,11 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                   <i className="fa-solid fa-shield-halved" style={{ fontSize: '1rem' }}></i>
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 850, letterSpacing: '-0.02em', color: '#ffffff' }}>
                     Secure Course Checkout
                   </h3>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="fa-solid fa-lock" style={{ fontSize: '0.68rem', color: '#10b981' }}></i>
+                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fa-solid fa-lock" style={{ fontSize: '0.66rem', color: '#10b981' }}></i>
                     <span>256-Bit Bank Grade SSL Encrypted</span>
                   </div>
                 </div>
@@ -525,25 +674,79 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
             </div>
 
             {/* Modal Body: Split 2 columns on desktop */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+            <div className="ot-cpm-grid">
               {/* LEFT COLUMN: Order Summary */}
-              <div
-                style={{
-                  padding: '24px',
-                  background: 'var(--bg-surface, #f8fafc)',
-                  borderRight: '1px solid var(--border-default, #e2e8f0)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
+              <div className="ot-cpm-summary-col">
                 <div>
                   <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--accent-primary, #5A70D3)', marginBottom: '8px' }}>
                     Order Summary
                   </div>
 
-                  {/* Course Card Summary */}
-                  <div style={{ display: 'flex', gap: '14px', marginBottom: '20px' }}>
+                  {/* Compact Mobile Summary Bar (Click to toggle details on small screens) */}
+                  <div
+                    className="ot-cpm-mobile-bar"
+                    onClick={() => setShowMobileDetails(!showMobileDetails)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          background: '#0f172a',
+                          flexShrink: 0
+                        }}
+                      >
+                        {course.thumbnail ? (
+                          <img src={resolveMediaUrl(course.thumbnail)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', fontSize: '0.9rem' }}>
+                            <i className="fa-solid fa-graduation-cap"></i>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.86rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {course.name}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                          {activePlan && (
+                            <span style={{
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                              padding: '1px 6px',
+                              borderRadius: '6px',
+                              background: activePlan.bgColor || 'rgba(90, 112, 211, 0.1)',
+                              color: activePlan.color || '#5A70D3',
+                              border: `1px solid ${activePlan.borderColor || '#5A70D3'}`
+                            }}>
+                              <i className={activePlan.icon || 'fa-solid fa-layer-group'} style={{ marginRight: '3px' }}></i>
+                              {activePlan.shortName || activePlan.name}
+                            </span>
+                          )}
+                          {appliedCoupon && (
+                            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#059669' }}>
+                              🎉 -{currencySymbol}{discountAmount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '4px' }}>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-primary, #5A70D3)' }}>
+                        {currencySymbol}{finalPrice}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--accent-primary, #5A70D3)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+                        <span>{showMobileDetails ? 'Hide details' : 'Coupons & Info'}</span>
+                        <i className={`fa-solid ${showMobileDetails ? 'fa-chevron-up' : 'fa-chevron-down'}`} style={{ fontSize: '0.62rem' }}></i>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop Course Card Summary */}
+                  <div className="ot-cpm-desktop-course-card" style={{ gap: '14px', marginBottom: '20px' }}>
                     <div
                       style={{
                         width: '84px',
@@ -589,6 +792,9 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                       )}
                     </div>
                   </div>
+
+                  {/* Expandable Section: Coupons, Itemized Price Breakdown & Perks */}
+                  <div className={`ot-cpm-summary-details ${showMobileDetails ? 'is-mobile-open' : ''}`}>
 
                   {/* Coupon Code Section */}
                   <div style={{ marginBottom: '18px' }}>
@@ -820,20 +1026,21 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div style={{ marginTop: '20px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                <div style={{ marginTop: '16px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   By completing this purchase, you agree to OneTutor's Terms of Service and refund policy.
                 </div>
               </div>
 
               {/* RIGHT COLUMN: Payment Method & Payment Form */}
-              <div style={{ padding: '24px' }}>
+              <div className="ot-cpm-payment-col">
                 <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 800, color: 'var(--accent-primary, #5A70D3)', marginBottom: '12px' }}>
                   Select Payment Method
                 </div>
 
                 {/* Method Tabs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '20px' }}>
+                <div className="ot-cpm-method-tabs">
                   {[
                     { id: 'RAZORPAY', label: 'Razorpay', icon: 'fa-bolt', badge: 'Fast' },
                     { id: 'CARD', label: 'Cards', icon: 'fa-credit-card' },
@@ -844,22 +1051,13 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                     <button
                       key={tab.id}
                       type="button"
+                      className="ot-cpm-tab-btn"
                       onClick={() => { setPaymentMethod(tab.id); setError(''); }}
                       style={{
-                        padding: '10px 4px',
-                        borderRadius: '10px',
                         border: paymentMethod === tab.id ? '2px solid var(--accent-primary, #5A70D3)' : '1px solid var(--border-default, #cbd5e1)',
                         background: paymentMethod === tab.id ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'var(--bg-card, #ffffff)',
                         color: paymentMethod === tab.id ? 'var(--accent-primary, #5A70D3)' : 'var(--text-secondary, #475569)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '4px',
                         fontWeight: paymentMethod === tab.id ? 800 : 600,
-                        fontSize: '0.72rem',
-                        transition: 'all 0.15s ease',
-                        position: 'relative'
                       }}
                     >
                       {tab.badge && (
@@ -954,7 +1152,7 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                           One single checkout window supporting all major Indian payment options:
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem', color: '#475569' }}>
+                        <div className="ot-cpm-razorpay-grid">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '9px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                             <i className="fa-solid fa-mobile-screen-button" style={{ color: '#0284c7', fontSize: '1rem' }}></i>
                             <span><strong>UPI</strong> (GPay, PhonePe, Paytm, CRED)</span>
