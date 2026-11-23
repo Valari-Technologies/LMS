@@ -2249,7 +2249,7 @@ export default function StudentCourseDashboardPage() {
                     {daysAbsent}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{daysAbsent === 0 ? 'No absences' : 'Missed sessions'}</span>
+                    <span>{daysAbsent === 0 ? 'No absences' : 'Absent'}</span>
                     <span style={{ color: '#ef4444', fontWeight: 700 }}>{daysAbsent > 0 ? 'Absent' : 'Clean'}</span>
                   </div>
                 </div>
@@ -2525,7 +2525,7 @@ export default function StudentCourseDashboardPage() {
                       <i className="fa-solid fa-circle-check"></i> Present
                     </span>
                     <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '12px' }}>
-                      <i className="fa-solid fa-circle-xmark"></i> Absent / Missed
+                      <i className="fa-solid fa-circle-xmark"></i> Absent
                     </span>
                   </div>
                 </div>
@@ -2598,7 +2598,7 @@ export default function StudentCourseDashboardPage() {
                                     alignItems: 'center',
                                     gap: '4px'
                                   }}>
-                                    <i className="fa-solid fa-circle-xmark"></i> Absent / Missed
+                                    <i className="fa-solid fa-circle-xmark"></i> Absent
                                   </span>
                                 )}
                               </td>

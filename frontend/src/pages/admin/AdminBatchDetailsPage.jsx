@@ -351,9 +351,9 @@ export default function AdminBatchDetailsPage() {
         <div className="stat-card" style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
           <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Live Attendance</span>
-            <i className="fa-solid fa-clipboard-user" style={{ color: '#10b981' }}></i>
+            <i className="fa-solid fa-clipboard-user" style={{ color: totalHeldSessionsCount > 0 ? (overallBatchAttendancePct >= 80 ? '#10b981' : overallBatchAttendancePct > 40 ? '#6366f1' : '#ef4444') : '#64748b' }}></i>
           </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: '6px', color: '#10b981' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: '6px', color: totalHeldSessionsCount > 0 ? (overallBatchAttendancePct >= 80 ? '#10b981' : overallBatchAttendancePct > 40 ? '#6366f1' : '#ef4444') : '#64748b' }}>
             {totalHeldSessionsCount > 0 ? `${overallBatchAttendancePct}%` : '100%'}
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -465,24 +465,25 @@ export default function AdminBatchDetailsPage() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '5px',
-                                background: 'rgba(148, 163, 184, 0.12)',
+                                background: '#f1f5f9',
                                 color: '#64748b',
-                                border: '1px solid rgba(148, 163, 184, 0.25)',
+                                border: '1px solid #cbd5e1',
                                 borderRadius: '9999px',
                                 padding: '4px 10px',
                                 fontSize: '0.78rem',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap'
                               }}
                               title="Click to view session attendance breakdown"
                             >
-                              <i className="fa-regular fa-clock"></i> No sessions held yet
+                              <i className="fa-regular fa-clock"></i> No classes held
                             </span>
                           );
                         }
 
                         const rate = att.percentage ?? 0;
-                        const isPerfect = rate >= 100;
-                        const isPartial = rate > 0 && rate < 100;
+                        const isAllPresent = att.absentCount === 0 && att.attendedCount > 0;
+                        const isAllAbsent = att.attendedCount === 0;
 
                         return (
                           <div
@@ -490,39 +491,66 @@ export default function AdminBatchDetailsPage() {
                             style={{
                               cursor: 'pointer',
                               display: 'inline-flex',
-                              flexDirection: 'column',
-                              gap: '4px',
-                              padding: '4px 6px',
-                              borderRadius: '8px',
-                              transition: 'all 0.15s ease'
+                              alignItems: 'center'
                             }}
                             title="Click to view student session breakdown & attendance sheet"
                           >
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                background: isPerfect
-                                  ? 'rgba(16, 185, 129, 0.12)'
-                                  : isPartial
-                                  ? 'rgba(99, 102, 241, 0.12)'
-                                  : 'rgba(239, 68, 68, 0.1)',
-                                color: isPerfect ? '#10b981' : isPartial ? '#6366f1' : '#ef4444',
-                                border: `1px solid ${isPerfect ? 'rgba(16, 185, 129, 0.3)' : isPartial ? 'rgba(99, 102, 241, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                borderRadius: '9999px',
-                                padding: '3px 10px',
-                                fontSize: '0.8rem',
-                                fontWeight: 800,
-                                width: 'fit-content'
-                              }}
-                            >
-                              <i className={`fa-solid ${isPerfect ? 'fa-circle-check' : isPartial ? 'fa-circle-half-stroke' : 'fa-circle-xmark'}`}></i>
-                              <span>{rate}% ({att.attendedCount}/{att.totalHeld} Present)</span>
-                            </span>
-                            {att.absentCount > 0 && (
-                              <span style={{ fontSize: '0.74rem', color: '#ef4444', fontWeight: 600, paddingLeft: '4px' }}>
-                                • {att.absentCount} missed / absent
+                            {isAllAbsent ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                  borderRadius: '9999px',
+                                  padding: '4px 12px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 800,
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                <i className="fa-solid fa-circle-xmark"></i>
+                                <span>Absent ({att.absentCount}/{att.totalHeld})</span>
+                              </span>
+                            ) : isAllPresent ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  color: '#10b981',
+                                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                                  borderRadius: '9999px',
+                                  padding: '4px 12px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 800,
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                <i className="fa-solid fa-circle-check"></i>
+                                <span>Present ({att.attendedCount}/{att.totalHeld})</span>
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  background: 'rgba(99, 102, 241, 0.12)',
+                                  color: '#6366f1',
+                                  border: '1px solid rgba(99, 102, 241, 0.25)',
+                                  borderRadius: '9999px',
+                                  padding: '4px 12px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 800,
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                <i className="fa-solid fa-circle-half-stroke"></i>
+                                <span>{rate}% ({att.attendedCount} Present • {att.absentCount} Absent)</span>
                               </span>
                             )}
                           </div>
