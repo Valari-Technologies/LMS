@@ -92,28 +92,71 @@ const STORAGE_KEY_ENROLLED_PLANS = 'onetutor_enrolled_plan_';
  * Returns default selling plans structure for a course.
  */
 export function getDefaultSellingPlans(basePrice = 499, currency = 'INR') {
-  const p = Number(basePrice) || 499;
+  const p = Number(basePrice) || 0;
+  // If basePrice is 0 or unconfigured, default to standard tier prices
+  if (!p || p <= 0) {
+    return {
+      liveOnly: {
+        enabled: true,
+        price: 499,
+        currency: currency || 'INR'
+      },
+      liveAndRecorded: {
+        enabled: true,
+        price: 899,
+        currency: currency || 'INR'
+      },
+      recordedOnly: {
+        enabled: true,
+        price: 349,
+        currency: currency || 'INR'
+      }
+    };
+  }
+
+  // If basePrice is low (e.g. testing with ₹1, ₹1.5, ₹10) preserve exact base price
+  if (p <= 10) {
+    return {
+      liveOnly: {
+        enabled: true,
+        price: p,
+        currency: currency || 'INR'
+      },
+      liveAndRecorded: {
+        enabled: true,
+        price: p,
+        currency: currency || 'INR'
+      },
+      recordedOnly: {
+        enabled: true,
+        price: p,
+        currency: currency || 'INR'
+      }
+    };
+  }
+
+  // Proportional pricing without hardcoded Math.max(99/149) floors
   return {
     liveOnly: {
       enabled: true,
-      price: Math.max(99, Math.round(p * 0.7)),
+      price: Math.round(p * 0.8),
       currency: currency || 'INR'
     },
     liveAndRecorded: {
       enabled: true,
-      price: Math.max(149, p),
+      price: p,
       currency: currency || 'INR'
     },
     recordedOnly: {
       enabled: true,
-      price: Math.max(99, Math.round(p * 0.5)),
+      price: Math.round(p * 0.6),
       currency: currency || 'INR'
     }
   };
 }
 
 /**
- * Parses selling plans from a course object, with fallback to default tiers.
+ * Parses selling plans from a course object or localStorage, respecting exact configured prices.
  */
 export function parseSellingPlans(course) {
   if (!course) return null;
@@ -135,21 +178,31 @@ export function parseSellingPlans(course) {
     try {
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (parsed && (parsed.liveOnly || parsed.liveAndRecorded || parsed.recordedOnly)) {
+        const getTierPrice = (tierKey, defaultRatio = 1) => {
+          const tier = parsed[tierKey];
+          if (tier && tier.price !== undefined && tier.price !== null && tier.price !== '') {
+            const num = Number(tier.price);
+            if (!isNaN(num) && num >= 0) return num;
+          }
+          const bp = Number(course.price) || 0;
+          return bp > 0 ? (bp <= 10 ? bp : Math.round(bp * defaultRatio)) : 0;
+        };
+
         return {
           liveOnly: {
             enabled: parsed.liveOnly?.enabled !== false,
-            price: Number(parsed.liveOnly?.price) || Math.round((Number(course.price) || 499) * 0.7),
-            currency: course.currency || 'INR'
+            price: getTierPrice('liveOnly', 0.8),
+            currency: parsed.liveOnly?.currency || course.currency || 'INR'
           },
           liveAndRecorded: {
             enabled: parsed.liveAndRecorded?.enabled !== false,
-            price: Number(parsed.liveAndRecorded?.price) || Number(course.price) || 899,
-            currency: course.currency || 'INR'
+            price: getTierPrice('liveAndRecorded', 1),
+            currency: parsed.liveAndRecorded?.currency || course.currency || 'INR'
           },
           recordedOnly: {
             enabled: parsed.recordedOnly?.enabled !== false,
-            price: Number(parsed.recordedOnly?.price) || Math.round((Number(course.price) || 499) * 0.5),
-            currency: course.currency || 'INR'
+            price: getTierPrice('recordedOnly', 0.6),
+            currency: parsed.recordedOnly?.currency || course.currency || 'INR'
           }
         };
       }
@@ -178,7 +231,7 @@ export function saveCourseSellingPlans(courseId, plans) {
 }
 
 /**
- * Gets the active selling plans for a course, merging API data and local storage.
+ * Gets the active selling plans for a course, prioritizing localStorage for latest live edits.
  */
 export function getCourseSellingPlans(courseId, course) {
   if (!courseId && !course) return null;
@@ -191,7 +244,23 @@ export function getCourseSellingPlans(courseId, course) {
       if (local) {
         const parsed = JSON.parse(local);
         if (parsed && (parsed.liveOnly || parsed.liveAndRecorded || parsed.recordedOnly)) {
-          return parsed;
+          return {
+            liveOnly: {
+              enabled: parsed.liveOnly?.enabled !== false,
+              price: parsed.liveOnly?.price !== undefined ? Number(parsed.liveOnly.price) : 0,
+              currency: parsed.liveOnly?.currency || course?.currency || 'INR'
+            },
+            liveAndRecorded: {
+              enabled: parsed.liveAndRecorded?.enabled !== false,
+              price: parsed.liveAndRecorded?.price !== undefined ? Number(parsed.liveAndRecorded.price) : 0,
+              currency: parsed.liveAndRecorded?.currency || course?.currency || 'INR'
+            },
+            recordedOnly: {
+              enabled: parsed.recordedOnly?.enabled !== false,
+              price: parsed.recordedOnly?.price !== undefined ? Number(parsed.recordedOnly.price) : 0,
+              currency: parsed.recordedOnly?.currency || course?.currency || 'INR'
+            }
+          };
         }
       }
     } catch {
@@ -218,12 +287,13 @@ export function getAvailablePlanList(course) {
   }).map(def => {
     const config = plans[def.key];
     const price = config && config.price !== undefined ? Number(config.price) : def.defaultPrice;
+    const formattedPrice = Number.isInteger(price) ? price.toLocaleString() : price.toFixed(2);
     return {
       ...def,
       price,
       currency: course.currency || 'INR',
       currencySymbol,
-      displayPrice: `${currencySymbol}${price.toLocaleString()}`
+      displayPrice: `${currencySymbol}${formattedPrice}`
     };
   });
 }

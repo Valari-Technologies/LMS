@@ -48,10 +48,26 @@ export default function CourseDetailsPage() {
   const [showCouponInput, setShowCouponInput] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
 
+  const [plansVersion, setPlansVersion] = useState(0);
+
+  useEffect(() => {
+    const handlePlansUpdated = (e) => {
+      if (!e.detail?.courseId || String(e.detail.courseId) === String(id)) {
+        setPlansVersion(v => v + 1);
+      }
+    };
+    window.addEventListener('onetutor-selling-plans-updated', handlePlansUpdated);
+    window.addEventListener('storage', handlePlansUpdated);
+    return () => {
+      window.removeEventListener('onetutor-selling-plans-updated', handlePlansUpdated);
+      window.removeEventListener('storage', handlePlansUpdated);
+    };
+  }, [id]);
+
   // Selling Plans / Tiers State
   const availablePlans = useMemo(() => {
     return getAvailablePlanList(course);
-  }, [course]);
+  }, [course, plansVersion]);
 
   const [selectedPlanId, setSelectedPlanId] = useState(null);
 
@@ -420,6 +436,8 @@ export default function CourseDetailsPage() {
   const isBatchFull = hasBatches ? !batches.some(b => isBatchEnrollable(b)) : false;
   const isPublished = !course?.status || course.status.toLowerCase() === 'published';
   const isPaidCourse = (course?.pricingType === 'subscription' || course?.pricingType === 'paid') && Number(course?.price) > 0;
+  const isLifetimeAccess = course?.subscriptionPeriod === 'lifetime' || course?.subscriptionPeriod === 'one-time' || course?.pricingType === 'paid';
+  const isRecurringSubscription = (course?.pricingType === 'subscription') && !isLifetimeAccess;
   const currencySymbol = course?.currency === 'USD' ? '$' : '₹';
 
   const handleEnroll = async () => {
@@ -1821,8 +1839,8 @@ export default function CourseDetailsPage() {
                 <div className="ot-cd-badge-pill" style={{ background: 'rgba(99, 102, 241, 0.25)', color: '#c7d2fe', border: '1px solid rgba(165, 180, 252, 0.4)', fontWeight: 800 }}>
                   <i className="fa-solid fa-gem" style={{ color: '#818cf8' }}></i>
                   <span>
-                    {currencySymbol}{Number(course.price).toLocaleString()}
-                    {course.pricingType === 'subscription' && ` / ${course.subscriptionPeriod || 'month'}`}
+                    {currencySymbol}{Number.isInteger(Number(course.price)) ? Number(course.price).toLocaleString() : Number(course.price).toFixed(2)}
+                    {isRecurringSubscription ? ` / ${course.subscriptionPeriod === 'yearly' ? 'year' : 'month'}` : ' • Lifetime Access'}
                   </span>
                 </div>
               ) : (
@@ -2583,21 +2601,21 @@ export default function CourseDetailsPage() {
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-                            {currencySymbol}{appliedCoupon ? effectiveFinalPrice.toLocaleString() : currentPlanPrice.toLocaleString()}
+                            {currencySymbol}{appliedCoupon ? (Number.isInteger(effectiveFinalPrice) ? effectiveFinalPrice.toLocaleString() : effectiveFinalPrice.toFixed(2)) : (Number.isInteger(currentPlanPrice) ? currentPlanPrice.toLocaleString() : currentPlanPrice.toFixed(2))}
                           </span>
-                          {(appliedCoupon || (selectedPlan && selectedPlan.price !== Number(course.price))) && (
+                          {appliedCoupon && (
                             <span style={{ fontSize: '1.1rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: 600 }}>
-                              {currencySymbol}{appliedCoupon ? currentPlanPrice.toLocaleString() : Number(course.price).toLocaleString()}
+                              {currencySymbol}{Number.isInteger(currentPlanPrice) ? currentPlanPrice.toLocaleString() : currentPlanPrice.toFixed(2)}
                             </span>
                           )}
-                          {course.pricingType === 'subscription' && (
+                          {isRecurringSubscription && (
                             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
                               /{course.subscriptionPeriod === 'yearly' ? 'year' : 'month'}
                             </span>
                           )}
                         </div>
                         <span style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {selectedPlan ? selectedPlan.name : (course.pricingType === 'subscription' ? 'Subscription Access' : 'One-time Payment')}
+                          {selectedPlan ? selectedPlan.name : (isRecurringSubscription ? 'Subscription Access' : 'One-Time Lifetime Access')}
                         </span>
                       </div>
                       {appliedCoupon ? (
@@ -2712,7 +2730,7 @@ export default function CourseDetailsPage() {
                                   color: isSelected ? (plan.color || '#0f172a') : '#0f172a',
                                   letterSpacing: '-0.02em'
                                 }}>
-                                  {plan.currencySymbol}{plan.price.toLocaleString()}
+                                  {plan.currencySymbol}{Number.isInteger(plan.price) ? plan.price.toLocaleString() : plan.price.toFixed(2)}
                                 </div>
                               </div>
                             </div>
@@ -2942,7 +2960,7 @@ export default function CourseDetailsPage() {
                   >
                     <i className="fa-solid fa-lock-open"></i>
                     <span>
-                      {course.pricingType === 'subscription' ? 'Subscribe Now' : 'Buy Now'} • {currencySymbol}{appliedCoupon ? effectiveFinalPrice.toLocaleString() : currentPlanPrice.toLocaleString()}
+                      {isRecurringSubscription ? 'Subscribe Now' : 'Enroll Now'} • {currencySymbol}{appliedCoupon ? (Number.isInteger(effectiveFinalPrice) ? effectiveFinalPrice.toLocaleString() : effectiveFinalPrice.toFixed(2)) : (Number.isInteger(currentPlanPrice) ? currentPlanPrice.toLocaleString() : currentPlanPrice.toFixed(2))}
                     </span>
                   </button>
                 ) : (

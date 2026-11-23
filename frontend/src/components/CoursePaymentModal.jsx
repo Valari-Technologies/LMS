@@ -81,8 +81,16 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
   const originalPrice = (activePlan && activePlan.price !== undefined) ? Number(activePlan.price) : (Number(course.price) || 0);
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const finalPrice = appliedCoupon ? appliedCoupon.finalPrice : originalPrice;
-  const isMonthly = course.pricingType === 'subscription';
-  const isYearly = course.subscriptionPeriod === 'yearly';
+  const formatPrice = (amt) => {
+    const num = Number(amt) || 0;
+    return Number.isInteger(num) ? num.toLocaleString() : num.toFixed(2);
+  };
+  const isSubscription = (course.pricingType === 'subscription' || course.pricingType === 'subscription_access')
+    && course.subscriptionPeriod !== 'lifetime'
+    && course.subscriptionPeriod !== 'one-time'
+    && course.pricingType !== 'paid';
+  const isMonthly = isSubscription && (course.subscriptionPeriod === 'monthly' || !course.subscriptionPeriod);
+  const isYearly = isSubscription && course.subscriptionPeriod === 'yearly';
 
   const handleApplyCoupon = async (codeToUse) => {
     setCouponError('');
@@ -736,7 +744,7 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
 
                     <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '4px' }}>
                       <div style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-primary, #5A70D3)' }}>
-                        {currencySymbol}{finalPrice}
+                        {currencySymbol}{formatPrice(finalPrice)}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--accent-primary, #5A70D3)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
                         <span>{showMobileDetails ? 'Hide details' : 'Coupons & Info'}</span>
@@ -1001,9 +1009,9 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                       <span style={{ fontWeight: 700, color: '#10b981' }}>₹0.00 (Waived)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border-default, #e2e8f0)', fontSize: '1.05rem', fontWeight: 800 }}>
-                      <span>Total Due Today:</span>
+                      <span>{isSubscription ? 'Total Due Today:' : 'Total Amount:'}</span>
                       <span style={{ color: 'var(--accent-primary, #5A70D3)', fontSize: '1.25rem' }}>
-                        {currencySymbol}{finalPrice}
+                        {currencySymbol}{formatPrice(finalPrice)}
                         {isMonthly && <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>/mo</span>}
                         {isYearly && <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>/yr</span>}
                       </span>
@@ -1472,12 +1480,12 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                       ) : paymentMethod === 'RAZORPAY' ? (
                         <>
                           <i className="fa-solid fa-bolt"></i>
-                          <span>Proceed with Razorpay ({currencySymbol}{finalPrice})</span>
+                          <span>Proceed with Razorpay ({currencySymbol}{formatPrice(finalPrice)})</span>
                         </>
                       ) : (
                         <>
                           <i className="fa-solid fa-lock"></i>
-                          <span>Pay {currencySymbol}{finalPrice} Securely</span>
+                          <span>Pay {currencySymbol}{formatPrice(finalPrice)} Securely</span>
                         </>
                       )}
                     </button>

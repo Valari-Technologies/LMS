@@ -112,8 +112,8 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
                 'Enrolled'
               ) : ((course.pricingType === 'subscription' || course.pricingType === 'paid') && Number(course.price) > 0) ? (
                 <>
-                  {course.currency === 'USD' ? '$' : '₹'}{Number(course.price).toLocaleString()}
-                  {course.pricingType === 'subscription' && (
+                  {course.currency === 'USD' ? '$' : '₹'}{Number.isInteger(Number(course.price)) ? Number(course.price).toLocaleString() : Number(course.price).toFixed(2)}
+                  {course.pricingType === 'subscription' && course.subscriptionPeriod !== 'lifetime' && course.subscriptionPeriod !== 'one-time' && (
                     <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b' }}>
                       /{course.subscriptionPeriod === 'yearly' ? 'yr' : 'mo'}
                     </span>
@@ -126,7 +126,7 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
             {course.isBestseller && (
               <span className="ud-badge-bestseller">Bestseller</span>
             )}
-            {!isEnrolled && (course.pricingType === 'subscription') && Number(course.price) > 0 && (
+            {!isEnrolled && (course.pricingType === 'subscription' || course.pricingType === 'paid') && Number(course.price) > 0 && (
               <span style={{
                 fontSize: '0.68rem',
                 fontWeight: 700,
@@ -136,7 +136,7 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
                 color: '#4f46e5',
                 border: '1px solid #c7d2fe'
               }}>
-                Subscription
+                {(course.subscriptionPeriod === 'lifetime' || course.subscriptionPeriod === 'one-time' || course.pricingType === 'paid') ? 'Lifetime Access' : 'Subscription'}
               </span>
             )}
           </div>

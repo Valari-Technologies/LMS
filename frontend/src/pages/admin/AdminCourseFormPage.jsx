@@ -204,10 +204,14 @@ export default function AdminCourseFormPage() {
       minPrice = Math.min(...activeTiers.map(t => Number(t.price)));
     }
 
+    const isLifetime = form.subscriptionPeriod === 'lifetime' || form.subscriptionPeriod === 'one-time';
+    const computedPricingType = !isPaid ? 'free' : (isLifetime ? 'paid' : 'subscription');
+
     setLoading(true);
     const payload = {
       ...form,
       price: minPrice,
+      pricingType: computedPricingType,
       sellingPlans: form.sellingPlans ? JSON.stringify(form.sellingPlans) : null,
       categoryId: form.categoryId ? Number(form.categoryId) : null,
     };
@@ -901,15 +905,19 @@ export default function AdminCourseFormPage() {
                                         onChange={() => {
                                           setForm(prev => {
                                             const currentPlans = prev.sellingPlans || getDefaultSellingPlans(prev.price, prev.currency);
+                                            const updated = {
+                                              ...currentPlans,
+                                              [def.key]: {
+                                                ...currentPlans[def.key],
+                                                enabled: !isEnabled
+                                              }
+                                            };
+                                            if (id) {
+                                              saveCourseSellingPlans(id, updated);
+                                            }
                                             return {
                                               ...prev,
-                                              sellingPlans: {
-                                                ...currentPlans,
-                                                [def.key]: {
-                                                  ...currentPlans[def.key],
-                                                  enabled: !isEnabled
-                                                }
-                                              }
+                                              sellingPlans: updated
                                             };
                                           });
                                         }}
@@ -957,22 +965,27 @@ export default function AdminCourseFormPage() {
                                       <input
                                         type="number"
                                         min="0"
-                                        step="1"
+                                        step="any"
                                         disabled={!isEnabled}
                                         value={currentPrice}
                                         onChange={(e) => {
-                                          const val = Math.max(0, Number(e.target.value) || 0);
+                                          const rawVal = e.target.value;
+                                          const val = rawVal === '' ? '' : Math.max(0, parseFloat(rawVal) || 0);
                                           setForm(prev => {
                                             const currentPlans = prev.sellingPlans || getDefaultSellingPlans(prev.price, prev.currency);
+                                            const updated = {
+                                              ...currentPlans,
+                                              [def.key]: {
+                                                ...currentPlans[def.key],
+                                                price: val
+                                              }
+                                            };
+                                            if (id && val !== '') {
+                                              saveCourseSellingPlans(id, updated);
+                                            }
                                             return {
                                               ...prev,
-                                              sellingPlans: {
-                                                ...currentPlans,
-                                                [def.key]: {
-                                                  ...currentPlans[def.key],
-                                                  price: val
-                                                }
-                                              }
+                                              sellingPlans: updated
                                             };
                                           });
                                         }}
@@ -1068,7 +1081,7 @@ export default function AdminCourseFormPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '28px', paddingTop: '16px', borderTop: '1px solid var(--border-default, #e2e8f0)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '28px', paddingTop: '16px', borderTop: '1px solid var(--border-default, #e2e8f0)', flexWrap: 'wrap', gap: '10px' }}>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -1077,14 +1090,29 @@ export default function AdminCourseFormPage() {
               >
                 ← Back: Basic Overview
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setActiveStep('outcomes')}
-                style={{ fontSize: '0.88rem', padding: '9px 22px', fontWeight: 700 }}
-              >
-                Next: Outcomes & Audience →
-              </button>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  style={{ fontSize: '0.88rem', fontWeight: 700 }}
+                >
+                  {loading ? (
+                    <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i> Saving…</>
+                  ) : (
+                    <><i className="fa-solid fa-check" style={{ marginRight: '6px' }}></i> Save Changes</>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setActiveStep('outcomes')}
+                  style={{ fontSize: '0.88rem', padding: '9px 22px', fontWeight: 700 }}
+                >
+                  Next: Outcomes & Audience →
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -548,8 +548,8 @@ export default function StudentLayout() {
                                             'Free'
                                           ) : (
                                             <>
-                                              {course.currency === 'USD' ? '$' : '₹'}{Number(course.price).toLocaleString()}
-                                              {course.pricingType === 'subscription' && (
+                                              {course.currency === 'USD' ? '$' : '₹'}{Number.isInteger(Number(course.price)) ? Number(course.price).toLocaleString() : Number(course.price).toFixed(2)}
+                                              {course.pricingType === 'subscription' && course.subscriptionPeriod !== 'lifetime' && course.subscriptionPeriod !== 'one-time' && (
                                                 <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b' }}>
                                                   /{course.subscriptionPeriod === 'yearly' ? 'yr' : 'mo'}
                                                 </span>
