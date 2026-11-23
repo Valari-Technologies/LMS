@@ -132,10 +132,10 @@ export default function CourseCommunityWhatsAppView({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '400px',
+        height: '100vh',
         background: '#ffffff',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
+        borderRadius: 0,
+        border: 'none',
         color: '#5A70D3'
       }}>
         <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '28px' }}></i>

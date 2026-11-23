@@ -9148,21 +9148,33 @@ h6,
   border-left-color: #5A70D3 !important;
 }
 
-/* WhatsApp Style Embedded Dashboard Hub */
+/* WhatsApp Style Embedded Dashboard Hub - Edge-to-Edge Full Viewport */
 .ot-course-content-main.community-tab-active {
-  padding: 16px 20px 20px 20px !important;
+  padding: 0 !important;
+  margin: 0 !important;
   max-width: 100% !important;
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 
-.ot-dashboard-community-hub {
-  height: calc(100vh - 100px) !important;
-  max-height: calc(100vh - 100px) !important;
-  min-height: 600px !important;
-  border-radius: 16px;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+.ot-dashboard-community-hub,
+.ot-course-content-main.community-tab-active .ot-dashboard-community-hub {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  min-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
   background: #ffffff;
   width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 1 !important;
 }
 
 .ot-whatsapp-back-btn {

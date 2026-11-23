@@ -1636,7 +1636,10 @@ export default function StudentCourseDashboardPage() {
   //               Tab Workspace Content.
   // =========================================================================
   return (
-    <div className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div
+      className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${activeTab === 'community' ? 'community-tab-active' : ''}`}
+      style={activeTab === 'community' ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}}
+    >
       {/* Mobile Backdrop Overlay */}
       {mobileSidebarOpen && (
         <div
@@ -1877,7 +1880,10 @@ export default function StudentCourseDashboardPage() {
         style={{
           marginLeft: sidebarCollapsed ? '78px' : '270px',
           width: sidebarCollapsed ? 'calc(100% - 78px)' : 'calc(100% - 270px)',
-          minHeight: '100vh'
+          minHeight: '100vh',
+          height: activeTab === 'community' ? '100vh' : 'auto',
+          maxHeight: activeTab === 'community' ? '100vh' : 'none',
+          overflow: activeTab === 'community' ? 'hidden' : 'visible'
         }}
       >
 
@@ -2079,6 +2085,9 @@ export default function StudentCourseDashboardPage() {
             width: '100%',
             margin: '0 auto',
             padding: activeTab === 'community' ? '0' : '24px 20px 60px 20px',
+            height: activeTab === 'community' ? '100%' : 'auto',
+            maxHeight: activeTab === 'community' ? '100%' : 'none',
+            overflow: activeTab === 'community' ? 'hidden' : 'visible',
             boxSizing: 'border-box'
           }}
         >
