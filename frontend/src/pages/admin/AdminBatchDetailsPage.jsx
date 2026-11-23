@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAdminBatch, getBatchStudents, updateBatch, removeBatchStudent, changeBatchStudent, getCourseBatches } from '../../api/batches';
 import { getStudentDetail } from '../../api/users';
@@ -11,6 +11,7 @@ import {
 } from '../../utils/attendanceStorage';
 import { toast, confirmDialog } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
+import { PLAN_DEFINITIONS, PLAN_TYPES, getStudentEnrolledPlan } from '../../utils/courseSellingPlans';
 
 export default function AdminBatchDetailsPage() {
   const { isReadOnly } = usePermission();
@@ -22,6 +23,10 @@ export default function AdminBatchDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [totalStudents, setTotalStudents] = useState(0);
   const [page, setPage] = useState(0);
+
+  // Purchase Plan Filter & Search State
+  const [filterPlan, setFilterPlan] = useState('ALL'); // 'ALL' | 'FULL_ACCESS' | 'LIVE_ONLY' | 'RECORDED_ONLY' | 'FREE'
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Live Sessions & Attendance State
   const [liveSessions, setLiveSessions] = useState([]);
@@ -243,14 +248,72 @@ export default function AdminBatchDetailsPage() {
   const pct = Math.min(100, Math.round((batch.enrolledCount / batch.capacity) * 100));
   const isFull = batch.isFull || batch.enrolledCount >= batch.capacity;
 
-  // Batch overall live attendance calculations
+  // Enhance students with their resolved purchased selling plan
+  const studentsWithPlan = useMemo(() => {
+    return students.map(s => {
+      const plan = getStudentEnrolledPlan(batch?.courseId, s.studentId || s.studentEmail, s);
+      const isFree = s.pricingType === 'free' || s.amountPaid === 0;
+      const planType = s.planType || plan?.id || (isFree ? 'FREE' : 'FULL_ACCESS');
+      return {
+        ...s,
+        resolvedPlan: plan,
+        planType,
+        isFree
+      };
+    });
+  }, [students, batch?.courseId]);
+
+  // Compute breakdown counts across the batch
+  const planCounts = useMemo(() => {
+    const counts = {
+      ALL: studentsWithPlan.length,
+      [PLAN_TYPES.FULL_ACCESS]: 0,
+      [PLAN_TYPES.LIVE_ONLY]: 0,
+      [PLAN_TYPES.RECORDED_ONLY]: 0,
+      FREE: 0
+    };
+    studentsWithPlan.forEach(s => {
+      if (s.planType && counts[s.planType] !== undefined) {
+        counts[s.planType] += 1;
+      } else {
+        counts[PLAN_TYPES.FULL_ACCESS] += 1;
+      }
+      if (s.isFree) {
+        counts.FREE += 1;
+      }
+    });
+    return counts;
+  }, [studentsWithPlan]);
+
+  // Filter students by selected purchase plan and search query
+  const filteredStudents = useMemo(() => {
+    return studentsWithPlan.filter(s => {
+      if (filterPlan !== 'ALL') {
+        if (filterPlan === 'FREE') {
+          if (!s.isFree) return false;
+        } else if (s.planType !== filterPlan) {
+          return false;
+        }
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nameMatch = (s.studentName || '').toLowerCase().includes(q);
+        const emailMatch = (s.studentEmail || '').toLowerCase().includes(q);
+        if (!nameMatch && !emailMatch) return false;
+      }
+      return true;
+    });
+  }, [studentsWithPlan, filterPlan, searchQuery]);
+
+  // Batch overall live attendance calculations (computed among students with live access)
   const nowTime = new Date();
   const heldSessions = liveSessions.filter(s => s.status === 'completed' || (s.scheduledAt && new Date(s.scheduledAt) <= nowTime));
   const totalHeldSessionsCount = heldSessions.length;
 
+  const liveEligibleStudents = studentsWithPlan.filter(s => s.planType !== PLAN_TYPES.RECORDED_ONLY);
   let totalStudentAttendances = 0;
-  let totalStudentPossibleHeldAttendances = totalHeldSessionsCount * (students.length || 1);
-  students.forEach(st => {
+  let totalStudentPossibleHeldAttendances = totalHeldSessionsCount * (liveEligibleStudents.length || 1);
+  liveEligibleStudents.forEach(st => {
     const stAtt = computeStudentAttendance(st, liveSessions, attendanceRecords);
     totalStudentAttendances += stAtt.attendedCount;
   });
@@ -386,34 +449,327 @@ export default function AdminBatchDetailsPage() {
 
       {/* Students List */}
       <div className="table-card">
-        <div className="table-toolbar">
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>
-            Enrolled Students ({totalStudents})
-          </h2>
+        {/* Table Toolbar Header with Title & Student Search */}
+        <div className="table-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', paddingBottom: '14px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fa-solid fa-users" style={{ color: '#5A70D3' }}></i>
+              <span>Enrolled Students</span>
+              <span style={{
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                background: 'rgba(90, 112, 211, 0.1)',
+                color: '#5A70D3',
+                padding: '2px 8px',
+                borderRadius: '9999px'
+              }}>
+                {filteredStudents.length} {filteredStudents.length !== students.length ? `of ${totalStudents}` : `total`}
+              </span>
+            </h2>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              Divide and manage students based on their purchased selling plan and attendance eligibility.
+            </p>
+          </div>
+
+          {/* Quick Search Input */}
+          <div style={{ position: 'relative', minWidth: '260px' }}>
+            <i className="fa-solid fa-magnifying-glass" style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#94a3b8',
+              fontSize: '0.85rem'
+            }}></i>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search student by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                paddingLeft: '34px',
+                paddingRight: searchQuery ? '32px' : '12px',
+                height: '38px',
+                fontSize: '0.85rem',
+                borderRadius: '10px'
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: '0.85rem'
+                }}
+                title="Clear search"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Purchase Plan Division Filter Tabs / Pills */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '12px 18px',
+          background: 'var(--bg-surface-secondary, #f8fafc)',
+          borderTop: '1px solid var(--border-default)',
+          borderBottom: '1px solid var(--border-default)',
+          flexWrap: 'wrap'
+        }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <i className="fa-solid fa-filter" style={{ color: '#5A70D3' }}></i> Filter by Plan:
+          </span>
+
+          {/* 1. All Purchases */}
+          <button
+            type="button"
+            onClick={() => setFilterPlan('ALL')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: filterPlan === 'ALL' ? '1.5px solid #5A70D3' : '1px solid var(--border-default)',
+              background: filterPlan === 'ALL' ? '#5A70D3' : 'var(--bg-surface, #ffffff)',
+              color: filterPlan === 'ALL' ? '#ffffff' : 'var(--text-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+              boxShadow: filterPlan === 'ALL' ? '0 2px 8px rgba(90, 112, 211, 0.3)' : 'none'
+            }}
+          >
+            <i className="fa-solid fa-layer-group"></i>
+            <span>All Purchases</span>
+            <span style={{
+              fontSize: '0.72rem',
+              padding: '1px 6px',
+              borderRadius: '9999px',
+              background: filterPlan === 'ALL' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.06)',
+              color: filterPlan === 'ALL' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 700
+            }}>
+              {planCounts.ALL}
+            </span>
+          </button>
+
+          {/* 2. Live + Recordings (FULL_ACCESS) */}
+          <button
+            type="button"
+            onClick={() => setFilterPlan(PLAN_TYPES.FULL_ACCESS)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: filterPlan === PLAN_TYPES.FULL_ACCESS ? '1.5px solid #5A70D3' : '1px solid var(--border-default)',
+              background: filterPlan === PLAN_TYPES.FULL_ACCESS ? 'rgba(90, 112, 211, 0.12)' : 'var(--bg-surface, #ffffff)',
+              color: filterPlan === PLAN_TYPES.FULL_ACCESS ? '#5A70D3' : 'var(--text-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+              boxShadow: filterPlan === PLAN_TYPES.FULL_ACCESS ? '0 2px 8px rgba(90, 112, 211, 0.2)' : 'none'
+            }}
+          >
+            <i className="fa-solid fa-crown" style={{ color: '#5A70D3' }}></i>
+            <span>Live + Recordings</span>
+            <span style={{
+              fontSize: '0.72rem',
+              padding: '1px 6px',
+              borderRadius: '9999px',
+              background: filterPlan === PLAN_TYPES.FULL_ACCESS ? '#5A70D3' : 'rgba(0, 0, 0, 0.06)',
+              color: filterPlan === PLAN_TYPES.FULL_ACCESS ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 700
+            }}>
+              {planCounts[PLAN_TYPES.FULL_ACCESS]}
+            </span>
+          </button>
+
+          {/* 3. Live Sessions Only (LIVE_ONLY) */}
+          <button
+            type="button"
+            onClick={() => setFilterPlan(PLAN_TYPES.LIVE_ONLY)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: filterPlan === PLAN_TYPES.LIVE_ONLY ? '1.5px solid #0284c7' : '1px solid var(--border-default)',
+              background: filterPlan === PLAN_TYPES.LIVE_ONLY ? 'rgba(2, 132, 199, 0.12)' : 'var(--bg-surface, #ffffff)',
+              color: filterPlan === PLAN_TYPES.LIVE_ONLY ? '#0284c7' : 'var(--text-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+              boxShadow: filterPlan === PLAN_TYPES.LIVE_ONLY ? '0 2px 8px rgba(2, 132, 199, 0.2)' : 'none'
+            }}
+          >
+            <i className="fa-solid fa-tower-broadcast" style={{ color: '#0284c7' }}></i>
+            <span>Live Sessions Only</span>
+            <span style={{
+              fontSize: '0.72rem',
+              padding: '1px 6px',
+              borderRadius: '9999px',
+              background: filterPlan === PLAN_TYPES.LIVE_ONLY ? '#0284c7' : 'rgba(0, 0, 0, 0.06)',
+              color: filterPlan === PLAN_TYPES.LIVE_ONLY ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 700
+            }}>
+              {planCounts[PLAN_TYPES.LIVE_ONLY]}
+            </span>
+          </button>
+
+          {/* 4. Recordings Only (RECORDED_ONLY) */}
+          <button
+            type="button"
+            onClick={() => setFilterPlan(PLAN_TYPES.RECORDED_ONLY)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: filterPlan === PLAN_TYPES.RECORDED_ONLY ? '1.5px solid #059669' : '1px solid var(--border-default)',
+              background: filterPlan === PLAN_TYPES.RECORDED_ONLY ? 'rgba(5, 150, 105, 0.12)' : 'var(--bg-surface, #ffffff)',
+              color: filterPlan === PLAN_TYPES.RECORDED_ONLY ? '#059669' : 'var(--text-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+              boxShadow: filterPlan === PLAN_TYPES.RECORDED_ONLY ? '0 2px 8px rgba(5, 150, 105, 0.2)' : 'none'
+            }}
+          >
+            <i className="fa-solid fa-film" style={{ color: '#059669' }}></i>
+            <span>Recordings Only</span>
+            <span style={{
+              fontSize: '0.72rem',
+              padding: '1px 6px',
+              borderRadius: '9999px',
+              background: filterPlan === PLAN_TYPES.RECORDED_ONLY ? '#059669' : 'rgba(0, 0, 0, 0.06)',
+              color: filterPlan === PLAN_TYPES.RECORDED_ONLY ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 700
+            }}>
+              {planCounts[PLAN_TYPES.RECORDED_ONLY]}
+            </span>
+          </button>
+
+          {/* 5. Free Access (if applicable) */}
+          {planCounts.FREE > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilterPlan('FREE')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '9999px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                border: filterPlan === 'FREE' ? '1.5px solid #64748b' : '1px solid var(--border-default)',
+                background: filterPlan === 'FREE' ? 'rgba(100, 116, 139, 0.12)' : 'var(--bg-surface, #ffffff)',
+                color: filterPlan === 'FREE' ? '#475569' : 'var(--text-primary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <i className="fa-solid fa-gift" style={{ color: '#64748b' }}></i>
+              <span>Free Access</span>
+              <span style={{
+                fontSize: '0.72rem',
+                padding: '1px 6px',
+                borderRadius: '9999px',
+                background: filterPlan === 'FREE' ? '#64748b' : 'rgba(0, 0, 0, 0.06)',
+                color: filterPlan === 'FREE' ? '#ffffff' : 'var(--text-muted)',
+                fontWeight: 700
+              }}>
+                {planCounts.FREE}
+              </span>
+            </button>
+          )}
+
+          {/* Reset filter button if filtered */}
+          {(filterPlan !== 'ALL' || searchQuery) && (
+            <button
+              type="button"
+              onClick={() => { setFilterPlan('ALL'); setSearchQuery(''); }}
+              style={{
+                marginLeft: 'auto',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                color: '#ef4444',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <i className="fa-solid fa-rotate-left"></i> Reset Filter
+            </button>
+          )}
         </div>
 
         <div className="table-responsive">
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '65px', textAlign: 'center' }}>S.No</th>
+                <th style={{ width: '60px', textAlign: 'center' }}>S.No</th>
                 <th>Student Name</th>
                 <th>Email</th>
                 <th>Enrolled Date</th>
+                <th style={{ minWidth: '170px' }}>Purchased Plan</th>
                 <th style={{ minWidth: '180px' }}>Attendance</th>
-                <th style={{ minWidth: '180px' }}>Course Progress</th>
+                <th style={{ minWidth: '160px' }}>Course Progress</th>
                 <th style={{ textAlign: 'right', minWidth: '170px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {students.length === 0 ? (
+              {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="table-empty">
-                    No students currently enrolled in this batch.
+                  <td colSpan="8" className="table-empty" style={{ padding: '36px 16px', textAlign: 'center' }}>
+                    <div style={{ color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-filter-circle-xmark" style={{ fontSize: '2rem', color: '#cbd5e1' }}></i>
+                      <span>
+                        {students.length === 0
+                          ? 'No students currently enrolled in this batch.'
+                          : 'No students found matching the selected plan filter or search query.'}
+                      </span>
+                      {(filterPlan !== 'ALL' || searchQuery) && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => { setFilterPlan('ALL'); setSearchQuery(''); }}
+                          style={{ marginTop: '4px' }}
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
-                students.map((s, idx) => (
+                filteredStudents.map((s, idx) => (
                   <tr key={s.enrollmentId}>
                     <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
                       {page * 20 + idx + 1}
@@ -452,6 +808,43 @@ export default function AdminBatchDetailsPage() {
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         {s.enrolledAt ? new Date(s.enrolledAt).toLocaleString() : '—'}
                       </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.76rem',
+                            fontWeight: 800,
+                            padding: '3px 9px',
+                            borderRadius: '9999px',
+                            background: s.resolvedPlan?.bgColor || 'rgba(90, 112, 211, 0.1)',
+                            color: s.resolvedPlan?.color || '#5A70D3',
+                            border: `1px solid ${s.resolvedPlan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <i className={s.resolvedPlan?.icon || 'fa-solid fa-layer-group'} style={{ fontSize: '0.7rem' }}></i>
+                          <span>{s.resolvedPlan?.shortName || s.resolvedPlan?.name || 'Full Access'}</span>
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, paddingLeft: '4px' }}>
+                          {s.planType === PLAN_TYPES.RECORDED_ONLY ? (
+                            <span style={{ color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <i className="fa-solid fa-film" style={{ fontSize: '0.62rem' }}></i> Recordings Only
+                            </span>
+                          ) : s.planType === PLAN_TYPES.LIVE_ONLY ? (
+                            <span style={{ color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.62rem' }}></i> Live Only
+                            </span>
+                          ) : (
+                            <span style={{ color: '#4f46e5', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <i className="fa-solid fa-crown" style={{ fontSize: '0.62rem' }}></i> Live + Recordings
+                            </span>
+                          )}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       {(() => {
@@ -637,7 +1030,7 @@ export default function AdminBatchDetailsPage() {
         {totalStudents > 20 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid var(--border-default)' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Showing {students.length} of {totalStudents} students
+              Showing {filteredStudents.length} of {totalStudents} students
             </span>
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
@@ -831,6 +1224,52 @@ export default function AdminBatchDetailsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Purchased Selling Plan Info */}
+              {(() => {
+                const plan = getStudentEnrolledPlan(batch.courseId, viewStudent.studentId || viewStudent.studentEmail, viewStudent);
+                return (
+                  <div style={{
+                    padding: '16px',
+                    background: plan?.bgColor || 'rgba(90, 112, 211, 0.05)',
+                    border: `1.5px solid ${plan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
+                    borderRadius: '10px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: plan?.color || '#5A70D3', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className={plan?.icon || 'fa-solid fa-layer-group'}></i>
+                        <span>Purchased Plan & Access Tier</span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        padding: '3px 9px',
+                        borderRadius: '9999px',
+                        background: plan?.color || '#5A70D3',
+                        color: '#ffffff'
+                      }}>
+                        {plan?.shortName || plan?.name}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 800, marginBottom: '4px' }}>
+                      {plan?.name}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '10px' }}>
+                      {plan?.description}
+                    </div>
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.78rem', fontWeight: 700, flexWrap: 'wrap' }}>
+                      <span style={{ color: plan?.allowsLive ? '#0284c7' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <i className={plan?.allowsLive ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: plan?.allowsLive ? '#10b981' : '#94a3b8' }}></i>
+                        Live Interactive Classes & Attendance
+                      </span>
+                      <span style={{ color: plan?.allowsRecordings ? '#059669' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <i className={plan?.allowsRecordings ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: plan?.allowsRecordings ? '#10b981' : '#94a3b8' }}></i>
+                        Recorded Video Replays
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Course Progress Tracking */}
               <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px' }}>
@@ -1351,6 +1790,7 @@ export default function AdminBatchDetailsPage() {
                       <th style={{ width: '55px', textAlign: 'center' }}>#</th>
                       <th>Student Name</th>
                       <th>Email</th>
+                      <th style={{ minWidth: '130px' }}>Purchased Plan</th>
                       <th style={{ textAlign: 'center' }}>Present</th>
                       <th style={{ textAlign: 'center' }}>Absent</th>
                       <th style={{ textAlign: 'center' }}>Rate</th>
@@ -1358,12 +1798,12 @@ export default function AdminBatchDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {students.length === 0 ? (
+                    {studentsWithPlan.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="table-empty">No students enrolled in this batch.</td>
+                        <td colSpan="8" className="table-empty">No students enrolled in this batch.</td>
                       </tr>
                     ) : (
-                      students.map((st, i) => {
+                      studentsWithPlan.map((st, i) => {
                         const att = computeStudentAttendance(st, liveSessions, attendanceRecords);
                         const hasHeld = att.totalHeld > 0;
                         const rate = att.percentage ?? (hasHeld ? 0 : 100);
@@ -1375,6 +1815,22 @@ export default function AdminBatchDetailsPage() {
                             <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{i + 1}</td>
                             <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{st.studentName}</td>
                             <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{st.studentEmail}</td>
+                            <td>
+                              <span
+                                style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  padding: '3px 8px',
+                                  borderRadius: '9999px',
+                                  background: st.resolvedPlan?.bgColor || 'rgba(90, 112, 211, 0.1)',
+                                  color: st.resolvedPlan?.color || '#5A70D3',
+                                  border: `1px solid ${st.resolvedPlan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {st.resolvedPlan?.shortName || st.resolvedPlan?.name || 'Full Access'}
+                              </span>
+                            </td>
                             <td style={{ textAlign: 'center', fontWeight: 700, color: '#10b981' }}>{att.attendedCount}</td>
                             <td style={{ textAlign: 'center', fontWeight: 700, color: att.absentCount > 0 ? '#ef4444' : 'var(--text-muted)' }}>{att.absentCount}</td>
                             <td style={{ textAlign: 'center' }}>

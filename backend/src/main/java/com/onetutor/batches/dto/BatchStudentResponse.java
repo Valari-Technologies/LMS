@@ -18,7 +18,10 @@ public record BatchStudentResponse(
         Double attendanceRate,
         Integer attendedSessions,
         Integer totalHeldSessions,
-        Integer missedSessions
+        Integer missedSessions,
+        String planType,
+        String pricingType,
+        Double amountPaid
 ) {
     public static BatchStudentResponse from(Enrollment e, Double progressPercent, Integer completedContents, Integer totalContents,
                                             Double attendanceRate, Integer attendedSessions, Integer totalHeldSessions, Integer missedSessions) {
@@ -36,7 +39,10 @@ public record BatchStudentResponse(
                 attendanceRate != null ? attendanceRate : 100.0,
                 attendedSessions != null ? attendedSessions : 0,
                 totalHeldSessions != null ? totalHeldSessions : 0,
-                missedSessions != null ? missedSessions : 0
+                missedSessions != null ? missedSessions : 0,
+                e.getPlanType() != null ? e.getPlanType() : "FULL_ACCESS",
+                e.getPricingType() != null ? e.getPricingType() : "free",
+                e.getAmountPaidDouble()
         );
     }
 
