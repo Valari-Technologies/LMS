@@ -56,6 +56,63 @@ export default function AdminBatchDetailsPage() {
   const [submittingBatchChange, setSubmittingBatchChange] = useState(false);
   const [batchChangeError, setBatchChangeError] = useState('');
 
+  // Enhance students with their resolved purchased selling plan
+  const studentsWithPlan = useMemo(() => {
+    return (students || []).map(s => {
+      const plan = getStudentEnrolledPlan(batch?.courseId, s.studentId || s.studentEmail, s);
+      const isFree = s.pricingType === 'free' || s.amountPaid === 0;
+      const planType = s.planType || plan?.id || (isFree ? 'FREE' : 'FULL_ACCESS');
+      return {
+        ...s,
+        resolvedPlan: plan,
+        planType,
+        isFree
+      };
+    });
+  }, [students, batch?.courseId]);
+
+  // Compute breakdown counts across the batch
+  const planCounts = useMemo(() => {
+    const counts = {
+      ALL: (studentsWithPlan || []).length,
+      [PLAN_TYPES.FULL_ACCESS]: 0,
+      [PLAN_TYPES.LIVE_ONLY]: 0,
+      [PLAN_TYPES.RECORDED_ONLY]: 0,
+      FREE: 0
+    };
+    (studentsWithPlan || []).forEach(s => {
+      if (s.planType && counts[s.planType] !== undefined) {
+        counts[s.planType] += 1;
+      } else {
+        counts[PLAN_TYPES.FULL_ACCESS] += 1;
+      }
+      if (s.isFree) {
+        counts.FREE += 1;
+      }
+    });
+    return counts;
+  }, [studentsWithPlan]);
+
+  // Filter students by selected purchase plan and search query
+  const filteredStudents = useMemo(() => {
+    return (studentsWithPlan || []).filter(s => {
+      if (filterPlan !== 'ALL') {
+        if (filterPlan === 'FREE') {
+          if (!s.isFree) return false;
+        } else if (s.planType !== filterPlan) {
+          return false;
+        }
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nameMatch = (s.studentName || '').toLowerCase().includes(q);
+        const emailMatch = (s.studentEmail || '').toLowerCase().includes(q);
+        if (!nameMatch && !emailMatch) return false;
+      }
+      return true;
+    });
+  }, [studentsWithPlan, filterPlan, searchQuery]);
+
   // Listen for real-time attendance changes (e.g. student clicked join or admin override)
   useEffect(() => {
     function handleAttendanceUpdate() {
@@ -247,63 +304,6 @@ export default function AdminBatchDetailsPage() {
 
   const pct = Math.min(100, Math.round((batch.enrolledCount / batch.capacity) * 100));
   const isFull = batch.isFull || batch.enrolledCount >= batch.capacity;
-
-  // Enhance students with their resolved purchased selling plan
-  const studentsWithPlan = useMemo(() => {
-    return students.map(s => {
-      const plan = getStudentEnrolledPlan(batch?.courseId, s.studentId || s.studentEmail, s);
-      const isFree = s.pricingType === 'free' || s.amountPaid === 0;
-      const planType = s.planType || plan?.id || (isFree ? 'FREE' : 'FULL_ACCESS');
-      return {
-        ...s,
-        resolvedPlan: plan,
-        planType,
-        isFree
-      };
-    });
-  }, [students, batch?.courseId]);
-
-  // Compute breakdown counts across the batch
-  const planCounts = useMemo(() => {
-    const counts = {
-      ALL: studentsWithPlan.length,
-      [PLAN_TYPES.FULL_ACCESS]: 0,
-      [PLAN_TYPES.LIVE_ONLY]: 0,
-      [PLAN_TYPES.RECORDED_ONLY]: 0,
-      FREE: 0
-    };
-    studentsWithPlan.forEach(s => {
-      if (s.planType && counts[s.planType] !== undefined) {
-        counts[s.planType] += 1;
-      } else {
-        counts[PLAN_TYPES.FULL_ACCESS] += 1;
-      }
-      if (s.isFree) {
-        counts.FREE += 1;
-      }
-    });
-    return counts;
-  }, [studentsWithPlan]);
-
-  // Filter students by selected purchase plan and search query
-  const filteredStudents = useMemo(() => {
-    return studentsWithPlan.filter(s => {
-      if (filterPlan !== 'ALL') {
-        if (filterPlan === 'FREE') {
-          if (!s.isFree) return false;
-        } else if (s.planType !== filterPlan) {
-          return false;
-        }
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const nameMatch = (s.studentName || '').toLowerCase().includes(q);
-        const emailMatch = (s.studentEmail || '').toLowerCase().includes(q);
-        if (!nameMatch && !emailMatch) return false;
-      }
-      return true;
-    });
-  }, [studentsWithPlan, filterPlan, searchQuery]);
 
   // Batch overall live attendance calculations (computed among students with live access)
   const nowTime = new Date();
