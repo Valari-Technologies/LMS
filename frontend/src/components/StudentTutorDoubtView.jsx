@@ -11,7 +11,7 @@ import {
   markTutorThreadRead,
   uploadCommunityMedia
 } from '../api/community';
-import { resolveMediaUrl } from '../pages/admin/AdminCommunityPage';
+import { resolveMediaUrl } from '../utils/mediaUtils';
 
 const POLL_INTERVAL_MS = 4000;
 

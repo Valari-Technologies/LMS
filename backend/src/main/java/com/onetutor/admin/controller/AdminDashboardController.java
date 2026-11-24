@@ -9,7 +9,6 @@ import com.onetutor.courses.entity.CourseStatus;
 import com.onetutor.courses.repository.CourseRepository;
 import com.onetutor.enrollment.entity.EnrollmentStatus;
 import com.onetutor.enrollment.repository.EnrollmentRepository;
-import com.onetutor.live.entity.LiveSessionStatus;
 import com.onetutor.live.repository.LiveSessionRepository;
 import com.onetutor.users.entity.UserRole;
 import com.onetutor.users.entity.UserStatus;

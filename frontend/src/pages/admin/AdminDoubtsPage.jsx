@@ -10,7 +10,7 @@ import {
   uploadCommunityMedia
 } from '../../api/community';
 import { listAdminCourses } from '../../api/courses';
-import { resolveMediaUrl } from './AdminCommunityPage';
+import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 const POLL_INTERVAL_MS = 4000;
 

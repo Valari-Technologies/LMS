@@ -2050,7 +2050,8 @@ export default function StudentCourseDashboardPage() {
                activeTab === 'recordings' ? 'Recordings' :
                activeTab === 'live' ? 'Live Classes' :
                activeTab === 'attendance' ? 'Attendance' :
-               activeTab === 'community' ? 'Community Chat' : 'Dashboard'}
+               activeTab === 'community' ? 'Community Chat' :
+               activeTab === 'doubts' ? 'Doubt Clearance' : 'Dashboard'}
             </h1>
           </div>
 
