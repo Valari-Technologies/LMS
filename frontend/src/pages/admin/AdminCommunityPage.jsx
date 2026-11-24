@@ -17,6 +17,7 @@ import {
 import { listAdminCourses } from '../../api/courses';
 import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
 import { usePermission } from '../../hooks/usePermission';
+import StudentTutorDoubtView from '../../components/StudentTutorDoubtView';
 
 const BACKEND = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:8080';
 const POLL_INTERVAL_MS = 4000;
@@ -1631,6 +1632,7 @@ export default function AdminCommunityPage() {
     return localStorage.getItem('onetutor_community_notifications') !== 'disabled';
   });
   const [muteVersion, setMuteVersion] = useState(0);
+  const [adminChatMode, setAdminChatMode] = useState('group'); // 'group' | 'doubts'
 
   useEffect(() => {
     function handleNotifToggle() {
@@ -1920,6 +1922,61 @@ export default function AdminCommunityPage() {
               </div>
 
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* Admin Mode Toggle: Group Discussion vs Student Doubts Inbox */}
+                <div style={{
+                  display: 'inline-flex',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: '8px',
+                  padding: '2px',
+                  border: '1px solid var(--border-default)'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setAdminChatMode('group')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: adminChatMode === 'group' ? 'var(--bg-surface)' : 'transparent',
+                      color: adminChatMode === 'group' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                      boxShadow: adminChatMode === 'group' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <i className="fa-solid fa-users"></i>
+                    <span>Group Chat</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAdminChatMode('doubts')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: adminChatMode === 'doubts' ? 'var(--bg-surface)' : 'transparent',
+                      color: adminChatMode === 'doubts' ? '#6366f1' : 'var(--text-muted)',
+                      boxShadow: adminChatMode === 'doubts' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <i className="fa-solid fa-user-graduate" style={{ color: adminChatMode === 'doubts' ? '#6366f1' : 'var(--text-muted)' }}></i>
+                    <span>Student Doubts</span>
+                  </button>
+                </div>
+
                 {/* Per-chat Mute Toggle (WhatsApp style) */}
                 <button
                   type="button"
@@ -1947,15 +2004,26 @@ export default function AdminCommunityPage() {
               </div>
             </div>
 
-            {/* Chat messages + input */}
+            {/* Chat messages + input OR Student Doubts Inbox */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <ChatPanel
-                key={selectedCourse.courseId}
-                courseId={selectedCourse.courseId}
-                courseName={selectedCourse.courseName}
-                currentUser={user}
-                availableCourses={allCourses}
-              />
+              {adminChatMode === 'doubts' ? (
+                <StudentTutorDoubtView
+                  key={`doubt-admin-${selectedCourse.courseId}`}
+                  courseId={selectedCourse.courseId}
+                  courseName={selectedCourse.courseName}
+                  currentUser={user}
+                  isTutorOrAdmin={true}
+                  onBackToGroup={() => setAdminChatMode('group')}
+                />
+              ) : (
+                <ChatPanel
+                  key={selectedCourse.courseId}
+                  courseId={selectedCourse.courseId}
+                  courseName={selectedCourse.courseName}
+                  currentUser={user}
+                  availableCourses={allCourses}
+                />
+              )}
             </div>
           </>
         ) : (

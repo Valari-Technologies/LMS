@@ -139,4 +139,93 @@ export async function getMyCommunityStatus(courseId) {
   return res.data.data?.isDisabled ?? false;
 }
 
+// ─── Student Tutor Doubts API ────────────────────────────────────────────────
+
+/**
+ * Student: Initial paginated load of personal 1-on-1 doubt messages for a course.
+ */
+export async function getStudentDoubtMessages(courseId, { page = 0, size = 50 } = {}) {
+  const res = await api.get(`/community/${courseId}/doubts/messages`, { params: { page, size } });
+  return res.data.data;
+}
+
+/**
+ * Student: Poll new messages in personal 1-on-1 doubt thread.
+ */
+export async function pollStudentDoubtMessages(courseId, afterId = 0) {
+  const res = await api.get(`/community/${courseId}/doubts/messages/poll`, { params: { afterId } });
+  return res.data.data;
+}
+
+/**
+ * Student: Send a doubt message to course tutors.
+ */
+export async function sendStudentDoubt(courseId, data) {
+  const res = await api.post(`/community/${courseId}/doubts/messages`, data);
+  return res.data.data;
+}
+
+/**
+ * Student: Mark doubt thread as read.
+ */
+export async function markStudentDoubtRead(courseId, messageId) {
+  const res = await api.post(`/community/${courseId}/doubts/read`, null, {
+    params: messageId ? { messageId } : {}
+  });
+  return res.data.data;
+}
+
+// ─── Tutor / Admin Doubts API ────────────────────────────────────────────────
+
+/**
+ * Tutor / Admin: List all student doubt threads for this course.
+ */
+export async function getCourseDoubtThreads(courseId) {
+  const res = await api.get(`/community/${courseId}/doubts/threads`);
+  return res.data.data;
+}
+
+/**
+ * Tutor / Admin: Get paginated messages for a student doubt thread.
+ */
+export async function getStudentThreadMessages(courseId, studentId, { page = 0, size = 50 } = {}) {
+  const res = await api.get(`/community/${courseId}/doubts/students/${studentId}/messages`, { params: { page, size } });
+  return res.data.data;
+}
+
+/**
+ * Tutor / Admin: Poll messages for a student doubt thread.
+ */
+export async function pollStudentThreadMessages(courseId, studentId, afterId = 0) {
+  const res = await api.get(`/community/${courseId}/doubts/students/${studentId}/messages/poll`, { params: { afterId } });
+  return res.data.data;
+}
+
+/**
+ * Tutor / Admin: Reply to a student doubt.
+ */
+export async function sendTutorDoubtReply(courseId, studentId, data) {
+  const res = await api.post(`/community/${courseId}/doubts/students/${studentId}/messages`, data);
+  return res.data.data;
+}
+
+/**
+ * Tutor / Admin: Mark a student doubt thread as read.
+ */
+export async function markTutorThreadRead(courseId, studentId, messageId) {
+  const res = await api.post(`/community/${courseId}/doubts/students/${studentId}/read`, null, {
+    params: messageId ? { messageId } : {}
+  });
+  return res.data.data;
+}
+
+/**
+ * Unread doubts count for current user (student or tutor/admin).
+ */
+export async function getUnreadDoubtCount() {
+  const res = await api.get('/community/doubts/unread-count');
+  return res.data.data?.unreadCount ?? 0;
+}
+
+
 

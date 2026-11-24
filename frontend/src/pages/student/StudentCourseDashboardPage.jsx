@@ -117,9 +117,12 @@ export default function StudentCourseDashboardPage() {
 
   // Active tab routing (if tab=details or tab=curriculum, route to community)
   const rawTab = searchParams.get('tab') || 'dashboard';
-  const activeTab = (rawTab === 'details' || rawTab === 'curriculum') ? 'community' : rawTab;
-  const setActiveTab = (tab) => {
-    setSearchParams({ tab });
+  const subTab = searchParams.get('subTab') || (rawTab === 'doubts' ? 'doubts' : 'group');
+  const activeTab = (rawTab === 'details' || rawTab === 'curriculum' || rawTab === 'doubts') ? 'community' : rawTab;
+  const setActiveTab = (tab, newSubTab = null) => {
+    const params = { tab };
+    if (newSubTab) params.subTab = newSubTab;
+    setSearchParams(params);
   };
   const [, setChatMuteVersion] = useState(0);
 
@@ -1984,12 +1987,24 @@ export default function StudentCourseDashboardPage() {
             {/* Course Community Chat Tab */}
             <button
               type="button"
-              className={`ot-course-nav-link ${activeTab === 'community' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('community'); setMobileSidebarOpen(false); }}
-              title="Course Community Chat"
+              className={`ot-course-nav-link ${activeTab === 'community' && subTab !== 'doubts' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('community', 'group'); setMobileSidebarOpen(false); }}
+              title="Course Community Group Chat"
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-comments"></i></span>
               <span className="ot-course-nav-text">Community Chat</span>
+            </button>
+
+            {/* Ask Tutor (1-on-1 Doubts) Tab */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'community' && subTab === 'doubts' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('community', 'doubts'); setMobileSidebarOpen(false); }}
+              title="Ask Tutor • Private 1-on-1 Doubt Desk"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-user-graduate" style={{ color: activeTab === 'community' && subTab === 'doubts' ? '#ffffff' : '#6366f1' }}></i></span>
+              <span className="ot-course-nav-text">Ask Tutor (Doubts)</span>
+              <span className="ot-course-badge" style={{ background: '#ede9fe', color: '#6d28d9', fontWeight: 800 }}>1-on-1</span>
             </button>
 
             {/* Full Video Learning Classroom */}
@@ -3388,6 +3403,7 @@ export default function StudentCourseDashboardPage() {
               initialCourseId={courseId}
               currentCourse={course}
               currentUser={user}
+              initialChatMode={subTab === 'doubts' ? 'doubts' : 'group'}
             />
           )}
         </main>
