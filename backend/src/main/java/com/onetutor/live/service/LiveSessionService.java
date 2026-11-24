@@ -23,6 +23,7 @@ import com.onetutor.live.repository.SessionRecordingRatingRepository;
 import com.onetutor.live.repository.SessionRecordingRepository;
 import com.onetutor.sections.repository.SectionRepository;
 import com.onetutor.users.entity.User;
+import com.onetutor.users.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -62,6 +63,7 @@ public class LiveSessionService {
     private final com.onetutor.subtitles.service.SubtitleService subtitleService;
     private final SessionRecordingRatingRepository sessionRecordingRatingRepository;
     private final LiveSessionAttendanceRepository liveSessionAttendanceRepository;
+    private final UserRepository userRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
@@ -76,7 +78,8 @@ public class LiveSessionService {
                               com.onetutor.notifications.service.NotificationService notificationService,
                               @org.springframework.context.annotation.Lazy com.onetutor.subtitles.service.SubtitleService subtitleService,
                               SessionRecordingRatingRepository sessionRecordingRatingRepository,
-                              LiveSessionAttendanceRepository liveSessionAttendanceRepository) {
+                              LiveSessionAttendanceRepository liveSessionAttendanceRepository,
+                              UserRepository userRepository) {
         this.liveSessionRepository = liveSessionRepository;
         this.sessionRecordingRepository = sessionRecordingRepository;
         this.courseRepository = courseRepository;
@@ -90,6 +93,7 @@ public class LiveSessionService {
         this.subtitleService = subtitleService;
         this.sessionRecordingRatingRepository = sessionRecordingRatingRepository;
         this.liveSessionAttendanceRepository = liveSessionAttendanceRepository;
+        this.userRepository = userRepository;
     }
 
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
@@ -105,7 +109,7 @@ public class LiveSessionService {
                               com.onetutor.subtitles.service.SubtitleService subtitleService) {
         this(liveSessionRepository, sessionRecordingRepository, courseRepository, sectionRepository,
                 enrollmentRepository, mediaAssetRepository, meetingProvider, auditService, batchRepository,
-                notificationService, subtitleService, null, null);
+                notificationService, subtitleService, null, null, null);
     }
 
     public LiveSessionService(LiveSessionRepository liveSessionRepository,
@@ -120,7 +124,7 @@ public class LiveSessionService {
                               com.onetutor.notifications.service.NotificationService notificationService) {
         this(liveSessionRepository, sessionRecordingRepository, courseRepository, sectionRepository,
                 enrollmentRepository, mediaAssetRepository, meetingProvider, auditService, batchRepository,
-                notificationService, null, null, null);
+                notificationService, null, null, null, null);
     }
 
     @Transactional
