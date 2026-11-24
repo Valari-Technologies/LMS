@@ -211,7 +211,12 @@ export async function getSessionAttendance(sessionId) {
     const res = await api.get(`/admin/live-sessions/${sessionId}/attendance`);
     return res.data.data;
   } catch (err) {
-    return null;
+    try {
+      const fallbackRes = await api.get(`/live-sessions/${sessionId}/attendance`);
+      return fallbackRes.data.data;
+    } catch (e2) {
+      return null;
+    }
   }
 }
 

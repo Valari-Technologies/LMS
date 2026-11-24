@@ -48,7 +48,7 @@ public record SessionRecordingRatingResponse(
         return new SessionRecordingRatingResponse(
                 r.getId(),
                 rec != null ? rec.getId() : null,
-                rec != null && rec.getTitle() != null ? rec.getTitle() : ("Recording #" + (rec != null ? rec.getId() : "")),
+                rec != null && rec.getId() != null ? ("Recording #" + rec.getId()) : "Recording",
                 session != null ? session.getId() : null,
                 session != null ? session.getTitle() : null,
                 course != null ? course.getId() : null,
@@ -56,7 +56,7 @@ public record SessionRecordingRatingResponse(
                 u != null ? u.getId() : null,
                 u != null ? u.getName() : "Student",
                 u != null ? u.getEmail() : null,
-                u != null ? u.getAvatar() : null,
+                u != null ? u.getProfileImage() : null,
                 r.getRating(),
                 commentText,
                 r.getStatus() != null ? r.getStatus() : "pending",

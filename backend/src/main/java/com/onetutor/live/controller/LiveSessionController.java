@@ -68,5 +68,11 @@ public class LiveSessionController {
         liveSessionService.checkInAttendance(sessionId, student);
         return ApiResponse.ok("Attendance checked in successfully", null);
     }
+
+    @GetMapping("/{id}/attendance")
+    public ApiResponse<com.onetutor.live.dto.SessionAttendanceSheetResponse> getSessionAttendance(
+            @PathVariable Long id) {
+        return ApiResponse.ok(liveSessionService.getSessionAttendanceSheet(id));
+    }
 }
 

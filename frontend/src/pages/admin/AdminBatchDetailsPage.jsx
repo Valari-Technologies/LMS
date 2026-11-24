@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAdminBatch, getBatchStudents, updateBatch, removeBatchStudent, changeBatchStudent, getCourseBatches } from '../../api/batches';
 import { getStudentDetail } from '../../api/users';
-import { getAdminLiveSessions } from '../../api/live';
+import { getAdminLiveSessions, getSessionAttendance } from '../../api/live';
 import {
   getStoredAttendanceRecords,
   computeStudentAttendance,
   markStudentAttendanceOverride,
-  getSessionAttendanceSheet
+  getSessionAttendanceSheet,
+  recordStudentAttendance
 } from '../../utils/attendanceStorage';
 import { toast, confirmDialog } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -153,7 +154,38 @@ export default function AdminBatchDetailsPage() {
           if (s.batch?.id != null) return String(s.batch.id) === String(batchId);
           return true;
         });
-        setLiveSessions(filteredSes.length > 0 ? filteredSes : allSes);
+        const targetSessions = filteredSes.length > 0 ? filteredSes : allSes;
+        setLiveSessions(targetSessions);
+
+        // Synchronize backend attendance for these sessions
+        Promise.all(targetSessions.map(s => getSessionAttendance(s.id).catch(() => null))).then(sheets => {
+          let updated = false;
+          sheets.forEach((sheet, idx) => {
+            if (sheet?.students && Array.isArray(sheet.students)) {
+              sheet.students.forEach(st => {
+                if ((st.attendanceStatus || st.status) === 'PRESENT') {
+                  updated = true;
+                  recordStudentAttendance(targetSessions[idx].id, {
+                    id: st.studentId,
+                    studentId: st.studentId,
+                    email: st.studentEmail,
+                    studentEmail: st.studentEmail,
+                    name: st.studentName,
+                    studentName: st.studentName
+                  }, {
+                    courseId: batchData.courseId,
+                    batchId: batchData.id,
+                    sessionTitle: targetSessions[idx].title,
+                    attendedAt: st.attendedAt || st.joinTime
+                  });
+                }
+              });
+            }
+          });
+          if (updated) {
+            setAttendanceRecords(getStoredAttendanceRecords());
+          }
+        }).catch(() => {});
       } catch (e) {
         console.debug('Failed to load batch live sessions', e);
       }

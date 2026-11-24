@@ -13,7 +13,8 @@ import {
   getRecordingRatings,
   togglePublishRecordingRating,
   deleteRecordingRating,
-  getSessionAttendance
+  getSessionAttendance,
+  markAdminSessionAttendance
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
@@ -22,7 +23,8 @@ import { getAdminEnrollments } from '../../api/admin';
 import {
   getStoredAttendanceRecords,
   getSessionAttendanceSheet,
-  markStudentAttendanceOverride
+  markStudentAttendanceOverride,
+  recordStudentAttendance
 } from '../../utils/attendanceStorage';
 import { useNotification, confirmDialog } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
@@ -187,6 +189,25 @@ export default function AdminLiveSessionsPage() {
             status: st.status || st.attendanceStatus,
             attendedAt: st.attendedAt || st.joinTime
           }));
+
+          // Synchronize each verified student into local records so sheet and calculations match database
+          backendSheet.students.forEach(st => {
+            if ((st.attendanceStatus || st.status) === 'PRESENT') {
+              recordStudentAttendance(session.id, {
+                id: st.studentId,
+                studentId: st.studentId,
+                email: st.studentEmail,
+                studentEmail: st.studentEmail,
+                name: st.studentName,
+                studentName: st.studentName
+              }, {
+                courseId: sCourseId,
+                batchId: sBatchId,
+                sessionTitle: session.title,
+                attendedAt: st.attendedAt || st.joinTime
+              });
+            }
+          });
         }
       } catch (err) {
         console.debug('Backend getSessionAttendance not available or offline:', err);
@@ -3483,6 +3504,7 @@ export default function AdminLiveSessionsPage() {
                                         onClick={() => {
                                           const next = isPresent ? 'ABSENT' : 'PRESENT';
                                           markStudentAttendanceOverride(sessionAttendanceModal.session.id, st, next, sessionAttendanceModal.session);
+                                          markAdminSessionAttendance(sessionAttendanceModal.session.id, st.studentId || st.id, next).catch(() => {});
                                           setAttendanceRecords(getStoredAttendanceRecords());
                                           toast.success(`Attendance updated to ${next} for ${st.studentName}`);
                                         }}

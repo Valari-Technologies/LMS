@@ -1042,12 +1042,14 @@ public class LiveSessionService {
             }
             liveSessionAttendanceRepository.save(att);
         } else {
-            Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseIdAndStatus(req.studentId(), session.getCourse().getId(), EnrollmentStatus.active)
-                    .orElseThrow(() -> new BadRequestException("STUDENT_NOT_ENROLLED", "Student is not enrolled in this course"));
+            User student = enrollmentRepository.findByStudentIdAndCourseIdAndStatus(req.studentId(), session.getCourse().getId(), EnrollmentStatus.active)
+                    .map(Enrollment::getStudent)
+                    .orElseGet(() -> userRepository.findById(req.studentId())
+                            .orElseThrow(() -> new BadRequestException("STUDENT_NOT_FOUND", "Student not found")));
 
             LiveSessionAttendance att = new LiveSessionAttendance();
             att.setSession(session);
-            att.setStudent(enrollment.getStudent());
+            att.setStudent(student);
             att.setCourse(session.getCourse());
             att.setBatch(session.getBatch());
             att.setStatus(newStatus);
