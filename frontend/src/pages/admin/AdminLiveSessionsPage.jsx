@@ -1119,16 +1119,16 @@ export default function AdminLiveSessionsPage() {
         </div>
 
         <div className="table-responsive">
-          <table className="modern-table">
+          <table className="modern-table" style={{ width: '100%', minWidth: '980px' }}>
             <thead>
               <tr>
-                <th>Session Details</th>
-                <th>Course</th>
-                <th>Scheduled Time</th>
-                <th>Status</th>
-                <th>Meeting</th>
-                <th>Recordings</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '20%', minWidth: '180px' }}>Session Details</th>
+                <th style={{ width: '23%', minWidth: '220px' }}>Course</th>
+                <th style={{ width: '13%', minWidth: '130px', whiteSpace: 'nowrap' }}>Scheduled Time</th>
+                <th style={{ width: '8%', minWidth: '85px', textAlign: 'center' }}>Status</th>
+                <th style={{ width: '17%', minWidth: '190px' }}>Meeting</th>
+                <th style={{ width: '15%', minWidth: '180px' }}>Recordings</th>
+                <th style={{ width: '10%', minWidth: '130px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1148,119 +1148,119 @@ export default function AdminLiveSessionsPage() {
                 displayedSessions.map((s) => {
                   const effectiveStatus = getEffectiveStatus(s);
                   return (
-                    <tr key={s.id}>
-                      <td>
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{s.title}</div>
+                    <tr key={s.id} style={{ verticalAlign: 'middle' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: 1.3 }}>{s.title}</div>
                         {cleanDescription(s.description) && (
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
                             {cleanDescription(s.description)}
                           </div>
                         )}
                       </td>
-                      <td>
-                        <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ fontSize: '0.86rem', fontWeight: '600', color: 'var(--text-primary)', lineHeight: 1.3 }}>
                           {s.courseName || `Course #${s.courseId}`}
-                        </span>
-                        {s.batchName ? (
-                          <div style={{ marginTop: '3px' }}>
-                            <span className="badge" style={{ fontSize: '0.72rem', background: 'rgba(99, 102, 241, 0.12)', color: 'var(--primary)', border: '1px solid rgba(99, 102, 241, 0.25)', padding: '2px 6px', borderRadius: '4px' }}>
-                              <i className="fa-solid fa-users-rectangle" style={{ marginRight: '4px' }}></i>
-                              {s.batchName}{s.batchCode ? ` • ${s.batchCode}` : ''}
+                        </div>
+                        <div style={{ marginTop: '3px' }}>
+                          {s.batchName ? (
+                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(99, 102, 241, 0.12)', color: 'var(--primary)', border: '1px solid rgba(99, 102, 241, 0.25)', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <i className="fa-solid fa-users-rectangle"></i>
+                              <span>{s.batchName}{s.batchCode ? ` • ${s.batchCode}` : ''}</span>
                             </span>
-                          </div>
-                        ) : (
-                          <div style={{ marginTop: '3px' }}>
-                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(148, 163, 184, 0.12)', color: 'var(--text-muted)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
+                          ) : (
+                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(148, 163, 184, 0.12)', color: 'var(--text-muted)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '1px 6px', borderRadius: '4px' }}>
                               All Batches
                             </span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
-                      <td>
-                        <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: '500' }}>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', fontWeight: '600' }}>
                           {new Date(s.scheduledAt).toLocaleDateString()}
                         </div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '1px' }}>
                           {new Date(s.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           {s.endTime && ` - ${new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                         </div>
                       </td>
-                      <td>
-                        <span className={`status-badge ${effectiveStatus}`}>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <span className={`status-badge ${effectiveStatus}`} style={{ fontSize: '0.72rem', padding: '3px 8px' }}>
                           {effectiveStatus}
                         </span>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <Link
                             to={`/admin/live-classroom/${s.id}`}
                             className="btn btn-primary btn-sm"
-                            style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                            style={{ padding: '4px 9px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', borderRadius: '6px' }}
                             title="Launch embedded live classroom"
                           >
-                            <i className="fa-solid fa-video"></i> Launch Classroom
+                            <i className="fa-solid fa-video"></i> Launch
                           </Link>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#10b981', fontWeight: 700 }}
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 700, borderRadius: '6px', whiteSpace: 'nowrap' }}
                             onClick={() => openSessionAttendance(s)}
                             title="View student attendance sheet for this live session"
                           >
-                            <i className="fa-solid fa-clipboard-user"></i> Attendance Sheet
+                            <i className="fa-solid fa-clipboard-user"></i> Sheet
                           </button>
                           {s.meetingUrl && (
                             <a
                               href={s.meetingUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textDecoration: 'underline' }}
-                              title={s.meetingUrl}
+                              style={{ fontSize: '0.76rem', color: 'var(--text-muted)', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
+                              title={`Direct link: ${s.meetingUrl}`}
                             >
-                              Direct link ↗
+                              <i className="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td style={{ padding: '10px 14px' }}>
                         {s.recordings && s.recordings.length > 0 ? (
-                          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => setManageRecordingsModal(s)}
-                                title={`View and manage ${s.recordings.length} recording${s.recordings.length !== 1 ? 's' : ''}`}
-                              >
-                                <i className="fa-solid fa-film" style={{ marginRight: '5px', color: 'var(--accent-primary)' }}></i>
-                                {s.recordings.length} Recording{s.recordings.length !== 1 ? 's' : ''}
-                              </button>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => openOverviewModal(s, s.recordings[0])}
-                                title="Edit recording overview & notes for students"
-                                style={{ color: '#5A70D3', fontWeight: 700, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
-                              >
-                                <i className="fa-regular fa-file-lines"></i>
-                                <span>Overview</span>
-                              </button>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => setResourceModalRecording({ recording: s.recordings[0], session: s })}
-                                title={`Manage downloadable resources for recording (${getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length} attached)`}
-                                style={{ color: '#0f172a', fontWeight: 600, gap: '4px', display: 'inline-flex', alignItems: 'center' }}
-                              >
-                                <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3' }}></i>
-                                <span>Resources ({getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length})</span>
-                              </button>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => openRecordingModal(s)}
-                                title="Add another recording"
-                                aria-label="Add recording"
-                              >
-                                <i className="fa-solid fa-plus"></i>
-                              </button>
-                            </div>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setManageRecordingsModal(s)}
+                              title={`View and manage ${s.recordings.length} recording${s.recordings.length !== 1 ? 's' : ''}`}
+                              style={{ padding: '4px 8px', fontSize: '0.78rem', fontWeight: 700, borderRadius: '6px' }}
+                            >
+                              <i className="fa-solid fa-film" style={{ marginRight: '4px', color: 'var(--accent-primary)' }}></i>
+                              {s.recordings.length} {s.recordings.length === 1 ? 'Video' : 'Videos'}
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => openOverviewModal(s, s.recordings[0])}
+                              title="Edit recording overview & notes for students"
+                              style={{ padding: '4px 7px', fontSize: '0.78rem', color: '#5A70D3', borderRadius: '6px' }}
+                            >
+                              <i className="fa-regular fa-file-lines"></i>
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setResourceModalRecording({ recording: s.recordings[0], session: s })}
+                              title={`Manage resources (${getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length} attached)`}
+                              style={{ padding: '4px 7px', fontSize: '0.78rem', color: '#475569', borderRadius: '6px' }}
+                            >
+                              <i className="fa-solid fa-paperclip"></i>
+                              {getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length > 0 && (
+                                <span style={{ marginLeft: '3px', fontSize: '0.7rem', fontWeight: 700 }}>
+                                  {getRecordingResources(s.recordings[0]?.id, s.recordings[0]?.subtitleUrl, s.id).length}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => openRecordingModal(s)}
+                              title="Add another recording"
+                              style={{ padding: '4px 7px', fontSize: '0.78rem', borderRadius: '6px' }}
+                            >
+                              <i className="fa-solid fa-plus"></i>
+                            </button>
                             {/* Real ratings & reviews pill */}
                             {(() => {
                               const recIds = s.recordings.map(r => r.id);
@@ -1268,27 +1268,25 @@ export default function AdminLiveSessionsPage() {
                               if (allRatings.length > 0) {
                                 const avg = (allRatings.reduce((sum, x) => sum + (x.rating || 0), 0) / allRatings.length).toFixed(1);
                                 return (
-                                  <div
+                                  <span
                                     onClick={() => setManageRecordingsModal(s)}
                                     style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
-                                      gap: '4px',
+                                      gap: '3px',
                                       fontSize: '0.72rem',
                                       fontWeight: 800,
                                       color: '#ca8a04',
                                       background: 'rgba(234, 179, 8, 0.12)',
                                       border: '1px solid rgba(234, 179, 8, 0.28)',
-                                      padding: '1px 6px',
+                                      padding: '2px 5px',
                                       borderRadius: '4px',
                                       cursor: 'pointer'
                                     }}
                                     title="Click to view student reviews & feedback"
                                   >
-                                    <i className="fa-solid fa-star" style={{ fontSize: '0.66rem' }}></i>
-                                    <span>{avg}</span>
-                                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({allRatings.length} review{allRatings.length > 1 ? 's' : ''})</span>
-                                  </div>
+                                    <i className="fa-solid fa-star" style={{ fontSize: '0.64rem' }}></i> {avg}
+                                  </span>
                                 );
                               }
                               return null;
@@ -1299,39 +1297,41 @@ export default function AdminLiveSessionsPage() {
                             className="btn btn-secondary btn-sm"
                             onClick={() => openRecordingModal(s)}
                             title="Attach recording to this session"
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px', whiteSpace: 'nowrap' }}
                           >
-                            <i className="fa-solid fa-plus" style={{ marginRight: '5px' }}></i> Add Recording
+                            <i className="fa-solid fa-plus" style={{ marginRight: '4px' }}></i> Add Video
                           </button>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                           <button
                             className="btn btn-secondary btn-sm"
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
                             onClick={() => openEditModal(s)}
                             title="Edit session details"
                           >
-                            <i className="fa-solid fa-pen-to-square" style={{ marginRight: '4px' }}></i> Edit
+                            <i className="fa-solid fa-pen-to-square" style={{ marginRight: '3px' }}></i> Edit
                           </button>
                           {/* Complete button — shown for active sessions (not completed/cancelled) */}
                           {effectiveStatus !== 'completed' && effectiveStatus !== 'cancelled' && (
                             <button
                               className="btn btn-sm"
-                              style={{ background: '#10b981', color: '#fff', border: 'none' }}
+                              style={{ background: '#10b981', color: '#fff', border: 'none', padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
                               onClick={() => handleComplete(s.id)}
                               title="Mark session as completed"
                             >
-                              <i className="fa-solid fa-check" style={{ marginRight: '4px' }}></i> Complete
+                              <i className="fa-solid fa-check" style={{ marginRight: '3px' }}></i> Done
                             </button>
                           )}
                           {effectiveStatus !== 'cancelled' && (
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ color: '#ef4444' }}
+                              style={{ color: '#ef4444', padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
                               onClick={() => handleCancel(s.id)}
                               title="Cancel live session"
                             >
-                              <i className="fa-solid fa-ban" style={{ marginRight: '4px' }}></i> Cancel
+                              <i className="fa-solid fa-ban" style={{ marginRight: '3px' }}></i> Cancel
                             </button>
                           )}
                         </div>
