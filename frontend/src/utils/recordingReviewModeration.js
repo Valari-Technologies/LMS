@@ -14,7 +14,9 @@ export function getLocalStoredRecordingReviews(recordingId) {
     if (!raw) return [];
     const map = JSON.parse(raw);
     const list = map[String(recordingId)] || [];
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    // Strictly isolate reviews to this recordingId only
+    return list.filter(r => r && (!r.recordingId || String(r.recordingId) === String(recordingId)));
   } catch (e) {
     return [];
   }
@@ -25,7 +27,11 @@ export function saveRecordingReviewsLocally(recordingId, reviews) {
   try {
     const raw = localStorage.getItem(STORED_REVIEWS_KEY);
     const map = raw ? JSON.parse(raw) : {};
-    map[String(recordingId)] = reviews;
+    // Ensure every review stored under this recording key is strictly tagged with this recordingId
+    const sanitized = reviews
+      .filter(r => r && (!r.recordingId || String(r.recordingId) === String(recordingId)))
+      .map(r => ({ ...r, recordingId: Number(recordingId) || recordingId }));
+    map[String(recordingId)] = sanitized;
     localStorage.setItem(STORED_REVIEWS_KEY, JSON.stringify(map));
   } catch (e) {}
 }
@@ -36,12 +42,17 @@ export function saveSingleRecordingReviewLocally(recordingId, review) {
     const raw = localStorage.getItem(STORED_REVIEWS_KEY);
     const map = raw ? JSON.parse(raw) : {};
     const key = String(recordingId);
+    // Disallow saving a review under a different recording's key
+    if (review.recordingId && String(review.recordingId) !== key) {
+      return;
+    }
     const existing = Array.isArray(map[key]) ? [...map[key]] : [];
+    const sanitizedReview = { ...review, recordingId: Number(recordingId) || recordingId };
     const idx = existing.findIndex(r => String(r.id) === String(review.id));
     if (idx >= 0) {
-      existing[idx] = { ...existing[idx], ...review };
+      existing[idx] = { ...existing[idx], ...sanitizedReview };
     } else {
-      existing.unshift(review);
+      existing.unshift(sanitizedReview);
     }
     map[key] = existing;
     localStorage.setItem(STORED_REVIEWS_KEY, JSON.stringify(map));
@@ -144,6 +155,9 @@ export function applyRecordingListModeration(reviews) {
  * Unapproved / pending reviews never inflate public ratings.
  */
 export function getRecordingRatingStats(recordingId, defaultAvg, defaultTotal) {
+  if (!recordingId) {
+    return { averageRating: null, totalRatings: 0 };
+  }
   const recId = Number(recordingId);
   const localStatus = getLocalRecordingStatus(recId);
   if (localStatus === 'pending') {

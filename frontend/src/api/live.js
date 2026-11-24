@@ -5,6 +5,7 @@ import {
   setLocalRecordingDeleted,
   applyRecordingListModeration,
   saveRecordingReviewsLocally,
+  saveSingleRecordingReviewLocally,
   getLocalStoredRecordingReviews
 } from '../utils/recordingReviewModeration';
 import { cleanDescription, parseSessionRecordingMetadata } from '../utils/recordingResources';
@@ -112,9 +113,9 @@ export async function generateRecordingSubtitles(sessionId, recordingId) {
 
 export async function rateRecording(recordingId, { rating, comment }) {
   const res = await api.post(`/live-sessions/recordings/${recordingId}/rate`, { rating, comment });
-  const data = res.data.data;
+  const data = res.data?.data;
   if (data) {
-    saveRecordingReviewsLocally(recordingId, [data]);
+    saveSingleRecordingReviewLocally(recordingId, data);
   }
   emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
   return data;
@@ -124,24 +125,26 @@ export async function getRecordingRatings(recordingId) {
   if (!recordingId) return [];
   try {
     const res = await api.get(`/live-sessions/recordings/${recordingId}/ratings`);
-    const list = res.data?.data || [];
-    if (Array.isArray(list) && list.length > 0) {
+    if (res.data?.success || Array.isArray(res.data?.data)) {
+      const list = (res.data?.data || []).filter(r => !r.recordingId || String(r.recordingId) === String(recordingId));
       saveRecordingReviewsLocally(recordingId, list);
       return applyRecordingListModeration(list);
     }
   } catch (err) {
     try {
       const adminRes = await api.get(`/admin/live-sessions/recordings/${recordingId}/ratings`);
-      const list = adminRes.data?.data || [];
-      if (Array.isArray(list) && list.length > 0) {
+      if (adminRes.data?.success || Array.isArray(adminRes.data?.data)) {
+        const list = (adminRes.data?.data || []).filter(r => !r.recordingId || String(r.recordingId) === String(recordingId));
         saveRecordingReviewsLocally(recordingId, list);
         return applyRecordingListModeration(list);
       }
     } catch (e) {}
   }
 
-  // Resilient fallback to locally cached review entries for this recording
-  const localList = getLocalStoredRecordingReviews(recordingId);
+  // Resilient fallback to locally cached review entries strictly for this recording
+  const localList = getLocalStoredRecordingReviews(recordingId).filter(r =>
+    !r.recordingId || String(r.recordingId) === String(recordingId)
+  );
   return applyRecordingListModeration(localList);
 }
 

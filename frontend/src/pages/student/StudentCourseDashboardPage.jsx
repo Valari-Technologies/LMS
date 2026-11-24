@@ -165,8 +165,7 @@ export default function StudentCourseDashboardPage() {
   // Fetch real student reviews whenever a recording is selected in player
   useEffect(() => {
     const recId = selectedRecording?.id;
-    const sessId = selectedRecording?.sessionId;
-    if (!recId && !sessId) {
+    if (!recId) {
       setRecordingReviews([]);
       return;
     }
@@ -175,15 +174,11 @@ export default function StudentCourseDashboardPage() {
 
     const loadRatings = async () => {
       try {
-        let data = [];
-        if (recId) {
-          data = await getRecordingRatings(recId);
-        }
-        if ((!Array.isArray(data) || data.length === 0) && sessId && sessId !== recId) {
-          data = await getRecordingRatings(sessId);
-        }
+        const data = await getRecordingRatings(recId);
         if (isMounted) {
-          setRecordingReviews(data || []);
+          // Strictly only include reviews that belong to this recording ID
+          const strictlyThis = (data || []).filter(r => !r.recordingId || String(r.recordingId) === String(recId));
+          setRecordingReviews(strictlyThis);
         }
       } catch (err) {
         console.warn('Failed to load recording ratings/reviews:', err);
@@ -204,7 +199,7 @@ export default function StudentCourseDashboardPage() {
       isMounted = false;
       window.removeEventListener('recording-reviews-moderated', handleReviewsModerated);
     };
-  }, [selectedRecording?.id, selectedRecording?.sessionId]);
+  }, [selectedRecording?.id]);
 
   const [, setResourcesVersion] = useState(0);
 
@@ -322,7 +317,7 @@ export default function StudentCourseDashboardPage() {
   recordingSessions.forEach(s => {
     const recs = (s.recordings && s.recordings.length > 0)
       ? s.recordings
-      : (s.recordingUrl ? [{ id: s.id, url: s.recordingUrl, sessionTitle: s.title }] : []);
+      : (s.recordingUrl ? [{ id: `session-${s.id}`, sessionId: s.id, url: s.recordingUrl, sessionTitle: s.title, isVirtual: true }] : []);
 
     recs.forEach((r, rIdx) => {
       allRecordings.push({
@@ -529,9 +524,6 @@ export default function StudentCourseDashboardPage() {
       // Optimistically update local review state
       if (saved) {
         saveSingleRecordingReviewLocally(ratingModalRecording.id, saved);
-        if (ratingModalRecording.sessionId) {
-          saveSingleRecordingReviewLocally(ratingModalRecording.sessionId, saved);
-        }
         setRecordingReviews(prev => {
           const list = Array.isArray(prev) ? [...prev] : [];
           const idx = list.findIndex(r => String(r.id) === String(saved.id));
@@ -578,22 +570,23 @@ export default function StudentCourseDashboardPage() {
   // .ot-video-card, .ot-learn-action-bar, .ot-learn-tabs, .ot-course-content-sidebar)
   // =========================================================================
   if (selectedRecording) {
-    const publishedReviews = recordingReviews.filter(r => (r.status || '').toLowerCase() === 'published');
+    const publishedReviews = recordingReviews.filter(r =>
+      (!r.recordingId || String(r.recordingId) === String(selectedRecording.id)) &&
+      (r.status || '').toLowerCase() === 'published'
+    );
     const publishedReviewsWithComment = publishedReviews.filter(r => r.comment && r.comment.trim());
     const myReview = recordingReviews.find(r =>
+      (!r.recordingId || String(r.recordingId) === String(selectedRecording.id)) &&
       user && (String(user.id) === String(r.studentId) || user.email === r.studentEmail)
     );
     const myPendingReview = myReview && (myReview.status || '').toLowerCase() !== 'published' ? myReview : null;
 
-    // Public aggregate ratings strictly only count PUBLISHED reviews.
-    // If published reviews are loaded, compute from them; otherwise fallback to recording stats
-    const curTotalRatings = publishedReviews.length > 0
-      ? publishedReviews.length
-      : (selectedRecording.totalRatings || 0);
+    // Public aggregate ratings strictly only count PUBLISHED reviews for this recording.
+    const curTotalRatings = publishedReviews.length;
     const curAvgRating = publishedReviews.length > 0
       ? publishedReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / publishedReviews.length
-      : (selectedRecording.averageRating ? Number(selectedRecording.averageRating) : null);
-    const curUserRating = myReview ? myReview.rating : selectedRecording.userRating;
+      : null;
+    const curUserRating = myReview ? myReview.rating : (selectedRecording.userRating || null);
 
     // Overview & Resources for recording video matching course videos
     const recOverview = getRecordingOverview(
@@ -971,34 +964,15 @@ export default function StudentCourseDashboardPage() {
 
                     {/* Real Student Reviews & Feedback Testimonials Section */}
                     {(() => {
-                      let publishedReviews = recordingReviews.filter(rev => {
+                      const publishedReviews = recordingReviews.filter(rev => {
+                        const matchesRec = !rev.recordingId || String(rev.recordingId) === String(selectedRecording.id);
                         const st = (rev.status || '').toLowerCase();
-                        return st === 'published' || (!st && rev.rating);
+                        return matchesRec && (st === 'published' || (!st && rev.rating));
                       });
                       const myPendingReview = recordingReviews.find(rev =>
+                        (!rev.recordingId || String(rev.recordingId) === String(selectedRecording.id)) &&
                         user && (String(user.id) === String(rev.studentId) || user.email === rev.studentEmail) && (rev.status || '').toLowerCase() !== 'published'
                       );
-
-                      // Resilient fallback: If published reviews list is empty, but the recording has rating data
-                      // (curTotalRatings > 0 || selectedRecording.totalRatings > 0 || selectedRecording.averageRating > 0 || selectedRecording.userRating > 0),
-                      // construct the verified student review entry so student testimonials and ratings are always visible!
-                      if (publishedReviews.length === 0 && (curTotalRatings > 0 || selectedRecording.totalRatings > 0 || selectedRecording.averageRating > 0 || selectedRecording.userRating > 0)) {
-                        const ratingVal = curAvgRating ? Math.round(Number(curAvgRating)) : (selectedRecording.averageRating ? Math.round(Number(selectedRecording.averageRating)) : (selectedRecording.userRating || 5));
-                        const studentDisplayName = (selectedRecording.userRating && user?.name) ? user.name : 'Verified Student';
-                        const reviewText = selectedRecording.userComment || 'Great live class session replay. Concepts explained thoroughly with practical examples.';
-
-                        publishedReviews = [{
-                          id: `verified-${selectedRecording.id || selectedRecording.sessionId || 1}`,
-                          recordingId: selectedRecording.id,
-                          studentId: user?.id,
-                          studentName: studentDisplayName,
-                          rating: ratingVal,
-                          comment: reviewText,
-                          createdAt: selectedRecording.scheduledAt || selectedRecording.updatedAt || new Date().toISOString(),
-                          status: 'published',
-                          isVerified: true
-                        }];
-                      }
 
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '4px' }}>
@@ -2580,8 +2554,9 @@ export default function StudentCourseDashboardPage() {
                                     type="button"
                                     onClick={() => {
                                       // Watch in video classes style
-                                      const matchingRec = allRecordings.find(r => r.sessionId === s.sessionId) || {
-                                        id: s.sessionId,
+                                      const matchingRec = allRecordings.find(r => String(r.sessionId) === String(s.sessionId)) || {
+                                        id: null,
+                                        sessionId: s.sessionId,
                                         sessionTitle: s.sessionTitle,
                                         courseName: course?.name || course?.title,
                                         description: s.description,
@@ -2787,8 +2762,9 @@ export default function StudentCourseDashboardPage() {
                                     type="button"
                                     onClick={() => {
                                       // Open in video classes style
-                                      const matchingRec = allRecordings.find(r => r.sessionId === s.sessionId) || {
-                                        id: s.sessionId,
+                                      const matchingRec = allRecordings.find(r => String(r.sessionId) === String(s.sessionId)) || {
+                                        id: null,
+                                        sessionId: s.sessionId,
                                         sessionTitle: s.sessionTitle,
                                         courseName: course?.name || course?.title,
                                         description: s.description,
@@ -3200,7 +3176,7 @@ export default function StudentCourseDashboardPage() {
                    ========================================================= */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {displayedRecordings.map((s, idx) => {
-                    const primaryRec = (s.recordings && s.recordings[0]) || { id: s.id, url: s.recordingUrl, sessionTitle: s.title };
+                    const primaryRec = (s.recordings && s.recordings[0]) || { id: null, sessionId: s.id, url: s.recordingUrl, sessionTitle: s.title };
                     const stats = getRecordingRatingStats(primaryRec.id, primaryRec.averageRating ? Number(primaryRec.averageRating) : null, primaryRec.totalRatings || 0);
                     const totalRatings = stats.totalRatings;
                     const avgRating = stats.averageRating;
