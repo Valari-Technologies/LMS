@@ -1763,37 +1763,38 @@ export default function StudentCourseDashboardPage() {
           >
             {sidebarCollapsed ? (
               <div style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'rgba(90, 112, 211, 0.1)',
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#5A70D3',
-                fontSize: '1.2rem',
+                color: '#ffffff',
+                fontSize: '1.25rem',
                 flexShrink: 0,
-                boxShadow: '0 1px 3px rgba(90, 112, 211, 0.15)'
+                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.4)'
               }}>
                 <i className="fa-solid fa-graduation-cap"></i>
               </div>
             ) : (
-              <>
-                <span className="ot-brand-logo-wrap">
-                  <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '30px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="ot-brand-logo-wrap" style={{ background: '#ffffff', padding: '3px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)' }}>
+                  <img src={oneTutorBrandImg} alt="OneTutor" className="ot-brand-logo-img" style={{ height: '24px' }} />
                 </span>
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 800,
-                  background: 'rgba(90, 112, 211, 0.12)',
-                  color: '#5A70D3',
-                  padding: '3px 8px',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                  color: '#ffffff',
+                  padding: '3px 9px',
                   borderRadius: '9999px',
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 2px 10px rgba(79, 70, 229, 0.4)'
                 }}>
                   COURSE SPACE
                 </span>
-              </>
+              </div>
             )}
           </Link>
 
@@ -1837,15 +1838,17 @@ export default function StudentCourseDashboardPage() {
           {/* Active Course Title & Plan Badge */}
           {!sidebarCollapsed && (
             <div style={{
-              padding: '6px 8px 14px 8px',
-              borderBottom: '1px solid #f1f5f9',
-              marginBottom: '4px'
+              padding: '10px 12px 14px 12px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              marginBottom: '4px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '12px'
             }}>
               <div
                 style={{
-                  fontSize: '0.98rem',
+                  fontSize: '0.96rem',
                   fontWeight: 800,
-                  color: '#0f172a',
+                  color: '#f8fafc',
                   lineHeight: 1.35,
                   wordBreak: 'break-word'
                 }}
@@ -1855,20 +1858,20 @@ export default function StudentCourseDashboardPage() {
               </div>
               {enrolledPlan && (
                 <div style={{
-                  marginTop: '6px',
+                  marginTop: '8px',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  padding: '2px 8px',
+                  gap: '6px',
+                  padding: '3px 10px',
                   borderRadius: '9999px',
                   fontSize: '0.68rem',
                   fontWeight: 800,
                   letterSpacing: '0.3px',
-                  background: enrolledPlan.bgColor || 'rgba(90, 112, 211, 0.1)',
-                  color: enrolledPlan.color || '#5A70D3',
-                  border: `1px solid ${enrolledPlan.borderColor || 'rgba(90, 112, 211, 0.2)'}`
+                  background: 'rgba(99, 102, 241, 0.22)',
+                  color: '#c7d2fe',
+                  border: '1px solid rgba(99, 102, 241, 0.38)'
                 }}>
-                  <i className={enrolledPlan.icon} style={{ fontSize: '0.68rem' }}></i>
+                  <i className={enrolledPlan.icon} style={{ fontSize: '0.7rem' }}></i>
                   <span>{enrolledPlan.shortName || enrolledPlan.name}</span>
                 </div>
               )}
@@ -1886,7 +1889,7 @@ export default function StudentCourseDashboardPage() {
               onClick={() => { setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
               title="Course Learning Dashboard"
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-chart-pie"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-chart-pie" style={{ color: activeTab === 'dashboard' ? '#ffffff' : '#60a5fa' }}></i></span>
               <span className="ot-course-nav-text">Dashboard</span>
             </button>
 
@@ -1897,10 +1900,10 @@ export default function StudentCourseDashboardPage() {
               onClick={() => { setActiveTab('attendance'); setMobileSidebarOpen(false); }}
               title="Attendance Records"
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-calendar-check"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-calendar-check" style={{ color: activeTab === 'attendance' ? '#ffffff' : '#34d399' }}></i></span>
               <span className="ot-course-nav-text">Attendance</span>
               {attendance && (
-                <span className={`ot-course-badge ${activeTab === 'attendance' ? 'active' : ''}`}>
+                <span className={`ot-course-badge ${activeTab === 'attendance' ? 'active' : ''}`} style={activeTab !== 'attendance' ? { background: 'rgba(52, 211, 153, 0.16)', color: '#34d399' } : {}}>
                   {attendancePercentage}%
                 </span>
               )}
@@ -1913,7 +1916,7 @@ export default function StudentCourseDashboardPage() {
               onClick={() => { setActiveTab('live'); setMobileSidebarOpen(false); }}
               title={!enrolledPlan?.allowsLive ? "Live Classes (Upgrade required)" : "Live Online Classroom"}
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-tower-broadcast"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-tower-broadcast" style={{ color: activeTab === 'live' ? '#ffffff' : '#f87171' }}></i></span>
               <span className="ot-course-nav-text">Live Classes</span>
               {!enrolledPlan?.allowsLive ? (
                 <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>
@@ -1935,14 +1938,14 @@ export default function StudentCourseDashboardPage() {
               onClick={() => { setActiveTab('recordings'); setMobileSidebarOpen(false); }}
               title={!enrolledPlan?.allowsRecordings ? "Recordings (Upgrade required)" : "Recorded Sessions"}
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-video"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-video" style={{ color: activeTab === 'recordings' ? '#ffffff' : '#c084fc' }}></i></span>
               <span className="ot-course-nav-text">Recordings</span>
               {!enrolledPlan?.allowsRecordings ? (
                 <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>
                   <i className="fa-solid fa-lock"></i>
                 </span>
               ) : recordingSessions.length > 0 ? (
-                <span className={`ot-course-badge ${activeTab === 'recordings' ? 'active' : ''}`}>
+                <span className={`ot-course-badge ${activeTab === 'recordings' ? 'active' : ''}`} style={activeTab !== 'recordings' ? { background: 'rgba(192, 132, 252, 0.16)', color: '#c084fc' } : {}}>
                   {recordingSessions.length}
                 </span>
               ) : null}
@@ -1961,7 +1964,7 @@ export default function StudentCourseDashboardPage() {
               onClick={() => { setActiveTab('community'); setMobileSidebarOpen(false); }}
               title="Course Community Chat"
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-comments"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-comments" style={{ color: activeTab === 'community' ? '#ffffff' : '#38bdf8' }}></i></span>
               <span className="ot-course-nav-text">Community Chat</span>
             </button>
 
@@ -1972,7 +1975,7 @@ export default function StudentCourseDashboardPage() {
               onClick={handleOpenLectureClassroom}
               title="Lecture Classroom"
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-play"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-play" style={{ color: selectedRecording ? '#ffffff' : '#fbbf24' }}></i></span>
               <span className="ot-course-nav-text">Lecture Classroom</span>
             </button>
           </div>
@@ -1988,7 +1991,7 @@ export default function StudentCourseDashboardPage() {
               title="Return to My Learning Space"
               onClick={() => setMobileSidebarOpen(false)}
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-arrow-left"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-arrow-left" style={{ color: '#94a3b8' }}></i></span>
               <span className="ot-course-nav-text">My Learning</span>
             </Link>
 
@@ -1999,7 +2002,7 @@ export default function StudentCourseDashboardPage() {
               title="Go to OneTutor Home"
               onClick={() => setMobileSidebarOpen(false)}
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-house"></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-house" style={{ color: '#94a3b8' }}></i></span>
               <span className="ot-course-nav-text">Home Page</span>
             </Link>
           </div>
@@ -2234,34 +2237,98 @@ export default function StudentCourseDashboardPage() {
           {activeTab === 'dashboard' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
 
-              {/* Dashboard Sub-Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <i className="fa-solid fa-chart-pie" style={{ color: '#5A70D3' }}></i>
-                    <span>Course Learning Dashboard</span>
-                  </h2>
-                  <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <span>Live session telemetry, attendance records, and class replays</span>
+              {/* Modern Elevated Dashboard Header Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #10b981 100%)'
+                }}></div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '1.25rem',
+                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+                    flexShrink: 0
+                  }}>
+                    <i className="fa-solid fa-chart-pie"></i>
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+                      Course Learning Dashboard
+                    </h2>
+                    <div style={{ fontSize: '0.86rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>Live session telemetry, attendance records, and class replays</span>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        color: '#059669',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '9999px'
+                      }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></span>
+                        Active Course
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
                     type="button"
                     onClick={() => setActiveTab('attendance')}
                     style={{
-                      padding: '7px 14px',
-                      borderRadius: '8px',
+                      padding: '9px 16px',
+                      borderRadius: '10px',
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      fontSize: '0.82rem',
+                      color: '#0f172a',
+                      fontSize: '0.84rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '8px',
+                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = '#10b981';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.15)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(15, 23, 42, 0.05)';
                     }}
                   >
                     <i className="fa-solid fa-calendar-check" style={{ color: '#10b981' }}></i>
@@ -2272,17 +2339,29 @@ export default function StudentCourseDashboardPage() {
                     type="button"
                     onClick={() => setActiveTab('live')}
                     style={{
-                      padding: '7px 14px',
-                      borderRadius: '8px',
+                      padding: '9px 16px',
+                      borderRadius: '10px',
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      fontSize: '0.82rem',
+                      color: '#0f172a',
+                      fontSize: '0.84rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '8px',
+                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+                      transition: 'all 0.18s ease'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = '#ef4444';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.15)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(15, 23, 42, 0.05)';
                     }}
                   >
                     <i className="fa-solid fa-tower-broadcast" style={{ color: '#ef4444' }}></i>
@@ -2291,44 +2370,46 @@ export default function StudentCourseDashboardPage() {
                 </div>
               </div>
 
-              {/* 6 High-Utility POS KPI Telemetry Cards:
-                1. Upcoming Live Classes Count
-                2. Days Present
-                3. Days Absent
-                4. Total Live Class Sessions Count
-                5. Course Progress %
-                6. Attendance Standing % */}
+              {/* 5 High-Utility POS KPI Telemetry Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
 
                 {/* Metric 1: Upcoming Live Classes Count */}
                 <div
                   onClick={() => setActiveTab('live')}
                   style={{
-                    background: '#ffffff',
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                    border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #cbd5e1',
-                    boxShadow: isSessionLiveNow ? '0 4px 18px rgba(239, 68, 68, 0.15)' : '0 2px 8px rgba(15, 23, 42, 0.03)',
+                    background: isSessionLiveNow
+                      ? 'linear-gradient(180deg, #ffffff 0%, #fff1f2 100%)'
+                      : 'linear-gradient(180deg, #ffffff 0%, #fdf2f8 100%)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: isSessionLiveNow ? '2px solid #ef4444' : '1px solid #fbcfe8',
+                    boxShadow: isSessionLiveNow ? '0 6px 20px rgba(239, 68, 68, 0.2)' : '0 4px 16px rgba(236, 72, 153, 0.06)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(236, 72, 153, 0.16)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = isSessionLiveNow ? '0 6px 20px rgba(239, 68, 68, 0.2)' : '0 4px 16px rgba(236, 72, 153, 0.06)';
+                  }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Upcoming Live
                     </span>
-                    <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: isSessionLiveNow ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.84rem' }}></i>
+                    <span style={{ width: '34px', height: '34px', borderRadius: '10px', background: isSessionLiveNow ? '#fee2e2' : 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)', color: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-tower-broadcast" style={{ fontSize: '0.9rem' }}></i>
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.9rem', fontWeight: 900, color: isSessionLiveNow ? '#ef4444' : '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 900, color: isSessionLiveNow ? '#ef4444' : '#0f172a', lineHeight: 1.1, marginBottom: '6px' }}>
                     {isSessionLiveNow ? 'LIVE' : upcomingLiveCount}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{isSessionLiveNow ? 'Class in session' : 'Classes scheduled'}</span>
-                    <span style={{ color: '#ef4444', fontWeight: 700 }}>Join →</span>
+                    <span style={{ color: '#db2777', fontWeight: 700 }}>Join →</span>
                   </div>
                 </div>
 
@@ -2336,31 +2417,39 @@ export default function StudentCourseDashboardPage() {
                 <div
                   onClick={() => setActiveTab('attendance')}
                   style={{
-                    background: '#ffffff',
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: '1px solid #bbf7d0',
+                    boxShadow: '0 4px 16px rgba(16, 185, 129, 0.06)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#10b981'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.borderColor = '#10b981';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.16)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.borderColor = '#bbf7d0';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.06)';
+                  }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Days Present
                     </span>
-                    <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="fa-solid fa-user-check" style={{ fontSize: '0.84rem' }}></i>
+                    <span style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-user-check" style={{ fontSize: '0.9rem' }}></i>
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#10b981', lineHeight: 1.1, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 900, color: '#16a34a', lineHeight: 1.1, marginBottom: '6px' }}>
                     {daysPresent}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>Verified attendance</span>
-                    <span style={{ color: '#10b981', fontWeight: 700 }}>Present</span>
+                    <span style={{ color: '#16a34a', fontWeight: 700 }}>Present ✓</span>
                   </div>
                 </div>
 
@@ -2368,31 +2457,39 @@ export default function StudentCourseDashboardPage() {
                 <div
                   onClick={() => setActiveTab('attendance')}
                   style={{
-                    background: '#ffffff',
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #fff5f5 100%)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: '1px solid #fecaca',
+                    boxShadow: '0 4px 16px rgba(239, 68, 68, 0.06)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#ef4444'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.borderColor = '#ef4444';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(239, 68, 68, 0.16)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.borderColor = '#fecaca';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(239, 68, 68, 0.06)';
+                  }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Days Absent
                     </span>
-                    <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="fa-solid fa-user-xmark" style={{ fontSize: '0.84rem' }}></i>
+                    <span style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-user-xmark" style={{ fontSize: '0.9rem' }}></i>
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.9rem', fontWeight: 900, color: daysAbsent > 0 ? '#ef4444' : '#64748b', lineHeight: 1.1, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 900, color: daysAbsent > 0 ? '#dc2626' : '#64748b', lineHeight: 1.1, marginBottom: '6px' }}>
                     {daysAbsent}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{daysAbsent === 0 ? 'No absences' : 'Absent'}</span>
-                    <span style={{ color: '#ef4444', fontWeight: 700 }}>{daysAbsent > 0 ? 'Absent' : 'Clean'}</span>
+                    <span>{daysAbsent === 0 ? 'No absences' : 'Absent recorded'}</span>
+                    <span style={{ color: '#dc2626', fontWeight: 700 }}>{daysAbsent > 0 ? 'Absent' : 'Clean ✓'}</span>
                   </div>
                 </div>
 
@@ -2400,31 +2497,39 @@ export default function StudentCourseDashboardPage() {
                 <div
                   onClick={() => setActiveTab('live')}
                   style={{
-                    background: '#ffffff',
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: '1px solid #ddd6fe',
+                    boxShadow: '0 4px 16px rgba(124, 58, 237, 0.06)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#5A70D3'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.borderColor = '#7c3aed';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(124, 58, 237, 0.16)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.borderColor = '#ddd6fe';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(124, 58, 237, 0.06)';
+                  }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Total Live Sessions
                     </span>
-                    <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(90, 112, 211, 0.1)', color: '#5A70D3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="fa-solid fa-layer-group" style={{ fontSize: '0.84rem' }}></i>
+                    <span style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-layer-group" style={{ fontSize: '0.9rem' }}></i>
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 900, color: '#1e1b4b', lineHeight: 1.1, marginBottom: '6px' }}>
                     {totalLiveClassSessions}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{totalHeldSessions} held • {upcomingLiveCount} upcoming</span>
-                    <span style={{ color: '#5A70D3', fontWeight: 700 }}>Total</span>
+                    <span style={{ color: '#7c3aed', fontWeight: 700 }}>Total</span>
                   </div>
                 </div>
 
@@ -2432,66 +2537,101 @@ export default function StudentCourseDashboardPage() {
                 <div
                   onClick={() => setActiveTab('attendance')}
                   style={{
-                    background: '#ffffff',
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                    background: attendancePercentage >= 75
+                      ? 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)'
+                      : 'linear-gradient(180deg, #ffffff 0%, #fff5f5 100%)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: attendancePercentage >= 75 ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                    boxShadow: attendancePercentage >= 75 ? '0 4px 16px rgba(16, 185, 129, 0.06)' : '0 4px 16px rgba(239, 68, 68, 0.06)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#10b981'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.borderColor = attendancePercentage >= 75 ? '#10b981' : '#ef4444';
+                    e.currentTarget.style.boxShadow = attendancePercentage >= 75 ? '0 8px 24px rgba(16, 185, 129, 0.16)' : '0 8px 24px rgba(239, 68, 68, 0.16)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.borderColor = attendancePercentage >= 75 ? '#bbf7d0' : '#fecaca';
+                    e.currentTarget.style.boxShadow = attendancePercentage >= 75 ? '0 4px 16px rgba(16, 185, 129, 0.06)' : '0 4px 16px rgba(239, 68, 68, 0.06)';
+                  }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Attendance Rate
                     </span>
-                    <span style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="fa-solid fa-award" style={{ fontSize: '0.84rem' }}></i>
+                    <span style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '10px',
+                      background: attendancePercentage >= 75 ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                      color: attendancePercentage >= 75 ? '#16a34a' : '#dc2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <i className="fa-solid fa-award" style={{ fontSize: '0.9rem' }}></i>
                     </span>
                   </div>
-                  <div style={{ fontSize: '1.9rem', fontWeight: 900, color: attendancePercentage >= 75 ? '#10b981' : '#ef4444', lineHeight: 1.1, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 900, color: attendancePercentage >= 75 ? '#16a34a' : '#dc2626', lineHeight: 1.1, marginBottom: '6px' }}>
                     {attendancePercentage}%
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{attendancePercentage >= 75 ? '🟢 Eligible' : '⚠️ Warning'}</span>
-                    <span style={{ color: '#10b981', fontWeight: 700 }}>Min 75%</span>
+                    <span style={{ color: attendancePercentage >= 75 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>Min 75%</span>
                   </div>
                 </div>
               </div>
 
               {/* Course Live Session Attendance Log & Video Replays Workspace */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
 
                 {/* Course Live Session Attendance Log (Strictly for THIS COURSE) */}
-                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className="fa-solid fa-calendar-check" style={{ color: '#10b981' }}></i>
-                          <span>Live Class Attendance Records</span>
-                        </h3>
-                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                          Attendance telemetry for this separate course only
-                        </span>
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '1rem', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)' }}>
+                          <i className="fa-solid fa-calendar-check"></i>
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>
+                            Live Class Attendance Records
+                          </h3>
+                          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                            Attendance telemetry for this separate course only
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setActiveTab('attendance')}
-                        style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                        style={{
+                          background: 'rgba(90, 112, 211, 0.08)',
+                          border: 'none',
+                          color: '#4f46e5',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(90, 112, 211, 0.16)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(90, 112, 211, 0.08)'}
                       >
                         Full Details →
                       </button>
                     </div>
 
                     {(!attendance?.sessions || attendance.sessions.length === 0) ? (
-                      <div style={{ textAlign: 'center', padding: '28px 12px', color: '#64748b', fontSize: '0.86rem' }}>
-                        <i className="fa-regular fa-calendar" style={{ fontSize: '2rem', color: '#cbd5e1', marginBottom: '8px', display: 'block' }}></i>
+                      <div style={{ textAlign: 'center', padding: '32px 12px', color: '#64748b', fontSize: '0.88rem' }}>
+                        <i className="fa-regular fa-calendar" style={{ fontSize: '2.2rem', color: '#cbd5e1', marginBottom: '10px', display: 'block' }}></i>
                         No live class sessions held yet for this course.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {attendance.sessions.slice(0, 5).map((s, idx) => {
                           const isPresent = s.attendanceStatus === 'PRESENT';
                           const isUpcoming = s.attendanceStatus === 'UPCOMING';
@@ -2500,52 +2640,75 @@ export default function StudentCourseDashboardPage() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              padding: '10px 14px',
-                              borderRadius: '10px',
+                              padding: '12px 16px',
+                              borderRadius: '12px',
                               background: '#f8fafc',
-                              border: '1px solid #edf2f7',
-                              gap: '10px',
-                              flexWrap: 'wrap'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              border: '1px solid #e2e8f0',
+                              gap: '12px',
+                              flexWrap: 'wrap',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = '#ffffff';
+                              e.currentTarget.style.borderColor = '#cbd5e1';
+                              e.currentTarget.style.boxShadow = '0 4px 14px rgba(15, 23, 42, 0.05)';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = '#f8fafc';
+                              e.currentTarget.style.borderColor = '#e2e8f0';
+                              e.currentTarget.style.boxShadow = 'none';
+                              e.currentTarget.style.transform = 'none';
+                            }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{
-                                  width: '28px',
-                                  height: '28px',
+                                  width: '32px',
+                                  height: '32px',
                                   borderRadius: '50%',
-                                  background: isPresent ? 'rgba(16, 185, 129, 0.12)' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
-                                  color: isPresent ? '#10b981' : (isUpcoming ? '#0284c7' : '#ef4444'),
+                                  background: isPresent ? '#dcfce7' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
+                                  color: isPresent ? '#15803d' : (isUpcoming ? '#0369a1' : '#b91c1c'),
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  fontSize: '0.8rem',
+                                  fontSize: '0.84rem',
                                   flexShrink: 0
                                 }}>
                                   <i className={`fa-solid ${isPresent ? 'fa-check' : (isUpcoming ? 'fa-clock' : 'fa-xmark')}`}></i>
                                 </span>
                                 <div>
-                                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>{s.sessionTitle}</div>
-                                  <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                                    {s.scheduledAt ? new Date(s.scheduledAt).toLocaleString() : '—'}
+                                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>{s.sessionTitle}</div>
+                                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                    {s.scheduledAt ? new Date(s.scheduledAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                                   </div>
                                 </div>
                               </div>
 
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{
                                   fontSize: '0.72rem',
                                   fontWeight: 800,
-                                  padding: '3px 8px',
+                                  padding: '4px 10px',
                                   borderRadius: '9999px',
-                                  background: isPresent ? 'rgba(16, 185, 129, 0.12)' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
-                                  color: isPresent ? '#10b981' : (isUpcoming ? '#0284c7' : '#ef4444')
+                                  background: isPresent ? '#dcfce7' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
+                                  color: isPresent ? '#15803d' : (isUpcoming ? '#0369a1' : '#b91c1c'),
+                                  border: isPresent ? '1px solid #bbf7d0' : (isUpcoming ? '1px solid #bae6fd' : '1px solid #fecaca')
                                 }}>
-                                  {isPresent ? 'Present' : (isUpcoming ? 'Upcoming' : 'Absent')}
+                                  {isPresent ? '✓ Present' : (isUpcoming ? 'Upcoming' : '✕ Absent')}
                                 </span>
                                 {isUpcoming ? (
                                   <Link
                                     to={`/student/live-classroom/${s.sessionId}`}
                                     onClick={() => recordStudentAttendance(s.sessionId, user, { courseId: course?.id, sessionTitle: s.sessionTitle })}
-                                    style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, textDecoration: 'none' }}
+                                    style={{
+                                      fontSize: '0.82rem',
+                                      color: '#4f46e5',
+                                      fontWeight: 800,
+                                      textDecoration: 'none',
+                                      padding: '6px 14px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(79, 70, 229, 0.08)'
+                                    }}
                                   >
                                     Join →
                                   </Link>
@@ -2565,7 +2728,19 @@ export default function StudentCourseDashboardPage() {
                                       };
                                       setSelectedRecording(matchingRec);
                                     }}
-                                    style={{ background: 'none', border: 'none', fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, cursor: 'pointer' }}
+                                    style={{
+                                      background: 'rgba(79, 70, 229, 0.08)',
+                                      border: 'none',
+                                      fontSize: '0.82rem',
+                                      color: '#4f46e5',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      padding: '6px 14px',
+                                      borderRadius: '8px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.16)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.08)'}
                                   >
                                     Replay →
                                   </button>
@@ -2579,23 +2754,73 @@ export default function StudentCourseDashboardPage() {
                   </div>
 
                   {/* Recorded Replays Teaser */}
-                  <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '0.94rem', color: '#0f172a' }}>
-                        <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
-                        <span>Course Video Replays</span>
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)',
+                    borderRadius: '16px',
+                    padding: '22px 24px',
+                    border: '1px solid #ddd6fe',
+                    boxShadow: '0 4px 20px rgba(124, 58, 237, 0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '16px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                        fontSize: '1.1rem',
+                        boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
+                        flexShrink: 0
+                      }}>
+                        <i className="fa-solid fa-video"></i>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('recordings')}
-                        style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Watch &amp; Rate ({recordingSessions.length}) →
-                      </button>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a', marginBottom: '2px' }}>
+                          Course Video Replays
+                        </div>
+                        <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+                          Stream full replays of live classes for this course in the video classes classroom player.
+                        </p>
+                      </div>
                     </div>
-                    <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-                      Stream full replays of live classes for this course in the video classes classroom player.
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('recordings')}
+                      style={{
+                        background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '0.84rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        padding: '10px 18px',
+                        borderRadius: '10px',
+                        boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.18s ease'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 6px 18px rgba(79, 70, 229, 0.4)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = '0 4px 14px rgba(79, 70, 229, 0.3)';
+                      }}
+                    >
+                      <span>Watch &amp; Rate ({recordingSessions.length})</span>
+                      <i className="fa-solid fa-arrow-right"></i>
+                    </button>
                   </div>
 
               </div>
@@ -2610,7 +2835,7 @@ export default function StudentCourseDashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
               {/* Top Metric Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Overall Attendance</div>
                   <div style={{ fontSize: '2.2rem', fontWeight: 900, color: attendancePercentage >= 75 ? '#10b981' : '#ef4444' }}>
                     {attendancePercentage}%
@@ -2620,7 +2845,7 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 </div>
 
-                <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Classes Held</div>
                   <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a' }}>
                     {totalHeldSessions}
@@ -2630,7 +2855,7 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 </div>
 
-                <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Days Present</div>
                   <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#10b981' }}>
                     {daysPresent}
@@ -2640,7 +2865,7 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 </div>
 
-                <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)' }}>
+                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Days Absent</div>
                   <div style={{ fontSize: '2.2rem', fontWeight: 900, color: daysAbsent > 0 ? '#ef4444' : '#64748b' }}>
                     {daysAbsent}
@@ -2652,7 +2877,7 @@ export default function StudentCourseDashboardPage() {
               </div>
 
               {/* Attendance History Table */}
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
