@@ -102,7 +102,6 @@ export default function RecordingVideoPlayer({
   const controlsHideTimer = useRef(null);
   const toastTimerRef = useRef(null);
   const topQualityMenuRef = useRef(null);
-  const bottomQualityMenuRef = useRef(null);
   const pendingQualityRestoreRef = useRef(null);
   const isScrubbingRef = useRef(false);
 
@@ -462,8 +461,7 @@ export default function RecordingVideoPlayer({
   useEffect(() => {
     const handleClickOutside = (e) => {
       const isTopInside = topQualityMenuRef.current && topQualityMenuRef.current.contains(e.target);
-      const isBottomInside = bottomQualityMenuRef.current && bottomQualityMenuRef.current.contains(e.target);
-      if (!isTopInside && !isBottomInside) {
+      if (!isTopInside) {
         setShowQualityMenu(false);
       }
     };
@@ -1087,66 +1085,6 @@ export default function RecordingVideoPlayer({
             >
               <i className="fa-regular fa-closed-captioning"></i>
             </button>
-
-            {/* Quality & Speed Settings Popover in Bottom Bar */}
-            <div ref={bottomQualityMenuRef} style={{ position: 'relative', display: 'inline-block' }}>
-              <button
-                type="button"
-                className={`ot-ctrl-btn ${showQualityMenu ? 'ot-ctrl-btn--active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowQualityMenu(p => !p);
-                }}
-                title={`Settings • Quality: ${videoQuality.toUpperCase()}`}
-                aria-label="Settings"
-              >
-                <i className="fa-solid fa-gear"></i>
-              </button>
-
-              {showQualityMenu && (
-                <div
-                  className="ot-quality-menu"
-                  style={{ bottom: 'calc(100% + 8px)', top: 'auto', right: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="ot-quality-menu-header">
-                    <i className="fa-solid fa-sliders" style={{ fontSize: '0.72rem' }}></i>
-                    <span>Quality</span>
-                  </div>
-                  {VIDEO_QUALITY_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      className={`ot-quality-option-btn ${videoQuality === opt.id ? 'is-active' : ''}`}
-                      onClick={() => handleQualityChange(opt.id)}
-                    >
-                      <span>{opt.label}</span>
-                      {videoQuality === opt.id && (
-                        <i className="fa-solid fa-check"></i>
-                      )}
-                    </button>
-                  ))}
-
-                  <div className="ot-quality-menu-header" style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                    <i className="fa-solid fa-gauge-high" style={{ fontSize: '0.72rem' }}></i>
-                    <span>Speed</span>
-                  </div>
-                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((spd) => (
-                    <button
-                      key={spd}
-                      type="button"
-                      className={`ot-quality-option-btn ${playbackSpeed === spd ? 'is-active' : ''}`}
-                      onClick={() => handleSpeedChange(spd)}
-                    >
-                      <span>{spd === 1 ? '1x (Normal)' : `${spd}x`}</span>
-                      {playbackSpeed === spd && (
-                        <i className="fa-solid fa-check"></i>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Fullscreen Toggle */}
             <button
