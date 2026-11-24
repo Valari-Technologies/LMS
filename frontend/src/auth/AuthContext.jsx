@@ -9,8 +9,26 @@ const AuthContext = (typeof window !== 'undefined' && window.__OneTutorAuthConte
   : ((typeof window !== 'undefined') ? (window.__OneTutorAuthContext = createContext(null)) : createContext(null));
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('onetutor_auth_user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
+
+  // Helper to persist or clear onetutor_auth_user in sync with state
+  const updateStoredUser = (userData) => {
+    try {
+      if (userData) {
+        localStorage.setItem('onetutor_auth_user', JSON.stringify(userData));
+      } else {
+        localStorage.removeItem('onetutor_auth_user');
+      }
+    } catch (e) {}
+  };
 
   // Floating Auth Modal state
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -31,14 +49,17 @@ export function AuthProvider({ children }) {
     const hasToken = !!localStorage.getItem('accessToken');
     if (!hasToken) {
       setUser(null);
+      updateStoredUser(null);
       setLoading(false);
       return;
     }
     try {
       const me = await getCurrentUser();
       setUser(me);
+      updateStoredUser(me);
     } catch {
       setUser(null);
+      updateStoredUser(null);
     } finally {
       setLoading(false);
     }
@@ -49,6 +70,7 @@ export function AuthProvider({ children }) {
 
     const handleSessionExpired = () => {
       setUser(null);
+      updateStoredUser(null);
     };
     window.addEventListener('auth:session-expired', handleSessionExpired);
     return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
@@ -98,28 +120,33 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     const data = await apiLogin(credentials);
     setUser(data.user);
+    updateStoredUser(data.user);
     return data.user;
   };
 
   const loginWithGoogle = async (googlePayload) => {
     const data = await apiGoogleLogin(googlePayload);
     setUser(data.user);
+    updateStoredUser(data.user);
     return data.user;
   };
 
   const loginWithOtp = async ({ email, otp }) => {
     const data = await apiVerifyLoginOtp({ email, otp });
     setUser(data.user);
+    updateStoredUser(data.user);
     return data.user;
   };
 
   const setSessionUser = (userData) => {
     setUser(userData);
+    updateStoredUser(userData);
   };
 
   const logout = async () => {
     await apiLogout();
     setUser(null);
+    updateStoredUser(null);
   };
 
   return (

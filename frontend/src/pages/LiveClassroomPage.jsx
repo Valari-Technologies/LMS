@@ -59,6 +59,18 @@ export default function LiveClassroomPage({ role = 'student' }) {
     };
   }, [sessionId]);
 
+  // Dedicated effect to record attendance reliably as soon as user & sessionId are present
+  useEffect(() => {
+    if (!sessionId) return;
+    const isStaff = user?.role ? ['admin', 'super_admin', 'superadmin', 'content_creator', 'creator', 'readonly_admin', 'read_only_admin'].includes(user.role.toLowerCase()) : false;
+    if (role === 'student' && !isStaff) {
+      recordStudentAttendance(sessionId, user, {
+        courseId: joinInfo?.courseId,
+        sessionTitle: joinInfo?.sessionTitle || joinInfo?.title
+      });
+    }
+  }, [sessionId, user, role, joinInfo?.courseId, joinInfo?.sessionTitle, joinInfo?.title]);
+
   const handleLeave = () => {
     const isAdminRole = role === 'admin' || role === 'super_admin' || role === 'superadmin';
     if (isAdminRole) {

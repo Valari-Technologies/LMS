@@ -130,6 +130,7 @@ export default function AdminBatchDetailsPage() {
 
   async function loadBatchData() {
     setLoading(true);
+    setAttendanceRecords(getStoredAttendanceRecords());
     try {
       const [batchData, studentPage] = await Promise.all([
         getAdminBatch(batchId),

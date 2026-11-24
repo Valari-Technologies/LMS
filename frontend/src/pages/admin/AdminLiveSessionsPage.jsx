@@ -18,6 +18,7 @@ import {
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
 import { getCourseBatches, getAdminBatches, getBatchStudents } from '../../api/batches';
+import { getAdminEnrollments } from '../../api/admin';
 import {
   getStoredAttendanceRecords,
   getSessionAttendanceSheet,
@@ -228,8 +229,27 @@ export default function AdminLiveSessionsPage() {
         } catch (err) {
           console.debug('Failed to fetch course batches for attendance:', err);
         }
+
+        // 4. Also fetch active course enrollments to ensure all enrolled students are included
+        try {
+          const enrRes = await getAdminEnrollments({ courseId: sCourseId, size: 100 });
+          const enrList = enrRes?.content || (Array.isArray(enrRes) ? enrRes : []);
+          for (const enr of enrList) {
+            const eId = enr.studentId || enr.id;
+            const eEmail = enr.studentEmail || enr.email;
+            if (!combinedStudents.some(s => (eId && (s.studentId || s.id) === eId) || (eEmail && (s.studentEmail || s.email) === eEmail))) {
+              combinedStudents.push({
+                studentId: eId,
+                studentName: enr.studentName || enr.name,
+                studentEmail: eEmail,
+                profileImage: enr.profileImage || null
+              });
+            }
+          }
+        } catch (e) {}
       }
 
+      setAttendanceRecords(getStoredAttendanceRecords());
       setSessionAttendanceModal({
         session,
         loading: false,

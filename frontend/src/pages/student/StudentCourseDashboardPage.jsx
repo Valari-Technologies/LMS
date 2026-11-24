@@ -249,6 +249,18 @@ export default function StudentCourseDashboardPage() {
 
       if (attRes.status === 'fulfilled') {
         setAttendance(attRes.value);
+        // Synchronize verified backend attendance into client storage so admin view sees it immediately
+        if (attRes.value?.sessions && Array.isArray(attRes.value.sessions)) {
+          attRes.value.sessions.forEach(s => {
+            if (s.attendanceStatus === 'PRESENT') {
+              recordStudentAttendance(s.sessionId, user, {
+                courseId,
+                sessionTitle: s.sessionTitle,
+                attendedAt: s.attendedAt
+              });
+            }
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to load course dashboard data:', err);

@@ -10,8 +10,44 @@ export function getStoredAttendanceRecords() {
   try {
     const raw = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    let parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    // Auto-repair any record where studentEmail is missing or studentName is 'Student'
+    try {
+      let authUser = null;
+      const storedAuth = localStorage.getItem('onetutor_auth_user');
+      if (storedAuth) authUser = JSON.parse(storedAuth);
+      if (!authUser) {
+        const token = localStorage.getItem('accessToken');
+        if (token && token.includes('.')) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload?.sub) {
+            authUser = { email: payload.sub, name: payload.sub.split('@')[0] };
+          }
+        }
+      }
+      if (authUser && (authUser.email || authUser.id)) {
+        let changed = false;
+        parsed = parsed.map(r => {
+          if (!r.studentEmail || r.studentName === 'Student') {
+            changed = true;
+            return {
+              ...r,
+              studentEmail: r.studentEmail || authUser.email || '',
+              studentName: (r.studentName && r.studentName !== 'Student') ? r.studentName : (authUser.name || authUser.email || 'Student'),
+              studentId: r.studentId || authUser.id || authUser.studentId || null
+            };
+          }
+          return r;
+        });
+        if (changed) {
+          localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(parsed));
+        }
+      }
+    } catch (e) {}
+
+    return parsed;
   } catch (err) {
     console.warn('[attendanceStorage] Error reading stored attendance:', err);
     return [];
@@ -85,9 +121,25 @@ export async function recordStudentAttendance(sessionOrId, user = null, extra = 
       } catch (e) {}
     }
 
-    const studentId = currentUser?.id || currentUser?.studentId || currentUser?.userId || null;
-    const studentEmail = currentUser?.email || currentUser?.studentEmail || '';
-    const studentName = currentUser?.name || currentUser?.fullName || currentUser?.studentName || studentEmail || 'Student';
+    let studentId = currentUser?.id || currentUser?.studentId || currentUser?.userId || null;
+    let studentEmail = currentUser?.email || currentUser?.studentEmail || '';
+    let studentName = currentUser?.name || currentUser?.fullName || currentUser?.studentName || studentEmail || 'Student';
+
+    // Fallback: extract email from JWT accessToken payload if user state was missing
+    if (!studentEmail && typeof localStorage !== 'undefined') {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token && token.includes('.')) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload?.sub) {
+            studentEmail = payload.sub;
+            if (!studentName || studentName === 'Student') {
+              studentName = payload.sub.split('@')[0];
+            }
+          }
+        }
+      } catch (e) {}
+    }
 
     const sessionTitle = extra.sessionTitle ||
       (typeof sessionOrId === 'object' && sessionOrId !== null ? sessionOrId.title || sessionOrId.sessionTitle : null) ||
@@ -96,14 +148,15 @@ export async function recordStudentAttendance(sessionOrId, user = null, extra = 
     const batchId = extra.batchId || (typeof sessionOrId === 'object' && sessionOrId !== null ? sessionOrId.batchId || sessionOrId.batch?.id : null) || null;
 
     const existingRecords = getStoredAttendanceRecords();
-    const nowIso = new Date().toISOString();
+    const nowIso = extra.attendedAt || new Date().toISOString();
 
-    const recordKey = `${sessionId}_${studentId || studentEmail}`;
     const existingIndex = existingRecords.findIndex(r => {
       const matchSession = String(r.sessionId) === String(sessionId);
+      if (!matchSession) return false;
       const matchId = studentId && r.studentId && String(r.studentId) === String(studentId);
       const matchEmail = studentEmail && r.studentEmail && String(r.studentEmail).toLowerCase().trim() === String(studentEmail).toLowerCase().trim();
-      return matchSession && (matchId || matchEmail);
+      const matchOrphan = (!r.studentEmail || !r.studentId);
+      return matchId || matchEmail || matchOrphan;
     });
 
     const newRecord = {
@@ -116,7 +169,7 @@ export async function recordStudentAttendance(sessionOrId, user = null, extra = 
       courseId: courseId ? Number(courseId) : null,
       batchId: batchId ? Number(batchId) : null,
       status: 'PRESENT',
-      attendedAt: existingIndex >= 0 && existingRecords[existingIndex].attendedAt ? existingRecords[existingIndex].attendedAt : nowIso,
+      attendedAt: extra.attendedAt || (existingIndex >= 0 && existingRecords[existingIndex].attendedAt ? existingRecords[existingIndex].attendedAt : nowIso),
       joinTime: nowIso,
       updatedAt: nowIso
     };
@@ -235,9 +288,11 @@ export function computeStudentAttendance(student, liveSessions = [], attendanceR
     // Find if student has a PRESENT record
     const match = records.find(r => {
       const matchSession = String(r.sessionId) === String(sId);
+      if (!matchSession) return false;
       const matchId = studentId && r.studentId && String(r.studentId) === studentId;
       const matchEmail = studentEmail && r.studentEmail && String(r.studentEmail).toLowerCase().trim() === studentEmail;
-      return matchSession && (matchId || matchEmail);
+      const matchName = student.studentName && r.studentName && r.studentName !== 'Student' && String(student.studentName).toLowerCase().trim() === String(r.studentName).toLowerCase().trim();
+      return matchId || matchEmail || matchName;
     });
 
     const isPresent = match && String(match.status).toUpperCase() === 'PRESENT';
@@ -299,9 +354,11 @@ export function getSessionAttendanceSheet(session, batchStudents = [], attendanc
 
     const match = records.find(r => {
       const matchSession = String(r.sessionId) === String(sId);
+      if (!matchSession) return false;
       const matchId = stId && r.studentId && String(r.studentId) === stId;
       const matchEmail = stEmail && r.studentEmail && String(r.studentEmail).toLowerCase().trim() === stEmail;
-      return matchSession && (matchId || matchEmail);
+      const matchName = st.studentName && r.studentName && r.studentName !== 'Student' && String(st.studentName).toLowerCase().trim() === String(r.studentName).toLowerCase().trim();
+      return matchId || matchEmail || matchName;
     });
 
     const isPresent = (match && String(match.status).toUpperCase() === 'PRESENT') ||
