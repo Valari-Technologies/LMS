@@ -6,13 +6,17 @@
 FROM maven:3.9.8-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
+# Configure Maven to use high-speed mirror to prevent Maven Central 429 rate-limiting
+RUN mkdir -p /root/.m2
+COPY backend/settings.xml /root/.m2/settings.xml
+
 # Pre-fetch dependencies
 COPY backend/pom.xml .
-RUN mvn dependency:go-offline -B
+RUN mvn dependency:go-offline -B -s /root/.m2/settings.xml || true
 
 # Copy backend source code and build JAR package
 COPY backend/src ./src
-RUN mvn clean package -DskipTests -B
+RUN mvn clean package -DskipTests -B -s /root/.m2/settings.xml
 
 # 2. Runtime stage
 FROM eclipse-temurin:21-jre-alpine
