@@ -33,6 +33,7 @@ export default function AdminDashboard() {
   }
 
   const portals = [
+    { to: '/admin/doubts', icon: <i className="fa-solid fa-circle-question" style={{ color: '#6d28d9' }}></i>, title: 'Doubt Clearance Desk', desc: 'Review, answer, and manage all student doubts asked across courses.' },
     { to: '/admin/courses', icon: <i className="fa-solid fa-book-open"></i>, title: 'Courses Manager', desc: 'Create, edit, duplicate, version, publish, and preview curricula.' },
     { to: '/admin/categories', icon: <i className="fa-solid fa-tags"></i>, title: 'Categories', desc: 'Manage curriculum taxonomy and domain categories.' },
     { to: '/admin/students', icon: <i className="fa-solid fa-user-graduate"></i>, title: 'Students', desc: 'Review student records, enrollments, and manage account statuses.' },
@@ -108,6 +109,32 @@ export default function AdminDashboard() {
                 <span className="kpi-sub">Active & scheduled live sessions</span>
               </div>
             </div>
+
+            {/* DOUBTS ASKED */}
+            <Link to="/admin/doubts" className="kpi-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className="kpi-icon" style={{ background: 'rgba(109, 40, 217, 0.1)', color: '#6d28d9' }}>
+                <i className="fa-solid fa-circle-question"></i>
+              </div>
+              <div className="kpi-info">
+                <span className="kpi-val" style={{ color: '#6d28d9' }}>{stats?.totalDoubtsAsked || 0}</span>
+                <span className="kpi-label">Doubts Asked</span>
+                <span className="kpi-sub" style={{ color: (stats?.pendingDoubts || 0) > 0 ? '#b45309' : '#15803d', fontWeight: 700 }}>
+                  {(stats?.pendingDoubts || 0) > 0 ? `⚠️ ${stats.pendingDoubts} waiting for reply` : '✓ All doubts cleared'}
+                </span>
+              </div>
+            </Link>
+
+            {/* DOUBTS REPLIED */}
+            <Link to="/admin/doubts" className="kpi-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className="kpi-icon" style={{ background: 'rgba(21, 128, 61, 0.1)', color: '#15803d' }}>
+                <i className="fa-solid fa-comments"></i>
+              </div>
+              <div className="kpi-info">
+                <span className="kpi-val" style={{ color: '#15803d' }}>{stats?.totalDoubtsReplied || 0}</span>
+                <span className="kpi-label">Doubts Replied</span>
+                <span className="kpi-sub">Tutor responses provided</span>
+              </div>
+            </Link>
           </div>
 
           {/* Main Dashboard Sections */}

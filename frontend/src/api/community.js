@@ -227,5 +227,24 @@ export async function getUnreadDoubtCount() {
   return res.data.data?.unreadCount ?? 0;
 }
 
+/**
+ * Tutor / Admin: List all student doubt threads across all courses (or filtered by courseId).
+ */
+export async function getAllDoubtThreads(courseId = null) {
+  const res = await api.get('/community/doubts/all-threads', {
+    params: courseId ? { courseId } : {}
+  });
+  return res.data.data;
+}
+
+/**
+ * Direct KPI stats for doubts: totalDoubtsAsked, totalDoubtsReplied, pendingDoubts.
+ */
+export async function getDoubtStats() {
+  const res = await api.get('/community/doubts/stats');
+  return res.data.data;
+}
+
+
 
 

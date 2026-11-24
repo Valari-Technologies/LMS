@@ -4,6 +4,7 @@ import com.onetutor.admin.dto.AdminDashboardStatsResponse;
 import com.onetutor.audit.dto.AuditLogResponse;
 import com.onetutor.audit.repository.AuditLogRepository;
 import com.onetutor.common.ApiResponse;
+import com.onetutor.community.repository.TutorDoubtMessageRepository;
 import com.onetutor.courses.entity.CourseStatus;
 import com.onetutor.courses.repository.CourseRepository;
 import com.onetutor.enrollment.entity.EnrollmentStatus;
@@ -37,17 +38,20 @@ public class AdminDashboardController {
     private final EnrollmentRepository enrollmentRepository;
     private final LiveSessionRepository liveSessionRepository;
     private final AuditLogRepository auditLogRepository;
+    private final TutorDoubtMessageRepository doubtMessageRepository;
 
     public AdminDashboardController(UserRepository userRepository,
                                     CourseRepository courseRepository,
                                     EnrollmentRepository enrollmentRepository,
                                     LiveSessionRepository liveSessionRepository,
-                                    AuditLogRepository auditLogRepository) {
+                                    AuditLogRepository auditLogRepository,
+                                    TutorDoubtMessageRepository doubtMessageRepository) {
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.liveSessionRepository = liveSessionRepository;
         this.auditLogRepository = auditLogRepository;
+        this.doubtMessageRepository = doubtMessageRepository;
     }
 
     @GetMapping
@@ -67,6 +71,10 @@ public class AdminDashboardController {
         Instant now = Instant.now();
         Instant startOfToday = LocalDate.now(ZoneId.systemDefault()).atStartOfDay(ZoneId.systemDefault()).toInstant();
         long upcomingLiveSessions = liveSessionRepository.countUpcomingAndLive(now, startOfToday);
+
+        long totalDoubtsAsked = doubtMessageRepository.countTotalDoubtsAsked();
+        long totalDoubtsReplied = doubtMessageRepository.countTotalDoubtsReplied();
+        long pendingDoubts = doubtMessageRepository.countPendingDoubts();
 
         var recentLogsPage = auditLogRepository.findAllByOrderByCreatedAtDesc(
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
@@ -95,6 +103,9 @@ public class AdminDashboardController {
                 totalEnrollments,
                 activeEnrollments,
                 upcomingLiveSessions,
+                totalDoubtsAsked,
+                totalDoubtsReplied,
+                pendingDoubts,
                 recentLogs
         ));
     }

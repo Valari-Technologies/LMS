@@ -205,6 +205,79 @@ public class TutorDoubtService {
         return threads;
     }
 
+    /** Admin / Tutor: list all doubt threads across ALL courses (or filtered by courseId). */
+    @Transactional(readOnly = true)
+    public List<TutorDoubtThreadResponse> getAllDoubtThreads(Long optionalCourseId, User tutor) {
+        if (tutor.getRole() == UserRole.student) {
+            throw new ForbiddenException("ACCESS_DENIED", "Only instructors and administrators can access doubt threads");
+        }
+
+        List<Object[]> pairs;
+        if (optionalCourseId != null && optionalCourseId > 0) {
+            List<Long> studentIds = doubtMessageRepo.findDistinctStudentIdsByCourseId(optionalCourseId);
+            pairs = studentIds.stream().map(sId -> new Object[]{ optionalCourseId, sId }).toList();
+        } else {
+            pairs = doubtMessageRepo.findDistinctCourseAndStudentPairs();
+        }
+
+        if (pairs.isEmpty()) return Collections.emptyList();
+
+        List<TutorDoubtThreadResponse> threads = new ArrayList<>();
+        for (Object[] pair : pairs) {
+            Long cId = (Long) pair[0];
+            Long sId = (Long) pair[1];
+
+            Optional<Course> cOpt = courseRepo.findById(cId);
+            Optional<User> sOpt = userRepo.findById(sId);
+            if (cOpt.isEmpty() || sOpt.isEmpty()) continue;
+
+            Course course = cOpt.get();
+            User student = sOpt.get();
+
+            Optional<TutorDoubtMessage> lastMsgOpt = doubtMessageRepo
+                    .findFirstByCourseIdAndStudentIdOrderByCreatedAtDesc(cId, sId);
+            if (lastMsgOpt.isEmpty()) continue;
+            TutorDoubtMessage lastMsg = lastMsgOpt.get();
+
+            Optional<TutorDoubtReadStatus> readOpt = doubtReadRepo
+                    .findByUserIdAndCourseIdAndStudentId(tutor.getId(), cId, sId);
+            Long lastReadId = readOpt.map(TutorDoubtReadStatus::getLastReadMessageId).orElse(0L);
+
+            long unread = doubtMessageRepo.countUnreadMessages(cId, sId, lastReadId, tutor.getId());
+            boolean isWaiting = lastMsg.getSender().getId().equals(sId);
+
+            threads.add(new TutorDoubtThreadResponse(
+                    student.getId(),
+                    student.getName(),
+                    student.getEmail(),
+                    student.getProfileImage(),
+                    course.getId(),
+                    course.getName(),
+                    lastMsg.getContent() != null ? lastMsg.getContent() :
+                            (lastMsg.getMessageType() == MessageType.image ? "📷 Photo" :
+                             lastMsg.getMessageType() == MessageType.video ? "🎥 Video" : "📄 Attachment"),
+                    lastMsg.getMessageType().name(),
+                    lastMsg.getSender().getRole().name(),
+                    lastMsg.getCreatedAt(),
+                    unread,
+                    isWaiting ? "waiting_for_tutor" : "answered"
+            ));
+        }
+
+        threads.sort((a, b) -> b.lastMessageTime().compareTo(a.lastMessageTime()));
+        return threads;
+    }
+
+    /** Direct KPI stats for doubt clearance. */
+    @Transactional(readOnly = true)
+    public Map<String, Long> getDoubtStats() {
+        return Map.of(
+                "totalDoubtsAsked", doubtMessageRepo.countTotalDoubtsAsked(),
+                "totalDoubtsReplied", doubtMessageRepo.countTotalDoubtsReplied(),
+                "pendingDoubts", doubtMessageRepo.countPendingDoubts()
+        );
+    }
+
     /** Tutor fetches 1-on-1 messages for a student doubt thread. */
     @Transactional
     public PageResponse<TutorDoubtMessageResponse> getStudentThreadMessages(

@@ -3,7 +3,7 @@ import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../auth/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUnreadNotificationCount, getNotifications, markNotificationRead, markAllNotificationsRead } from '../api/notifications';
-import { getUnreadChatCount } from '../api/community';
+import { getUnreadChatCount, getUnreadDoubtCount } from '../api/community';
 import { getAdminLiveSessions, getUpcomingLiveSessionCount } from '../api/live';
 import { getAdminContactStats } from '../api/contact';
 import CommunityToastNotifier from './CommunityToastNotifier';
@@ -19,6 +19,7 @@ export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [unreadDoubtCount, setUnreadDoubtCount] = useState(0);
   const [liveClassCount, setLiveClassCount] = useState(0);
   const [pendingContactCount, setPendingContactCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -80,14 +81,16 @@ export default function AdminLayout() {
     if (!localStorage.getItem('accessToken')) return;
     if (isContentCreator) return;
     try {
-      const [notifRes, chatRes, liveCountRes, contactStatsRes] = await Promise.allSettled([
+      const [notifRes, chatRes, liveCountRes, contactStatsRes, doubtRes] = await Promise.allSettled([
         getUnreadNotificationCount(),
         getUnreadChatCount(),
         getUpcomingLiveSessionCount().catch(() => getAdminLiveSessions({ size: 100 })),
         getAdminContactStats().catch(() => null),
+        getUnreadDoubtCount().catch(() => 0),
       ]);
       if (notifRes.status === 'fulfilled') setUnreadCount(notifRes.value || 0);
       if (chatRes.status === 'fulfilled') setUnreadChatCount(chatRes.value || 0);
+      if (doubtRes.status === 'fulfilled') setUnreadDoubtCount(doubtRes.value || 0);
       if (contactStatsRes.status === 'fulfilled' && contactStatsRes.value) {
         setPendingContactCount(contactStatsRes.value.pending || 0);
       }
@@ -192,6 +195,7 @@ export default function AdminLayout() {
     {
       title: 'COMMUNICATIONS',
       items: [
+        { to: '/admin/doubts', label: 'Doubt Clearance', icon: <i className="fa-solid fa-circle-question"></i>, badge: unreadDoubtCount > 0 ? (unreadDoubtCount > 99 ? '99+' : unreadDoubtCount) : null },
         { to: '/admin/contact-messages', label: 'Support Inquiries', icon: <i className="fa-solid fa-headset"></i>, badge: pendingContactCount > 0 ? (pendingContactCount > 99 ? '99+' : pendingContactCount) : null },
         { to: '/admin/notifications', label: 'Notification Center', icon: <i className="fa-solid fa-bullhorn"></i> },
         { to: '/admin/community', label: 'Community', icon: <i className="fa-solid fa-comments"></i>, badge: unreadChatCount > 0 ? (unreadChatCount > 99 ? '99+' : unreadChatCount) : null },

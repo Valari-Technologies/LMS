@@ -51,6 +51,7 @@ import AdminBannersPage from '../pages/admin/AdminBannersPage';
 import AdminPromoBannerPage from '../pages/admin/AdminPromoBannerPage';
 import AdminCouponsPage from '../pages/admin/AdminCouponsPage';
 import AdminCommunityPage from '../pages/admin/AdminCommunityPage';
+import AdminDoubtsPage from '../pages/admin/AdminDoubtsPage';
 import AdminBatchesPage from '../pages/admin/AdminBatchesPage';
 import AdminBatchDetailsPage from '../pages/admin/AdminBatchDetailsPage';
 import AdminNotificationCenterPage from '../pages/admin/AdminNotificationCenterPage';
@@ -164,6 +165,7 @@ export default function App() {
                 <Route path="/admin/coupons" element={<AdminCouponsPage />} />
                 <Route path="/admin/reviews" element={<AdminReviewsPage />} />
                 <Route path="/admin/community" element={<AdminCommunityPage />} />
+                <Route path="/admin/doubts" element={<AdminDoubtsPage />} />
                 <Route path="/admin/contact-messages" element={<AdminContactMessagesPage />} />
                 <Route path="/admin/notifications" element={<AdminNotificationCenterPage />} />
                 <Route path="/admin/creator-dashboard" element={<ContentCreatorDashboard />} />

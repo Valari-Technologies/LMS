@@ -63,4 +63,31 @@ public interface TutorDoubtMessageRepository extends JpaRepository<TutorDoubtMes
                    "  AND m.id > COALESCE(r.last_read_message_id, 0)",
            nativeQuery = true)
     long countTotalUnreadForTutor(@Param("tutorId") Long tutorId);
+
+    /** Total doubts asked by students. */
+    @Query("SELECT COUNT(m) FROM TutorDoubtMessage m WHERE m.deleted = false AND m.sender.id = m.student.id")
+    long countTotalDoubtsAsked();
+
+    /** Total doubts replied by tutors. */
+    @Query("SELECT COUNT(m) FROM TutorDoubtMessage m WHERE m.deleted = false AND m.sender.id <> m.student.id")
+    long countTotalDoubtsReplied();
+
+    /** Count of distinct student doubt threads waiting for tutor reply. */
+    @Query(value = "SELECT COUNT(DISTINCT CONCAT(m.course_id, '-', m.student_id)) " +
+                   "FROM tutor_doubt_messages m " +
+                   "WHERE m.deleted = false " +
+                   "  AND m.sender_id = m.student_id " +
+                   "  AND NOT EXISTS (" +
+                   "      SELECT 1 FROM tutor_doubt_messages r " +
+                   "      WHERE r.course_id = m.course_id " +
+                   "        AND r.student_id = m.student_id " +
+                   "        AND r.sender_id <> r.student_id " +
+                   "        AND r.created_at >= m.created_at" +
+                   "  )",
+           nativeQuery = true)
+    long countPendingDoubts();
+
+    /** All distinct course and student pairs for doubt clearance across all courses. */
+    @Query("SELECT DISTINCT m.course.id, m.student.id FROM TutorDoubtMessage m")
+    List<Object[]> findDistinctCourseAndStudentPairs();
 }

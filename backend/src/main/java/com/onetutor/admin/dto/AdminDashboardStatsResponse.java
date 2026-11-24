@@ -15,5 +15,8 @@ public record AdminDashboardStatsResponse(
         long totalEnrollments,
         long activeEnrollments,
         long upcomingLiveSessions,
+        long totalDoubtsAsked,
+        long totalDoubtsReplied,
+        long pendingDoubts,
         List<AuditLogResponse> recentAuditLogs
 ) {}

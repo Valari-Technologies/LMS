@@ -28,6 +28,7 @@ import { recordStudentAttendance } from '../../utils/attendanceStorage';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
 import CourseCommunityWhatsAppView from '../../components/CourseCommunityWhatsAppView';
+import StudentTutorDoubtView from '../../components/StudentTutorDoubtView';
 import { ChatPanel } from '../admin/AdminCommunityPage';
 import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
 import CoursePaymentModal from '../../components/CoursePaymentModal';
@@ -117,12 +118,9 @@ export default function StudentCourseDashboardPage() {
 
   // Active tab routing (if tab=details or tab=curriculum, route to community)
   const rawTab = searchParams.get('tab') || 'dashboard';
-  const subTab = searchParams.get('subTab') || (rawTab === 'doubts' ? 'doubts' : 'group');
-  const activeTab = (rawTab === 'details' || rawTab === 'curriculum' || rawTab === 'doubts') ? 'community' : rawTab;
-  const setActiveTab = (tab, newSubTab = null) => {
-    const params = { tab };
-    if (newSubTab) params.subTab = newSubTab;
-    setSearchParams(params);
+  const activeTab = (rawTab === 'details' || rawTab === 'curriculum') ? 'community' : rawTab;
+  const setActiveTab = (tab) => {
+    setSearchParams({ tab });
   };
   const [, setChatMuteVersion] = useState(0);
 
@@ -1987,23 +1985,23 @@ export default function StudentCourseDashboardPage() {
             {/* Course Community Chat Tab */}
             <button
               type="button"
-              className={`ot-course-nav-link ${activeTab === 'community' && subTab !== 'doubts' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('community', 'group'); setMobileSidebarOpen(false); }}
+              className={`ot-course-nav-link ${activeTab === 'community' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('community'); setMobileSidebarOpen(false); }}
               title="Course Community Group Chat"
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-comments"></i></span>
               <span className="ot-course-nav-text">Community Chat</span>
             </button>
 
-            {/* Ask Tutor (1-on-1 Doubts) Tab */}
+            {/* Doubt Clearance (Dedicated 1-on-1 Private Desk) */}
             <button
               type="button"
-              className={`ot-course-nav-link ${activeTab === 'community' && subTab === 'doubts' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('community', 'doubts'); setMobileSidebarOpen(false); }}
-              title="Ask Tutor • Private 1-on-1 Doubt Desk"
+              className={`ot-course-nav-link ${activeTab === 'doubts' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('doubts'); setMobileSidebarOpen(false); }}
+              title="Doubt Clearance • Private 1-on-1 with Instructors"
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-user-graduate" style={{ color: activeTab === 'community' && subTab === 'doubts' ? '#ffffff' : '#6366f1' }}></i></span>
-              <span className="ot-course-nav-text">Ask Tutor (Doubts)</span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-circle-question" style={{ color: activeTab === 'doubts' ? '#ffffff' : '#6d28d9' }}></i></span>
+              <span className="ot-course-nav-text">Doubt Clearance</span>
               <span className="ot-course-badge" style={{ background: '#ede9fe', color: '#6d28d9', fontWeight: 800 }}>1-on-1</span>
             </button>
 
@@ -3396,15 +3394,37 @@ export default function StudentCourseDashboardPage() {
         )}
 
           {/* ===================================================================
-            TAB: COMMUNITY CHAT (WhatsApp Style Hub: All Chats + Opens this course first)
+            TAB: COMMUNITY CHAT (WhatsApp Style Hub: Pure Group Community Chat)
             =================================================================== */}
           {activeTab === 'community' && (
             <CourseCommunityWhatsAppView
               initialCourseId={courseId}
               currentCourse={course}
               currentUser={user}
-              initialChatMode={subTab === 'doubts' ? 'doubts' : 'group'}
             />
+          )}
+
+          {/* ===================================================================
+            TAB: DOUBT CLEARANCE (Dedicated 1-on-1 Private Doubt Clearance Desk)
+            =================================================================== */}
+          {activeTab === 'doubts' && (
+            <div style={{
+              height: 'calc(100vh - 48px)',
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
+            }}>
+              <StudentTutorDoubtView
+                courseId={courseId}
+                courseName={course?.name || course?.title}
+                currentUser={user}
+                isTutorOrAdmin={false}
+              />
+            </div>
           )}
         </main>
       </div>

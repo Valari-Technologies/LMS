@@ -126,4 +126,18 @@ public class TutorDoubtController {
         long count = doubtService.getUnreadDoubtCount(actor);
         return ApiResponse.ok(Map.of("unreadCount", count));
     }
+
+    /** Tutor / Admin: List all student doubt threads across all courses (or filtered by courseId). */
+    @GetMapping("/doubts/all-threads")
+    public ApiResponse<List<TutorDoubtThreadResponse>> getAllDoubtThreads(
+            @RequestParam(required = false) Long courseId,
+            @AuthenticationPrincipal User actor) {
+        return ApiResponse.ok(doubtService.getAllDoubtThreads(courseId, actor));
+    }
+
+    /** Direct KPI stats for doubt clearance (doubts asked, replied, pending). */
+    @GetMapping("/doubts/stats")
+    public ApiResponse<Map<String, Long>> getDoubtStats() {
+        return ApiResponse.ok(doubtService.getDoubtStats());
+    }
 }

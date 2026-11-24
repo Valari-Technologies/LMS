@@ -2,26 +2,19 @@ import { useState, useEffect } from 'react';
 import { getStudentCommunityOverview, markCommunityRead, getCommunityMessages } from '../api/community';
 import { ChatPanel, resolveMediaUrl } from '../pages/admin/AdminCommunityPage';
 import { isChatMuted, toggleMuteChat } from './CommunityToastNotifier';
-import StudentTutorDoubtView from './StudentTutorDoubtView';
 
 export default function CourseCommunityWhatsAppView({
   initialCourseId,
   currentCourse,
-  currentUser,
-  initialChatMode = 'group'
+  currentUser
 }) {
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [chatMode, setChatMode] = useState(initialChatMode);
   // Always open THIS course's chat first
   const [mobileShowChat, setMobileShowChat] = useState(true);
   const [, setMuteVersion] = useState(0);
-
-  useEffect(() => {
-    if (initialChatMode) setChatMode(initialChatMode);
-  }, [initialChatMode]);
 
   useEffect(() => {
     function handleMuteToggle() {
@@ -388,66 +381,10 @@ export default function CourseCommunityWhatsAppView({
                 }}>
                   {selectedCourse.courseName}
                 </h3>
-                <span style={{ fontSize: '0.74rem', color: chatMode === 'doubts' ? '#4f46e5' : '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: chatMode === 'doubts' ? '#4f46e5' : '#16a34a', display: 'inline-block' }}></span>
-                  {chatMode === 'doubts' ? 'Personal Tutor Doubt Desk' : 'Course Community Channel'}
+                <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a', display: 'inline-block' }}></span>
+                  Course Community Channel
                 </span>
-              </div>
-
-              {/* Channel Mode Toggle: Group Discussion vs Ask Tutor */}
-              <div style={{
-                display: 'inline-flex',
-                background: '#f1f5f9',
-                borderRadius: '10px',
-                padding: '3px',
-                border: '1px solid #e2e8f0',
-                flexShrink: 0
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setChatMode('group')}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: chatMode === 'group' ? '#ffffff' : 'transparent',
-                    color: chatMode === 'group' ? '#5A70D3' : '#64748b',
-                    boxShadow: chatMode === 'group' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <i className="fa-solid fa-users"></i>
-                  <span>Group Chat</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setChatMode('doubts')}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: chatMode === 'doubts' ? '#ffffff' : 'transparent',
-                    color: chatMode === 'doubts' ? '#4f46e5' : '#64748b',
-                    boxShadow: chatMode === 'doubts' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <i className="fa-solid fa-user-graduate" style={{ color: chatMode === 'doubts' ? '#4f46e5' : '#818cf8' }}></i>
-                  <span>Ask Tutor (Doubts)</span>
-                </button>
               </div>
 
               {/* Mute Chat Notifications Button */}
@@ -478,24 +415,14 @@ export default function CourseCommunityWhatsAppView({
 
             {/* Chat Messages Panel */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {chatMode === 'doubts' ? (
-                <StudentTutorDoubtView
-                  key={`doubt-${selectedCourse.courseId}`}
-                  courseId={selectedCourse.courseId}
-                  courseName={selectedCourse.courseName}
-                  currentUser={currentUser}
-                  onBackToGroup={() => setChatMode('group')}
-                />
-              ) : (
-                <ChatPanel
-                  key={selectedCourse.courseId}
-                  courseId={selectedCourse.courseId}
-                  courseName={selectedCourse.courseName}
-                  currentUser={currentUser}
-                  availableCourses={courses}
-                  placeholder="Share ideas or ask classmates a question…"
-                />
-              )}
+              <ChatPanel
+                key={selectedCourse.courseId}
+                courseId={selectedCourse.courseId}
+                courseName={selectedCourse.courseName}
+                currentUser={currentUser}
+                availableCourses={courses}
+                placeholder="Share ideas or ask classmates a question…"
+              />
             </div>
           </>
         ) : (
