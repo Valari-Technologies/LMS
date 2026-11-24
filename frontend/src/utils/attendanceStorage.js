@@ -304,8 +304,10 @@ export function getSessionAttendanceSheet(session, batchStudents = [], attendanc
       return matchSession && (matchId || matchEmail);
     });
 
-    const isPresent = match && String(match.status).toUpperCase() === 'PRESENT';
-    const isExplicitAbsent = match && String(match.status).toUpperCase() === 'ABSENT';
+    const isPresent = (match && String(match.status).toUpperCase() === 'PRESENT') ||
+                      String(st.status || st.attendanceStatus).toUpperCase() === 'PRESENT';
+    const isExplicitAbsent = (match && String(match.status).toUpperCase() === 'ABSENT') ||
+                            String(st.status || st.attendanceStatus).toUpperCase() === 'ABSENT';
 
     let status = 'UPCOMING';
     if (isPresent) {
@@ -320,10 +322,37 @@ export function getSessionAttendanceSheet(session, batchStudents = [], attendanc
       studentEmail: st.studentEmail || st.email || '',
       profileImage: st.profileImage || null,
       status,
-      attendedAt: isPresent ? (match.attendedAt || match.joinTime) : null,
+      attendedAt: isPresent ? (match?.attendedAt || match?.joinTime || st.attendedAt || st.joinTime) : null,
       adminOverride: match?.adminOverride || false
     };
   });
+
+  // Guarantee: also include any students who joined/attended this session
+  // Even if the session has no batch assigned or batchStudents list was empty
+  const sessionRecords = (records || []).filter(r => String(r.sessionId) === String(sId));
+  for (const r of sessionRecords) {
+    const rId = r.studentId != null ? String(r.studentId) : null;
+    const rEmail = r.studentEmail ? String(r.studentEmail).toLowerCase().trim() : '';
+
+    const alreadyInList = studentRows.some(st => {
+      const stId = st.studentId != null ? String(st.studentId) : null;
+      const stEmail = st.studentEmail ? String(st.studentEmail).toLowerCase().trim() : '';
+      return (rId && stId && rId === stId) || (rEmail && stEmail && rEmail === stEmail);
+    });
+
+    if (!alreadyInList) {
+      const isPresent = String(r.status).toUpperCase() === 'PRESENT';
+      studentRows.push({
+        studentId: r.studentId || `rec_${r.id || Date.now()}`,
+        studentName: r.studentName || r.studentEmail || 'Student',
+        studentEmail: r.studentEmail || '',
+        profileImage: r.profileImage || null,
+        status: isPresent ? 'PRESENT' : (String(r.status).toUpperCase() === 'ABSENT' ? 'ABSENT' : (isHeld ? 'ABSENT' : 'UPCOMING')),
+        attendedAt: isPresent ? (r.attendedAt || r.joinTime) : null,
+        adminOverride: r.adminOverride || false
+      });
+    }
+  }
 
   const presentCount = studentRows.filter(s => s.status === 'PRESENT').length;
   const absentCount = studentRows.filter(s => s.status === 'ABSENT').length;

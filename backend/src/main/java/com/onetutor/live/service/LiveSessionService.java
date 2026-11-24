@@ -947,7 +947,7 @@ public class LiveSessionService {
         if (session.getBatch() != null) {
             enrollments = enrollmentRepository.findBatchStudentsWithUser(session.getBatch().getId(), EnrollmentStatus.active, org.springframework.data.domain.Pageable.unpaged()).getContent();
         } else {
-            enrollments = enrollmentRepository.findByCourseIdAndStatus(session.getCourse().getId(), EnrollmentStatus.active);
+            enrollments = enrollmentRepository.findActiveEnrollmentsWithStudentByCourseId(session.getCourse().getId());
         }
 
         List<LiveSessionAttendance> attendances = liveSessionAttendanceRepository.findBySessionId(sessionId);
@@ -958,10 +958,13 @@ public class LiveSessionService {
         boolean isHeld = session.getStatus() == LiveSessionStatus.completed || (session.getScheduledAt() != null && session.getScheduledAt().isBefore(now));
 
         List<com.onetutor.live.dto.SessionAttendanceSheetResponse.StudentAttendanceItem> studentItems = new ArrayList<>();
+        Set<Long> processedStudentIds = new HashSet<>();
         int presentCount = 0;
 
         for (Enrollment e : enrollments) {
+            if (e.getStudent() == null) continue;
             User student = e.getStudent();
+            processedStudentIds.add(student.getId());
             LiveSessionAttendance att = attMap.get(student.getId());
             boolean isPresent = att != null && "PRESENT".equalsIgnoreCase(att.getStatus());
             if (isPresent) {
@@ -978,6 +981,27 @@ public class LiveSessionService {
                     att != null ? att.getAttendedAt() : null,
                     att != null ? att.getJoinTime() : null
             ));
+        }
+
+        // Guarantee: Include any students who checked in to this session even if not in the specific batch/enrollment query
+        for (LiveSessionAttendance att : attendances) {
+            if (att.getStudent() != null && !processedStudentIds.contains(att.getStudent().getId())) {
+                User student = att.getStudent();
+                processedStudentIds.add(student.getId());
+                boolean isPresent = "PRESENT".equalsIgnoreCase(att.getStatus());
+                if (isPresent) {
+                    presentCount++;
+                }
+                studentItems.add(new com.onetutor.live.dto.SessionAttendanceSheetResponse.StudentAttendanceItem(
+                        student.getId(),
+                        student.getName(),
+                        student.getEmail(),
+                        student.getProfileImage(),
+                        isPresent ? "PRESENT" : "ABSENT",
+                        att.getAttendedAt(),
+                        att.getJoinTime()
+                ));
+            }
         }
 
         int total = studentItems.size();

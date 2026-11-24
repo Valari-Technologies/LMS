@@ -12,7 +12,8 @@ import {
   generateRecordingSubtitles,
   getRecordingRatings,
   togglePublishRecordingRating,
-  deleteRecordingRating
+  deleteRecordingRating,
+  getSessionAttendance
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
@@ -143,10 +144,24 @@ export default function AdminLiveSessionsPage() {
   const [sessionAttendanceModal, setSessionAttendanceModal] = useState(null);
   const [sessionAttendanceFilter, setSessionAttendanceFilter] = useState('ALL');
   const [sessionAttendanceSearch, setSessionAttendanceSearch] = useState('');
+  const [attendanceRecords, setAttendanceRecords] = useState(() => getStoredAttendanceRecords());
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleAttendanceChange = () => {
+      setAttendanceRecords(getStoredAttendanceRecords());
+    };
+    window.addEventListener('onetutor_attendance_updated', handleAttendanceChange);
+    window.addEventListener('storage', handleAttendanceChange);
+    return () => {
+      window.removeEventListener('onetutor_attendance_updated', handleAttendanceChange);
+      window.removeEventListener('storage', handleAttendanceChange);
+    };
+  }, []);
 
   async function openSessionAttendance(session) {
     const sBatchId = session.batchId || session.batch?.id;
+    const sCourseId = session.courseId || session.course?.id;
     setSessionAttendanceModal({
       session,
       loading: true,
@@ -157,24 +172,77 @@ export default function AdminLiveSessionsPage() {
     setSessionAttendanceSearch('');
 
     try {
-      let batchStudentsList = [];
-      if (sBatchId) {
-        const res = await getBatchStudents(sBatchId, { size: 100 });
-        batchStudentsList = res?.content || (Array.isArray(res) ? res : []);
+      let combinedStudents = [];
+
+      // 1. Fetch live attendance sheet from backend API
+      try {
+        const backendSheet = await getSessionAttendance(session.id);
+        if (backendSheet?.students && Array.isArray(backendSheet.students) && backendSheet.students.length > 0) {
+          combinedStudents = backendSheet.students.map(st => ({
+            studentId: st.studentId,
+            studentName: st.studentName,
+            studentEmail: st.studentEmail,
+            profileImage: st.profileImage,
+            status: st.status || st.attendanceStatus,
+            attendedAt: st.attendedAt || st.joinTime
+          }));
+        }
+      } catch (err) {
+        console.debug('Backend getSessionAttendance not available or offline:', err);
       }
+
+      // 2. If session has a specific batch, fetch its students
+      if (sBatchId) {
+        try {
+          const res = await getBatchStudents(sBatchId, { size: 100 });
+          const list = res?.content || (Array.isArray(res) ? res : []);
+          for (const bSt of list) {
+            const bId = bSt.studentId || bSt.id;
+            const bEmail = bSt.studentEmail || bSt.email;
+            if (!combinedStudents.some(s => (bId && (s.studentId || s.id) === bId) || (bEmail && (s.studentEmail || s.email) === bEmail))) {
+              combinedStudents.push(bSt);
+            }
+          }
+        } catch (err) {
+          console.debug('Failed to fetch batch students:', err);
+        }
+      } else if (sCourseId) {
+        // 3. If session has no specific batch, fetch students across the course batches
+        try {
+          const courseBatches = await getCourseBatches(sCourseId);
+          if (Array.isArray(courseBatches) && courseBatches.length > 0) {
+            for (const b of courseBatches) {
+              try {
+                const bRes = await getBatchStudents(b.id, { size: 100 });
+                const bList = bRes?.content || (Array.isArray(bRes) ? bRes : []);
+                for (const bSt of bList) {
+                  const bId = bSt.studentId || bSt.id;
+                  const bEmail = bSt.studentEmail || bSt.email;
+                  if (!combinedStudents.some(s => (bId && (s.studentId || s.id) === bId) || (bEmail && (s.studentEmail || s.email) === bEmail))) {
+                    combinedStudents.push(bSt);
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+        } catch (err) {
+          console.debug('Failed to fetch course batches for attendance:', err);
+        }
+      }
+
       setSessionAttendanceModal({
         session,
         loading: false,
-        students: batchStudentsList,
+        students: combinedStudents,
         error: null
       });
     } catch (err) {
-      console.error('Failed to load batch students for attendance sheet', err);
+      console.error('Failed to load students for attendance sheet', err);
       setSessionAttendanceModal({
         session,
         loading: false,
         students: [],
-        error: 'Failed to load batch students'
+        error: 'Failed to load students'
       });
     }
   }
@@ -3232,7 +3300,7 @@ export default function AdminLiveSessionsPage() {
                 const sheet = getSessionAttendanceSheet(
                   sessionAttendanceModal.session,
                   sessionAttendanceModal.students,
-                  getStoredAttendanceRecords()
+                  attendanceRecords
                 );
 
                 const filter = sessionAttendanceFilter;
@@ -3395,6 +3463,7 @@ export default function AdminLiveSessionsPage() {
                                         onClick={() => {
                                           const next = isPresent ? 'ABSENT' : 'PRESENT';
                                           markStudentAttendanceOverride(sessionAttendanceModal.session.id, st, next, sessionAttendanceModal.session);
+                                          setAttendanceRecords(getStoredAttendanceRecords());
                                           toast.success(`Attendance updated to ${next} for ${st.studentName}`);
                                         }}
                                         title={isPresent ? "Mark student as Absent" : "Mark student as Present"}
