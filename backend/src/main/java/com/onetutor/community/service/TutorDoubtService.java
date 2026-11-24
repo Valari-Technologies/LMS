@@ -14,6 +14,7 @@ import com.onetutor.community.repository.TutorDoubtMessageRepository;
 import com.onetutor.community.repository.TutorDoubtReadStatusRepository;
 import com.onetutor.courses.entity.Course;
 import com.onetutor.courses.repository.CourseRepository;
+import com.onetutor.enrollment.entity.EnrollmentStatus;
 import com.onetutor.enrollment.repository.EnrollmentRepository;
 import com.onetutor.media.entity.MediaAsset;
 import com.onetutor.media.repository.MediaAssetRepository;
@@ -341,7 +342,9 @@ public class TutorDoubtService {
 
     private void assertStudentEnrolled(Long courseId, User student) {
         if (student.getRole() == UserRole.student) {
-            boolean enrolled = enrollmentRepo.existsByUserIdAndCourseId(student.getId(), courseId);
+            boolean enrolled = enrollmentRepo
+                    .findByStudentIdAndCourseIdAndStatus(student.getId(), courseId, EnrollmentStatus.active)
+                    .isPresent();
             if (!enrolled) {
                 throw new ForbiddenException("NOT_ENROLLED", "You are not enrolled in this course");
             }
