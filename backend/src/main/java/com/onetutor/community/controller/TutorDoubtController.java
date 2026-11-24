@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/community")
+@RequestMapping("/api/v1/doubts")
 public class TutorDoubtController {
 
     private final TutorDoubtService doubtService;
@@ -25,10 +25,34 @@ public class TutorDoubtController {
         this.doubtService = doubtService;
     }
 
+    // ── Common & Stats Endpoints ────────────────────────────────────────────────
+
+    /** Direct KPI stats for doubt clearance (doubts asked, replied, pending). */
+    @GetMapping("/stats")
+    public ApiResponse<Map<String, Long>> getDoubtStats() {
+        return ApiResponse.ok(doubtService.getDoubtStats());
+    }
+
+    /** Tutor / Admin: List all student doubt threads across all courses (or filtered by courseId). */
+    @GetMapping("/all-threads")
+    public ApiResponse<List<TutorDoubtThreadResponse>> getAllDoubtThreads(
+            @RequestParam(required = false) Long courseId,
+            @AuthenticationPrincipal User actor) {
+        return ApiResponse.ok(doubtService.getAllDoubtThreads(courseId, actor));
+    }
+
+    /** Total unread doubts count across courses for navbar/badge display. */
+    @GetMapping("/unread-count")
+    public ApiResponse<Map<String, Long>> getUnreadDoubtCount(
+            @AuthenticationPrincipal User actor) {
+        long count = doubtService.getUnreadDoubtCount(actor);
+        return ApiResponse.ok(Map.of("unreadCount", count));
+    }
+
     // ── Student Endpoints ────────────────────────────────────────────────────────
 
     /** Student: Load paginated 1-on-1 doubt messages for this course. */
-    @GetMapping("/{courseId}/doubts/messages")
+    @GetMapping("/courses/{courseId}/messages")
     public ApiResponse<PageResponse<TutorDoubtMessageResponse>> getStudentDoubtMessages(
             @PathVariable Long courseId,
             @RequestParam(defaultValue = "0") int page,
@@ -38,7 +62,7 @@ public class TutorDoubtController {
     }
 
     /** Student: Poll new doubt messages for this course. */
-    @GetMapping("/{courseId}/doubts/messages/poll")
+    @GetMapping("/courses/{courseId}/messages/poll")
     public ApiResponse<List<TutorDoubtMessageResponse>> pollStudentDoubtMessages(
             @PathVariable Long courseId,
             @RequestParam(defaultValue = "0") Long afterId,
@@ -47,7 +71,7 @@ public class TutorDoubtController {
     }
 
     /** Student: Send a doubt message to course tutors. */
-    @PostMapping("/{courseId}/doubts/messages")
+    @PostMapping("/courses/{courseId}/messages")
     public ApiResponse<TutorDoubtMessageResponse> sendStudentDoubt(
             @PathVariable Long courseId,
             @Valid @RequestBody SendDoubtMessageRequest req,
@@ -56,7 +80,7 @@ public class TutorDoubtController {
     }
 
     /** Student: Mark doubt thread as read. */
-    @PostMapping("/{courseId}/doubts/read")
+    @PostMapping("/courses/{courseId}/read")
     public ApiResponse<Void> markStudentDoubtRead(
             @PathVariable Long courseId,
             @RequestParam(required = false) Long messageId,
@@ -65,10 +89,10 @@ public class TutorDoubtController {
         return ApiResponse.ok("Marked as read", null);
     }
 
-    // ── Tutor / Admin Endpoints ─────────────────────────────────────────────────
+    // ── Tutor / Admin Course-Specific Endpoints ─────────────────────────────────
 
     /** Tutor / Admin: List all student doubt threads for this course. */
-    @GetMapping("/{courseId}/doubts/threads")
+    @GetMapping("/courses/{courseId}/threads")
     public ApiResponse<List<TutorDoubtThreadResponse>> getCourseDoubtThreads(
             @PathVariable Long courseId,
             @AuthenticationPrincipal User actor) {
@@ -76,7 +100,7 @@ public class TutorDoubtController {
     }
 
     /** Tutor / Admin: Load paginated messages for a student doubt thread. */
-    @GetMapping("/{courseId}/doubts/students/{studentId}/messages")
+    @GetMapping("/courses/{courseId}/students/{studentId}/messages")
     public ApiResponse<PageResponse<TutorDoubtMessageResponse>> getStudentThreadMessages(
             @PathVariable Long courseId,
             @PathVariable Long studentId,
@@ -87,7 +111,7 @@ public class TutorDoubtController {
     }
 
     /** Tutor / Admin: Poll messages for a student doubt thread. */
-    @GetMapping("/{courseId}/doubts/students/{studentId}/messages/poll")
+    @GetMapping("/courses/{courseId}/students/{studentId}/messages/poll")
     public ApiResponse<List<TutorDoubtMessageResponse>> pollStudentThreadMessages(
             @PathVariable Long courseId,
             @PathVariable Long studentId,
@@ -97,7 +121,7 @@ public class TutorDoubtController {
     }
 
     /** Tutor / Admin: Reply to a student doubt. */
-    @PostMapping("/{courseId}/doubts/students/{studentId}/messages")
+    @PostMapping("/courses/{courseId}/students/{studentId}/messages")
     public ApiResponse<TutorDoubtMessageResponse> replyToStudentDoubt(
             @PathVariable Long courseId,
             @PathVariable Long studentId,
@@ -107,7 +131,7 @@ public class TutorDoubtController {
     }
 
     /** Tutor / Admin: Mark a student thread read. */
-    @PostMapping("/{courseId}/doubts/students/{studentId}/read")
+    @PostMapping("/courses/{courseId}/students/{studentId}/read")
     public ApiResponse<Void> markThreadReadByTutor(
             @PathVariable Long courseId,
             @PathVariable Long studentId,
@@ -115,29 +139,5 @@ public class TutorDoubtController {
             @AuthenticationPrincipal User actor) {
         doubtService.markThreadReadByTutor(courseId, studentId, messageId, actor);
         return ApiResponse.ok("Marked as read", null);
-    }
-
-    // ── Common Endpoints ────────────────────────────────────────────────────────
-
-    /** Total unread doubts count across courses for navbar/badge display. */
-    @GetMapping("/doubts/unread-count")
-    public ApiResponse<Map<String, Long>> getUnreadDoubtCount(
-            @AuthenticationPrincipal User actor) {
-        long count = doubtService.getUnreadDoubtCount(actor);
-        return ApiResponse.ok(Map.of("unreadCount", count));
-    }
-
-    /** Tutor / Admin: List all student doubt threads across all courses (or filtered by courseId). */
-    @GetMapping("/doubts/all-threads")
-    public ApiResponse<List<TutorDoubtThreadResponse>> getAllDoubtThreads(
-            @RequestParam(required = false) Long courseId,
-            @AuthenticationPrincipal User actor) {
-        return ApiResponse.ok(doubtService.getAllDoubtThreads(courseId, actor));
-    }
-
-    /** Direct KPI stats for doubt clearance (doubts asked, replied, pending). */
-    @GetMapping("/doubts/stats")
-    public ApiResponse<Map<String, Long>> getDoubtStats() {
-        return ApiResponse.ok(doubtService.getDoubtStats());
     }
 }

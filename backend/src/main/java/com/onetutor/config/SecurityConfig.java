@@ -132,6 +132,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/users/**").authenticated()
                 // Community chat (enrollment check enforced in service)
                 .requestMatchers("/api/v1/community", "/api/v1/community/**").authenticated()
+                // Dedicated 1-on-1 Doubt Clearance Desk
+                .requestMatchers("/api/v1/doubts", "/api/v1/doubts/**").authenticated()
                 // Student media upload for community attachments
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/media/upload").authenticated()
                 // Everything else requires authentication

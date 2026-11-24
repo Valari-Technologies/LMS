@@ -133,7 +133,7 @@ public class TutorDoubtService {
                 if (preview.length() > 70) preview = preview.substring(0, 67) + "...";
                 String title = "New Student Doubt: " + course.getName();
                 String body = student.getName() + " asked: " + preview;
-                String linkUrl = "/admin/community?courseId=" + courseId + "&tab=doubts&studentId=" + student.getId();
+                String linkUrl = "/admin/doubts?courseId=" + courseId + "&studentId=" + student.getId();
 
                 notificationService.notifyUsers(tutors, title, body,
                         NotificationType.COMMUNITY, course.getThumbnail(), linkUrl);
@@ -355,7 +355,7 @@ public class TutorDoubtService {
             if (preview.length() > 70) preview = preview.substring(0, 67) + "...";
             String title = "Tutor Replied to Your Doubt in " + course.getName();
             String body = tutor.getName() + ": " + preview;
-            String linkUrl = "/student/courses/" + courseId + "/dashboard?tab=community&subTab=doubts";
+            String linkUrl = "/student/courses/" + courseId + "/dashboard?tab=doubts";
 
             notificationService.notify(student, title, body,
                     NotificationType.COMMUNITY, course.getThumbnail(), linkUrl);
