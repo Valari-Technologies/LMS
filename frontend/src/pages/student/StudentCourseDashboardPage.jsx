@@ -29,6 +29,7 @@ import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import oneTutorBrandImg from '../../assets/images/oneTutorBrand.png';
 import CourseCommunityWhatsAppView from '../../components/CourseCommunityWhatsAppView';
 import StudentTutorDoubtView from '../../components/StudentTutorDoubtView';
+import { getUnreadDoubtCount } from '../../api/community';
 import { ChatPanel } from '../admin/AdminCommunityPage';
 import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
 import CoursePaymentModal from '../../components/CoursePaymentModal';
@@ -139,6 +140,29 @@ export default function StudentCourseDashboardPage() {
   // Recordings tab state (Search & Sort)
   const [recordingSearch, setRecordingSearch] = useState('');
   const [recordingSort, setRecordingSort] = useState('newest'); // 'newest' | 'oldest'
+
+  // Doubt Clearance unread badge count
+  const [unreadDoubtCount, setUnreadDoubtCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    async function fetchUnreadDoubts() {
+      try {
+        const count = await getUnreadDoubtCount();
+        if (mounted && typeof count === 'number') {
+          setUnreadDoubtCount(count);
+        }
+      } catch (err) {
+        // silent fail
+      }
+    }
+    fetchUnreadDoubts();
+    const interval = setInterval(fetchUnreadDoubts, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Sidebar responsive & collapse state for inside course card pages
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -2002,7 +2026,13 @@ export default function StudentCourseDashboardPage() {
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-circle-question" style={{ color: activeTab === 'doubts' ? '#ffffff' : '#6d28d9' }}></i></span>
               <span className="ot-course-nav-text">Doubt Clearance</span>
-              <span className="ot-course-badge" style={{ background: '#ede9fe', color: '#6d28d9', fontWeight: 800 }}>1-on-1</span>
+              {unreadDoubtCount > 0 ? (
+                <span className="ot-course-badge live-pulse" style={{ background: '#ef4444', color: '#ffffff', fontWeight: 800 }}>
+                  {unreadDoubtCount > 99 ? '99+' : unreadDoubtCount}
+                </span>
+              ) : (
+                <span className="ot-course-badge" style={{ background: '#ede9fe', color: '#6d28d9', fontWeight: 800 }}>1-on-1</span>
+              )}
             </button>
 
             {/* Full Video Learning Classroom */}
@@ -2027,9 +2057,9 @@ export default function StudentCourseDashboardPage() {
           marginLeft: sidebarCollapsed ? '78px' : '270px',
           width: sidebarCollapsed ? 'calc(100% - 78px)' : 'calc(100% - 270px)',
           minHeight: '100vh',
-          height: activeTab === 'community' ? '100vh' : 'auto',
-          maxHeight: activeTab === 'community' ? '100vh' : 'none',
-          overflow: activeTab === 'community' ? 'hidden' : 'visible'
+          height: (activeTab === 'community' || activeTab === 'doubts') ? '100vh' : 'auto',
+          maxHeight: (activeTab === 'community' || activeTab === 'doubts') ? '100vh' : 'none',
+          overflow: (activeTab === 'community' || activeTab === 'doubts') ? 'hidden' : 'visible'
         }}
       >
 
@@ -2225,16 +2255,16 @@ export default function StudentCourseDashboardPage() {
         </header>
 
         <main
-          className={`ot-course-content-main ${activeTab === 'community' ? 'community-tab-fullbleed community-tab-active' : ''}`}
+          className={`ot-course-content-main ${(activeTab === 'community' || activeTab === 'doubts') ? 'community-tab-fullbleed community-tab-active' : ''}`}
           style={{
             flex: 1,
-            maxWidth: activeTab === 'community' ? '100%' : '1360px',
+            maxWidth: (activeTab === 'community' || activeTab === 'doubts') ? '100%' : '1360px',
             width: '100%',
-            margin: activeTab === 'community' ? '0' : '0 auto',
-            padding: activeTab === 'community' ? '0' : '24px 20px 60px 20px',
-            height: activeTab === 'community' ? '100%' : 'auto',
-            maxHeight: activeTab === 'community' ? '100%' : 'none',
-            overflow: activeTab === 'community' ? 'hidden' : 'visible',
+            margin: (activeTab === 'community' || activeTab === 'doubts') ? '0' : '0 auto',
+            padding: (activeTab === 'community' || activeTab === 'doubts') ? '0' : '24px 20px 60px 20px',
+            height: (activeTab === 'community' || activeTab === 'doubts') ? '100%' : 'auto',
+            maxHeight: (activeTab === 'community' || activeTab === 'doubts') ? '100%' : 'none',
+            overflow: (activeTab === 'community' || activeTab === 'doubts') ? 'hidden' : 'visible',
             boxSizing: 'border-box'
           }}
         >
@@ -3410,20 +3440,18 @@ export default function StudentCourseDashboardPage() {
             =================================================================== */}
           {activeTab === 'doubts' && (
             <div style={{
-              height: 'calc(100vh - 48px)',
+              height: '100vh',
               background: '#ffffff',
-              borderRadius: '16px',
-              border: '1px solid #e2e8f0',
+              borderRadius: 0,
+              border: 'none',
               overflow: 'hidden',
               display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
+              flexDirection: 'column'
             }}>
               <StudentTutorDoubtView
-                courseId={courseId}
-                courseName={course?.name || course?.title}
+                initialCourseId={courseId}
+                currentCourse={course}
                 currentUser={user}
-                isTutorOrAdmin={false}
               />
             </div>
           )}

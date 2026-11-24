@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/doubts")
+@RequestMapping({"/api/v1/doubts", "/api/v1/community/doubts"})
 public class TutorDoubtController {
 
     private final TutorDoubtService doubtService;

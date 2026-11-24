@@ -81,10 +81,13 @@ export async function requestFcmToken() {
     let swRegistration = null;
     if ('serviceWorker' in navigator) {
       try {
+        const basePath = import.meta.env.BASE_URL || '/';
+        const cleanBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+        const swScriptPath = `${cleanBase}firebase-messaging-sw.js`;
         const swUrl = isFirebaseConfigured()
-          ? `/firebase-messaging-sw.js?${new URLSearchParams(firebaseConfig).toString()}`
-          : '/firebase-messaging-sw.js';
-        swRegistration = await navigator.serviceWorker.register(swUrl);
+          ? `${swScriptPath}?${new URLSearchParams(firebaseConfig).toString()}`
+          : swScriptPath;
+        swRegistration = await navigator.serviceWorker.register(swUrl, { scope: cleanBase });
         console.log('[Firebase] Service Worker active scope:', swRegistration.scope);
       } catch (swErr) {
         console.warn('[Firebase] Service Worker registration note:', swErr.message);

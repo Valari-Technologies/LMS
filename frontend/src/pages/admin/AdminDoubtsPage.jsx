@@ -12,7 +12,7 @@ import {
 import { listAdminCourses } from '../../api/courses';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 
-const POLL_INTERVAL_MS = 4000;
+const POLL_INTERVAL_MS = 3500;
 
 function formatTime(iso) {
   if (!iso) return '';
@@ -28,20 +28,111 @@ function formatDate(iso) {
   yesterday.setDate(yesterday.getDate() - 1);
   if (d.toDateString() === today.toDateString()) return 'Today';
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function isSameDay(iso1, iso2) {
+  if (!iso1 || !iso2) return false;
+  return new Date(iso1).toDateString() === new Date(iso2).toDateString();
 }
 
 function getInitials(name = '') {
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 }
 
-function getFileIcon(type, mime) {
-  if (type === 'pdf' || mime?.includes('pdf')) return 'fa-file-pdf';
-  if (type === 'video' || mime?.startsWith('video/')) return 'fa-file-video';
-  if (type === 'image' || mime?.startsWith('image/')) return 'fa-file-image';
-  return 'fa-file';
+function downloadMedia(url, filename = 'download') {
+  if (!url) return;
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Lightbox Modal for Image Previews
+// ─────────────────────────────────────────────────────────────────────────────
+function ImageLightboxModal({ url, filename, onClose }) {
+  if (!url) return null;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        background: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+      }}
+      onClick={onClose}
+    >
+      <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '10px', zIndex: 100000 }}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); downloadMedia(url, filename || 'image.jpg'); }}
+          style={{
+            background: '#5A70D3',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <i className="fa-solid fa-download" /> Download
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            background: 'rgba(255,255,255,0.2)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <i className="fa-solid fa-xmark" />
+        </button>
+      </div>
+
+      <img
+        src={url}
+        alt=""
+        style={{
+          maxWidth: '90vw',
+          maxHeight: '85vh',
+          objectFit: 'contain',
+          borderRadius: '12px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN ADMIN DOUBTS PAGE (WhatsApp Exact Layout & Styling)
+// ─────────────────────────────────────────────────────────────────────────────
 export default function AdminDoubtsPage() {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
@@ -59,13 +150,16 @@ export default function AdminDoubtsPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const lastMsgIdRef = useRef(0);
   const pollTimerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
-  // Load courses list and overall doubt stats
+  // Load courses list and doubt KPI stats
   useEffect(() => {
     async function loadMeta() {
       try {
@@ -87,7 +181,7 @@ export default function AdminDoubtsPage() {
     loadMeta();
   }, []);
 
-  // Load threads whenever course filter changes
+  // Load doubt threads whenever course filter changes
   useEffect(() => {
     let mounted = true;
     setLoadingThreads(true);
@@ -99,13 +193,25 @@ export default function AdminDoubtsPage() {
         if (!mounted) return;
         const valid = Array.isArray(list) ? list : [];
         setThreads(valid);
+
         if (valid.length > 0) {
-          setSelectedThread(valid[0]);
+          // If previous selection exists in new list, maintain it; otherwise select first
+          const stillThere = valid.find(t =>
+            selectedThread &&
+            t.studentId === selectedThread.studentId &&
+            t.courseId === selectedThread.courseId
+          );
+          if (stillThere) {
+            setSelectedThread(stillThere);
+          } else {
+            setSelectedThread(valid[0]);
+          }
         } else {
           setSelectedThread(null);
         }
       } catch (err) {
         console.error('Failed to load doubt threads:', err);
+        if (mounted) setThreads([]);
       } finally {
         if (mounted) setLoadingThreads(false);
       }
@@ -115,7 +221,7 @@ export default function AdminDoubtsPage() {
     return () => { mounted = false; };
   }, [selectedCourseId]);
 
-  // Load messages when selected thread changes
+  // Load conversation messages whenever selectedThread changes
   useEffect(() => {
     if (!selectedThread) {
       setMessages([]);
@@ -123,22 +229,24 @@ export default function AdminDoubtsPage() {
     }
 
     let mounted = true;
+    const { courseId, studentId } = selectedThread;
     setLoadingMessages(true);
     setMessages([]);
     lastMsgIdRef.current = 0;
 
     async function loadMessages() {
       try {
-        const data = await getStudentThreadMessages(selectedThread.courseId, selectedThread.studentId, { page: 0, size: 50 });
+        const data = await getStudentThreadMessages(courseId, studentId, { page: 0, size: 50 });
         if (!mounted) return;
         const list = data?.content || [];
         setMessages(list);
         if (list.length > 0) {
           lastMsgIdRef.current = list[list.length - 1].id;
         }
-        markTutorThreadRead(selectedThread.courseId, selectedThread.studentId).catch(() => {});
+
+        markTutorThreadRead(courseId, studentId).catch(() => {});
         setThreads(prev => prev.map(t =>
-          t.studentId === selectedThread.studentId && t.courseId === selectedThread.courseId
+          t.studentId === studentId && t.courseId === courseId
             ? { ...t, unreadCount: 0 }
             : t
         ));
@@ -150,52 +258,50 @@ export default function AdminDoubtsPage() {
     }
 
     loadMessages();
-    return () => { mounted = false; };
-  }, [selectedThread?.courseId, selectedThread?.studentId]);
 
-  // Polling for live messages in active thread
-  useEffect(() => {
-    if (!selectedThread) return;
+    // Live polling for student's new doubts
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const fresh = await pollStudentThreadMessages(courseId, studentId, lastMsgIdRef.current);
+        if (Array.isArray(fresh) && fresh.length > 0) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMsgs = fresh.filter(m => !existingIds.has(m.id));
+            if (newMsgs.length === 0) return prev;
+            const combined = [...prev, ...newMsgs];
+            lastMsgIdRef.current = combined[combined.length - 1].id;
+            markTutorThreadRead(courseId, studentId, lastMsgIdRef.current).catch(() => {});
+            return combined;
+          });
+        }
+      } catch {
+        // ignore transient poll error
+      }
+    }, POLL_INTERVAL_MS);
 
-    function startPolling() {
-      pollTimerRef.current = setInterval(async () => {
-        try {
-          const fresh = await pollStudentThreadMessages(
-            selectedThread.courseId,
-            selectedThread.studentId,
-            lastMsgIdRef.current
-          );
-          if (Array.isArray(fresh) && fresh.length > 0) {
-            setMessages(prev => {
-              const existingIds = new Set(prev.map(m => m.id));
-              const newMsgs = fresh.filter(m => !existingIds.has(m.id));
-              if (newMsgs.length === 0) return prev;
-              const combined = [...prev, ...newMsgs];
-              lastMsgIdRef.current = combined[combined.length - 1].id;
-              markTutorThreadRead(selectedThread.courseId, selectedThread.studentId, lastMsgIdRef.current).catch(() => {});
-              return combined;
-            });
-          }
-        } catch {}
-      }, POLL_INTERVAL_MS);
-    }
-
-    startPolling();
     return () => {
+      mounted = false;
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
   }, [selectedThread?.courseId, selectedThread?.studentId]);
 
-  // Auto-scroll
+  // Auto-scroll messages container to bottom
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  }, [messages, sendingReply]);
+  }, [messages, loadingMessages]);
+
+  function handleSelectThread(t) {
+    setSelectedThread(t);
+  }
 
   async function handleSendReply() {
     const toSend = replyText.trim();
-    if ((!toSend && !selectedFile) || sendingReply || uploading || !selectedThread) return;
+    if (!toSend && !selectedFile) return;
+    if (sendingReply || uploading) return;
+    if (!selectedThread) return;
 
     setSendingReply(true);
     try {
@@ -243,6 +349,9 @@ export default function AdminDoubtsPage() {
         }));
       }
       setReplyText('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     } catch (err) {
       alert(err?.response?.data?.error?.message || 'Failed to send reply');
     } finally {
@@ -250,6 +359,24 @@ export default function AdminDoubtsPage() {
       setUploading(false);
       setUploadProgress(0);
     }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendReply();
+    }
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Attachment file size must be less than 50MB.');
+      return;
+    }
+    setSelectedFile(file);
+    e.target.value = '';
   }
 
   const filteredThreads = threads.filter(t => {
@@ -267,79 +394,79 @@ export default function AdminDoubtsPage() {
   const waitingCount = threads.filter(t => t.status === 'waiting_for_tutor').length;
 
   return (
-    <div className="page" style={{ paddingBottom: '30px' }}>
-      {/* Header */}
-      <div className="page-header" style={{ marginBottom: '20px' }}>
+    <div className="page" style={{ paddingBottom: '24px' }}>
+      {/* Page Header */}
+      <div className="page-header" style={{ marginBottom: '16px' }}>
         <div className="page-title-wrap">
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <i className="fa-solid fa-circle-question" style={{ color: '#6d28d9' }}></i>
+            <i className="fa-solid fa-circle-question" style={{ color: '#5A70D3' }} />
             <span>Doubt Clearance Desk</span>
           </h1>
           <p className="page-subtitle">
             Private 1-on-1 clearance space: answer student doubts and provide academic guidance.
           </p>
         </div>
-      </div>
 
-      {/* KPI Stats Bar */}
-      <div className="kpi-grid" style={{ marginBottom: '24px' }}>
-        <div className="kpi-card">
-          <div className="kpi-icon" style={{ background: 'rgba(109, 40, 217, 0.1)', color: '#6d28d9' }}>
-            <i className="fa-solid fa-circle-question"></i>
+        {/* Quick KPI stats */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 14px',
+            borderRadius: '9999px',
+            background: 'rgba(90, 112, 211, 0.1)',
+            color: '#5A70D3',
+            fontSize: '0.84rem',
+            fontWeight: 700
+          }}>
+            <i className="fa-solid fa-circle-question" />
+            <span>{stats.totalDoubtsAsked} Doubts Asked</span>
           </div>
-          <div className="kpi-info">
-            <span className="kpi-val" style={{ color: '#6d28d9' }}>{stats.totalDoubtsAsked}</span>
-            <span className="kpi-label">Doubts Asked</span>
-            <span className="kpi-sub">Total student questions submitted</span>
-          </div>
-        </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon" style={{ background: 'rgba(21, 128, 61, 0.1)', color: '#15803d' }}>
-            <i className="fa-solid fa-comments"></i>
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-val" style={{ color: '#15803d' }}>{stats.totalDoubtsReplied}</span>
-            <span className="kpi-label">Doubts Replied</span>
-            <span className="kpi-sub">Tutor responses given</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon" style={{ background: 'rgba(217, 119, 6, 0.1)', color: '#d97706' }}>
-            <i className="fa-solid fa-hourglass-half"></i>
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-val" style={{ color: '#d97706' }}>{stats.pendingDoubts}</span>
-            <span className="kpi-label">Pending Doubts</span>
-            <span className="kpi-sub" style={{ color: stats.pendingDoubts > 0 ? '#b45309' : '#15803d', fontWeight: 700 }}>
-              {stats.pendingDoubts > 0 ? '⚠️ Awaiting instructor answer' : '✓ All doubts cleared'}
-            </span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 14px',
+            borderRadius: '9999px',
+            background: waitingCount > 0 ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.1)',
+            color: waitingCount > 0 ? '#b45309' : '#16a34a',
+            fontSize: '0.84rem',
+            fontWeight: 700
+          }}>
+            <i className={`fa-solid ${waitingCount > 0 ? 'fa-clock' : 'fa-check-circle'}`} />
+            <span>{waitingCount > 0 ? `${waitingCount} Waiting for Reply` : 'All Cleared'}</span>
           </div>
         </div>
       </div>
 
-      {/* Main Workspace: Left List + Right Conversation */}
-      <div className="card" style={{
-        display: 'flex',
-        height: 'calc(100vh - 340px)',
-        minHeight: '520px',
-        padding: 0,
-        overflow: 'hidden',
-        borderRadius: '16px',
-        border: '1px solid var(--border-default)'
-      }}>
-        {/* Left Column: Course Selector, Filter, and Student Doubt Threads */}
+      {/* Main WhatsApp-Style Split Card */}
+      <div
+        className="card"
+        style={{
+          padding: 0,
+          overflow: 'hidden',
+          height: 'calc(100vh - 170px)',
+          minHeight: '620px',
+          display: 'flex',
+          border: '1px solid var(--border-default)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
+        }}
+      >
+        {/* ──────────────────────────────────────────────────────────────────
+            1. Left Sidebar: Doubt Threads (WhatsApp Chats List)
+            ────────────────────────────────────────────────────────────────── */}
         <div style={{
-          width: '360px',
+          width: '320px',
           borderRight: '1px solid var(--border-default)',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--bg-surface)',
-          flexShrink: 0
+          flexShrink: 0,
+          background: 'var(--bg-surface)'
         }}>
-          {/* Filter Bar */}
-          <div style={{ padding: '16px', borderBottom: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Header Controls */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {/* Course Filter Dropdown */}
             <select
               value={selectedCourseId}
@@ -373,11 +500,11 @@ export default function AdminDoubtsPage() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search student by name or email…"
+                placeholder="Search student or course…"
                 style={{
                   width: '100%',
                   padding: '7px 10px 7px 30px',
-                  borderRadius: '8px',
+                  borderRadius: '20px',
                   border: '1px solid var(--border-default)',
                   background: 'var(--bg-elevated)',
                   color: 'var(--text-primary)',
@@ -388,7 +515,7 @@ export default function AdminDoubtsPage() {
               />
             </div>
 
-            {/* Category Filter Pills */}
+            {/* Filter Pills */}
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 type="button"
@@ -401,7 +528,7 @@ export default function AdminDoubtsPage() {
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: filter === 'all' ? '#6d28d9' : 'var(--bg-elevated)',
+                  background: filter === 'all' ? '#5A70D3' : 'var(--bg-elevated)',
                   color: filter === 'all' ? '#ffffff' : 'var(--text-muted)'
                 }}
               >
@@ -445,53 +572,57 @@ export default function AdminDoubtsPage() {
           </div>
 
           {/* Threads List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingThreads ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6d28d9' }}>
-                <i className="fa-solid fa-circle-notch fa-spin"></i>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#5A70D3' }}>
+                <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '24px' }} />
               </div>
             ) : filteredThreads.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-muted)', fontSize: '0.84rem' }}>
-                No doubts in this filter
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                No doubts match your search
               </div>
             ) : (
               filteredThreads.map(t => {
-                const isActive = selectedThread?.studentId === t.studentId && selectedThread?.courseId === t.courseId;
+                const isSelected = selectedThread &&
+                  selectedThread.studentId === t.studentId &&
+                  selectedThread.courseId === t.courseId;
                 const isWaiting = t.status === 'waiting_for_tutor';
+
                 return (
                   <button
                     key={`${t.courseId}-${t.studentId}`}
                     type="button"
-                    onClick={() => setSelectedThread(t)}
+                    onClick={() => handleSelectThread(t)}
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: isActive ? 'rgba(109, 40, 217, 0.08)' : 'transparent',
-                      borderLeft: isActive ? '3px solid #6d28d9' : '3px solid transparent',
-                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
+                      padding: '12px 14px',
+                      background: isSelected ? 'rgba(90, 112, 211, 0.08)' : 'none',
+                      border: 'none',
+                      borderLeft: isSelected ? '3px solid #5A70D3' : '3px solid transparent',
+                      cursor: 'pointer',
                       textAlign: 'left',
-                      marginBottom: '2px',
                       transition: 'all 0.15s ease'
                     }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-elevated)'; }}
+                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'none'; }}
                   >
+                    {/* Avatar */}
                     <div style={{
-                      width: '38px',
-                      height: '38px',
+                      width: '42px',
+                      height: '42px',
                       borderRadius: '50%',
-                      background: '#6d28d9',
+                      background: '#5A70D3',
                       color: '#ffffff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: 800,
-                      overflow: 'hidden',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      overflow: 'hidden'
                     }}>
                       {t.studentAvatar ? (
                         <img src={resolveMediaUrl(t.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -502,49 +633,60 @@ export default function AdminDoubtsPage() {
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                        <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{
+                          fontWeight: 700,
+                          fontSize: '0.88rem',
+                          color: isSelected ? '#5A70D3' : 'var(--text-primary)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
                           {t.studentName}
                         </span>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>
                           {formatTime(t.lastMessageTime)}
                         </span>
                       </div>
 
-                      <div style={{ fontSize: '0.74rem', color: '#6d28d9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '0.74rem', color: '#5A70D3', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>
                         {t.courseName}
                       </div>
 
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                        {t.lastMessage || 'Sent attachment'}
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                        {t.lastMessage || 'No messages'}
                       </div>
+                    </div>
 
-                      <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{
-                          fontSize: '0.64rem',
-                          fontWeight: 800,
-                          padding: '1px 6px',
+                    {/* Status badge / unread */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                      <span style={{
+                        fontSize: '0.64rem',
+                        fontWeight: 800,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: isWaiting ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.12)',
+                        color: isWaiting ? '#b45309' : '#15803d'
+                      }}>
+                        {isWaiting ? 'Waiting' : 'Answered'}
+                      </span>
+
+                      {t.unreadCount > 0 && (
+                        <div style={{
+                          minWidth: '18px',
+                          height: '18px',
                           borderRadius: '9999px',
-                          background: isWaiting ? 'rgba(217, 119, 6, 0.15)' : 'rgba(21, 128, 61, 0.15)',
-                          color: isWaiting ? '#b45309' : '#15803d'
+                          padding: '0 4px',
+                          background: '#5A70D3',
+                          color: '#ffffff',
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
-                          {isWaiting ? '⚠️ Waiting for Reply' : '✓ Replied'}
-                        </span>
-
-                        {t.unreadCount > 0 && (
-                          <span style={{
-                            background: '#ef4444',
-                            color: '#ffffff',
-                            fontSize: '0.64rem',
-                            fontWeight: 800,
-                            borderRadius: '9999px',
-                            padding: '0 5px',
-                            minWidth: '16px',
-                            textAlign: 'center'
-                          }}>
-                            {t.unreadCount}
-                          </span>
-                        )}
-                      </div>
+                          {t.unreadCount > 99 ? '99+' : t.unreadCount}
+                        </div>
+                      )}
                     </div>
                   </button>
                 );
@@ -553,291 +695,439 @@ export default function AdminDoubtsPage() {
           </div>
         </div>
 
-        {/* Right Column: 1-on-1 Conversation Panel */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-elevated)' }}>
+        {/* ──────────────────────────────────────────────────────────────────
+            2. Right Area: Conversation Pane (WhatsApp Style Chat Screen)
+            ────────────────────────────────────────────────────────────────── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {selectedThread ? (
             <>
-              {/* Header */}
+              {/* WhatsApp Header */}
               <div style={{
-                padding: '14px 20px',
+                padding: '12px 20px',
                 background: 'var(--bg-surface)',
                 borderBottom: '1px solid var(--border-default)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px'
+                gap: '12px',
+                boxShadow: 'var(--shadow-sm)',
+                flexShrink: 0
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '50%',
-                    background: '#6d28d9',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    fontWeight: 800,
-                    overflow: 'hidden'
-                  }}>
-                    {selectedThread.studentAvatar ? (
-                      <img src={resolveMediaUrl(selectedThread.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      getInitials(selectedThread.studentName)
-                    )}
-                  </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: '#5A70D3',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  flexShrink: 0,
+                  overflow: 'hidden'
+                }}>
+                  {selectedThread.studentAvatar ? (
+                    <img src={resolveMediaUrl(selectedThread.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    getInitials(selectedThread.studentName)
+                  )}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {selectedThread.studentName}
                     </h3>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      {selectedThread.studentEmail} • <strong style={{ color: '#6d28d9' }}>{selectedThread.courseName}</strong>
-                    </div>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      background: 'rgba(90, 112, 211, 0.1)',
+                      color: '#5A70D3'
+                    }}>
+                      Student
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {selectedThread.studentEmail} • <strong style={{ color: '#5A70D3' }}>{selectedThread.courseName}</strong>
                   </div>
                 </div>
 
-                <span style={{
+                <div style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
                   fontSize: '0.74rem',
                   fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  background: selectedThread.status === 'waiting_for_tutor' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(21, 128, 61, 0.15)',
+                  background: selectedThread.status === 'waiting_for_tutor' ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.12)',
                   color: selectedThread.status === 'waiting_for_tutor' ? '#b45309' : '#15803d'
                 }}>
-                  {selectedThread.status === 'waiting_for_tutor' ? '⏳ Waiting for your reply' : '✓ Doubt Answered'}
-                </span>
+                  {selectedThread.status === 'waiting_for_tutor' ? 'Waiting for your reply' : 'Answered'}
+                </div>
               </div>
 
-              {/* Messages Scroll Area */}
-              <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}>
+              {/* Chat Messages Container */}
+              <div
+                ref={messagesContainerRef}
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '16px 20px',
+                  background: 'var(--bg-elevated)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}
+              >
                 {loadingMessages ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#6d28d9' }}>
-                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5A70D3' }}>
+                    <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '26px' }} />
                   </div>
-                ) : messages.map(msg => {
-                  const isTutorSender = msg.senderRole === 'admin' || msg.senderRole === 'super_admin' || msg.senderRole === 'superadmin';
-                  const isOwn = msg.senderId === user?.id || isTutorSender;
+                ) : messages.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    No messages in this thread
+                  </div>
+                ) : (
+                  messages.map((msg, index) => {
+                    const isTutor = msg.senderId === user?.id || (msg.senderRole && msg.senderRole !== 'student');
+                    const prevMsg = index > 0 ? messages[index - 1] : null;
+                    const showDate = !prevMsg || !isSameDay(prevMsg.createdAt, msg.createdAt);
 
-                  return (
-                    <div
-                      key={msg.id}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: isOwn ? 'flex-end' : 'flex-start',
-                        maxWidth: '100%'
-                      }}
-                    >
-                      <div style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        color: isTutorSender ? '#6d28d9' : 'var(--text-muted)',
-                        marginBottom: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}>
-                        <span>{isOwn ? 'You (Instructor)' : msg.senderName}</span>
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{formatTime(msg.createdAt)}</span>
-                      </div>
-
-                      <div style={{
-                        maxWidth: '78%',
-                        background: isOwn ? '#6d28d9' : 'var(--bg-surface)',
-                        color: isOwn ? '#ffffff' : 'var(--text-primary)',
-                        padding: '10px 14px',
-                        borderRadius: isOwn ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                        boxShadow: isOwn
-                          ? '0 2px 6px rgba(109, 40, 217, 0.25)'
-                          : '0 2px 6px rgba(0,0,0,0.04)',
-                        border: isOwn ? 'none' : '1px solid var(--border-default)',
-                        wordBreak: 'break-word',
-                        fontSize: '0.88rem',
-                        lineHeight: 1.45
-                      }}>
-                        {msg.mediaUrl && (
-                          <div style={{ marginBottom: msg.content ? '8px' : '0' }}>
-                            {msg.messageType === 'image' ? (
-                              <img
-                                src={resolveMediaUrl(msg.mediaUrl)}
-                                alt=""
-                                style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', cursor: 'pointer' }}
-                                onClick={() => window.open(resolveMediaUrl(msg.mediaUrl), '_blank')}
-                              />
-                            ) : msg.messageType === 'video' ? (
-                              <video src={resolveMediaUrl(msg.mediaUrl)} controls style={{ maxWidth: '100%', maxHeight: '260px', borderRadius: '8px' }} />
-                            ) : (
-                              <a
-                                href={resolveMediaUrl(msg.mediaUrl)}
-                                target="_blank"
-                                rel="noreferrer"
-                                download
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  padding: '8px 12px',
-                                  background: isOwn ? 'rgba(255,255,255,0.15)' : 'var(--bg-elevated)',
-                                  color: isOwn ? '#ffffff' : 'var(--text-primary)',
-                                  borderRadius: '8px',
-                                  textDecoration: 'none',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 600
-                                }}
-                              >
-                                <i className={`fa-solid ${getFileIcon(msg.messageType, msg.mediaMimeType)}`}></i>
-                                <span>{msg.mediaName || 'Download Attachment'}</span>
-                                <i className="fa-solid fa-arrow-down" style={{ fontSize: '0.72rem' }}></i>
-                              </a>
-                            )}
+                    return (
+                      <div key={msg.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                        {/* Date Group Pill */}
+                        {showDate && (
+                          <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 10px' }}>
+                            <span style={{
+                              padding: '3px 12px',
+                              background: 'var(--border-default)',
+                              color: 'var(--text-secondary)',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              borderRadius: '9999px'
+                            }}>
+                              {formatDate(msg.createdAt)}
+                            </span>
                           </div>
                         )}
-                        {msg.content && <div>{msg.content}</div>}
+
+                        {/* WhatsApp Message Bubble */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: isTutor ? 'flex-end' : 'flex-start',
+                          marginBottom: '6px'
+                        }}>
+                          {!isTutor && (
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: '#5A70D3',
+                              color: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              marginRight: '8px',
+                              marginTop: '2px',
+                              flexShrink: 0,
+                              overflow: 'hidden'
+                            }}>
+                              {msg.senderAvatar ? (
+                                <img src={resolveMediaUrl(msg.senderAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                getInitials(msg.senderName || selectedThread.studentName)
+                              )}
+                            </div>
+                          )}
+
+                          <div className="cc-bubble-wrap" style={{ maxWidth: '68%', position: 'relative' }}>
+                            {!isTutor && (
+                              <div style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: 'var(--text-secondary)',
+                                marginBottom: '2px',
+                                paddingLeft: '2px'
+                              }}>
+                                {msg.senderName || selectedThread.studentName}
+                              </div>
+                            )}
+
+                            <div style={{
+                              background: isTutor
+                                ? 'linear-gradient(135deg, #5A70D3 0%, #4355B9 100%)'
+                                : 'var(--bg-surface)',
+                              color: isTutor ? '#ffffff' : 'var(--text-primary)',
+                              padding: msg.messageType === 'text' ? '9px 13px' : '6px',
+                              borderRadius: isTutor ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                              boxShadow: isTutor
+                                ? '0 2px 8px rgba(90, 112, 211, 0.22)'
+                                : 'var(--shadow-sm)',
+                              border: isTutor ? 'none' : '1px solid var(--border-default)',
+                              position: 'relative'
+                            }}>
+                              {/* Text message */}
+                              {msg.content && (
+                                <p style={{
+                                  margin: 0,
+                                  fontSize: '0.88rem',
+                                  lineHeight: 1.5,
+                                  whiteSpace: 'pre-wrap',
+                                  wordBreak: 'break-word'
+                                }}>
+                                  {msg.content}
+                                </p>
+                              )}
+
+                              {/* Image message */}
+                              {msg.messageType === 'image' && msg.mediaUrl && (
+                                <div
+                                  onClick={() => setPreviewImage(resolveMediaUrl(msg.mediaUrl))}
+                                  style={{ cursor: 'pointer', display: 'inline-block', position: 'relative' }}
+                                  title="Click to view image"
+                                >
+                                  <img
+                                    src={resolveMediaUrl(msg.mediaUrl)}
+                                    alt=""
+                                    style={{ maxWidth: '240px', maxHeight: '180px', borderRadius: '10px', display: 'block', objectFit: 'cover' }}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Video message */}
+                              {msg.messageType === 'video' && msg.mediaUrl && (
+                                <video
+                                  src={resolveMediaUrl(msg.mediaUrl)}
+                                  controls
+                                  style={{ maxWidth: '260px', borderRadius: '10px', display: 'block' }}
+                                />
+                              )}
+
+                              {/* PDF / Document message */}
+                              {(msg.messageType === 'pdf' || msg.messageType === 'file') && msg.mediaUrl && (
+                                <div
+                                  onClick={() => downloadMedia(resolveMediaUrl(msg.mediaUrl), msg.mediaName || 'attachment.pdf')}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    color: isTutor ? '#ffffff' : 'var(--text-primary)',
+                                    padding: '8px 6px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Click to download file"
+                                >
+                                  <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', color: isTutor ? '#ffffff' : '#ef4444' }} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 700, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {msg.mediaName || 'Document.pdf'}
+                                    </div>
+                                    {msg.mediaSize > 0 && (
+                                      <div style={{ fontSize: '10px', opacity: 0.8 }}>
+                                        {(msg.mediaSize / 1024 / 1024).toFixed(1)} MB
+                                      </div>
+                                    )}
+                                  </div>
+                                  <i className="fa-solid fa-download" style={{ fontSize: '13px', opacity: 0.8 }} />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Timestamp */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              justifyContent: isTutor ? 'flex-end' : 'flex-start',
+                              marginTop: '2px',
+                              padding: '0 2px'
+                            }}>
+                              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                {formatTime(msg.createdAt)}
+                              </span>
+                              {isTutor && (
+                                <i className="fa-solid fa-check-double" style={{ fontSize: '10px', color: '#5A70D3' }} />
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Selected File Chip */}
+              {/* File Upload Preview Banner */}
               {selectedFile && (
                 <div style={{
-                  padding: '8px 20px',
-                  background: 'rgba(109, 40, 217, 0.1)',
+                  padding: '8px 16px',
+                  background: 'var(--bg-surface)',
+                  borderTop: '1px solid var(--border-default)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  fontSize: '0.82rem',
-                  color: '#6d28d9',
-                  borderTop: '1px solid var(--border-default)'
+                  gap: '10px'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className={`fa-solid ${getFileIcon(selectedFile.type, selectedFile.type)}`}></i>
-                    <span>{selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3', fontSize: '14px' }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {selectedFile.name}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setSelectedFile(null)}
-                    style={{ background: 'none', border: 'none', color: '#6d28d9', cursor: 'pointer', fontWeight: 800 }}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
                   >
-                    ✕
+                    <i className="fa-solid fa-xmark" />
                   </button>
                 </div>
               )}
 
-              {/* Reply Box */}
+              {/* Bottom Input Bar */}
               <div style={{
-                padding: '12px 18px',
+                padding: '12px 16px',
                 background: 'var(--bg-surface)',
                 borderTop: '1px solid var(--border-default)',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
+                alignItems: 'flex-end',
+                gap: '10px',
+                flexShrink: 0
               }}>
+                {/* Paperclip attachment */}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*,.pdf,.doc,.docx,.zip,.txt,.py,.java,.js"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
                   style={{ display: 'none' }}
-                  onChange={e => {
-                    if (e.target.files && e.target.files[0]) {
-                      setSelectedFile(e.target.files[0]);
-                    }
-                  }}
                 />
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Attach file or code"
-                  disabled={uploading || sendingReply}
+                  disabled={sendingReply || uploading}
+                  title="Attach file"
                   style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '50%',
                     width: '38px',
                     height: '38px',
+                    borderRadius: '50%',
+                    border: '1px solid var(--border-default)',
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--text-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    color: 'var(--text-muted)'
+                    flexShrink: 0,
+                    fontSize: '15px',
+                    transition: 'all 0.15s ease'
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#5A70D3'; e.currentTarget.style.borderColor = '#5A70D3'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
                 >
-                  <i className="fa-solid fa-paperclip"></i>
+                  <i className="fa-solid fa-paperclip" />
                 </button>
 
+                {/* Textarea */}
                 <textarea
+                  ref={textareaRef}
                   value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendReply();
-                    }
+                  onChange={e => {
+                    setReplyText(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                   }}
-                  placeholder="Reply directly to this student's doubt… (Enter to send)"
+                  onKeyDown={handleKeyDown}
+                  placeholder={`Reply to ${selectedThread.studentName}'s doubt (Shift+Enter for new line)...`}
                   rows={1}
                   disabled={sendingReply || uploading}
                   style={{
                     flex: 1,
                     padding: '9px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-default)',
-                    outline: 'none',
                     fontSize: '0.88rem',
-                    lineHeight: 1.4,
-                    resize: 'none',
-                    fontFamily: 'inherit',
+                    borderRadius: '20px',
+                    border: '1px solid var(--border-default)',
                     background: 'var(--bg-elevated)',
-                    color: 'var(--text-primary)'
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    resize: 'none',
+                    maxHeight: '120px',
+                    fontFamily: 'inherit',
+                    lineHeight: 1.4,
+                    boxSizing: 'border-box'
                   }}
                 />
 
+                {/* Send Button */}
                 <button
                   type="button"
-                  onClick={handleSendReply}
+                  onClick={() => handleSendReply()}
                   disabled={(!replyText.trim() && !selectedFile) || sendingReply || uploading}
-                  title="Send Reply"
                   style={{
-                    background: (!replyText.trim() && !selectedFile) || sendingReply || uploading
-                      ? 'var(--text-muted)'
-                      : '#6d28d9',
-                    border: 'none',
+                    width: '40px',
+                    height: '40px',
                     borderRadius: '50%',
-                    width: '38px',
-                    height: '38px',
+                    border: 'none',
+                    background: (!replyText.trim() && !selectedFile) || sendingReply || uploading ? 'var(--border-default)' : '#5A70D3',
+                    color: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: (!replyText.trim() && !selectedFile) || sendingReply || uploading ? 'not-allowed' : 'pointer',
-                    color: '#ffffff'
+                    flexShrink: 0,
+                    fontSize: '15px',
+                    boxShadow: (!replyText.trim() && !selectedFile) ? 'none' : '0 2px 8px rgba(90, 112, 211, 0.35)',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {sendingReply || uploading ? (
-                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                    <i className="fa-solid fa-spinner fa-spin" />
                   ) : (
-                    <i className="fa-solid fa-paper-plane"></i>
+                    <i className="fa-solid fa-paper-plane" />
                   )}
                 </button>
               </div>
             </>
           ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-              Select a student doubt from the list to view and reply
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(90, 112, 211, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '28px',
+                color: '#5A70D3'
+              }}>
+                <i className="fa-solid fa-circle-question" />
+              </div>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
+                Select a Doubt Thread
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.86rem', maxWidth: '320px', lineHeight: 1.4 }}>
+                Choose a student doubt thread from the list on the left to view question history and reply.
+              </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Image Lightbox Modal */}
+      {previewImage && (
+        <ImageLightboxModal
+          url={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
     </div>
   );
 }
