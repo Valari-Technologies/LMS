@@ -1875,7 +1875,34 @@ export default function StudentCourseDashboardPage() {
             </div>
           )}
 
-          {/* Nav Section 1: Course Dashboard Spaces */}
+          {/* Nav Section 1: Shortcuts & Global Links (My Learning & Home Page) */}
+          <div className="ot-course-nav-section">
+            <div className="ot-course-section-label">Navigation</div>
+
+            {/* My Learning Space */}
+            <Link
+              to="/student/my-courses"
+              className="ot-course-nav-link"
+              title="Return to My Learning Space"
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-arrow-left"></i></span>
+              <span className="ot-course-nav-text">My Learning</span>
+            </Link>
+
+            {/* Home / Index Page */}
+            <Link
+              to="/"
+              className="ot-course-nav-link"
+              title="Go to OneTutor Home"
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-house"></i></span>
+              <span className="ot-course-nav-text">Home Page</span>
+            </Link>
+          </div>
+
+          {/* Nav Section 2: Course Dashboard Spaces */}
           <div className="ot-course-nav-section">
             <div className="ot-course-section-label">Course Spaces</div>
 
@@ -1975,33 +2002,6 @@ export default function StudentCourseDashboardPage() {
               <span className="ot-course-nav-icon"><i className="fa-solid fa-play"></i></span>
               <span className="ot-course-nav-text">Lecture Classroom</span>
             </button>
-          </div>
-
-          {/* Nav Section 3: Shortcuts & Global Links */}
-          <div className="ot-course-nav-section">
-            <div className="ot-course-section-label">Navigation</div>
-
-            {/* My Learning Space */}
-            <Link
-              to="/student/my-courses"
-              className="ot-course-nav-link"
-              title="Return to My Learning Space"
-              onClick={() => setMobileSidebarOpen(false)}
-            >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-arrow-left"></i></span>
-              <span className="ot-course-nav-text">My Learning</span>
-            </Link>
-
-            {/* Home / Index Page */}
-            <Link
-              to="/"
-              className="ot-course-nav-link"
-              title="Go to OneTutor Home"
-              onClick={() => setMobileSidebarOpen(false)}
-            >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-house"></i></span>
-              <span className="ot-course-nav-text">Home Page</span>
-            </Link>
           </div>
 
         </div>
@@ -2246,7 +2246,51 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <Link
+                    to="/student/my-courses"
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                    }}
+                    title="Return to My Learning"
+                  >
+                    <i className="fa-solid fa-arrow-left" style={{ color: '#5A70D3' }}></i>
+                    <span>My Learning</span>
+                  </Link>
+
+                  <Link
+                    to="/"
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                    }}
+                    title="Go to Home"
+                  >
+                    <i className="fa-solid fa-house" style={{ color: '#5A70D3' }}></i>
+                    <span>Home</span>
+                  </Link>
+
                   <button
                     type="button"
                     onClick={() => setActiveTab('attendance')}
