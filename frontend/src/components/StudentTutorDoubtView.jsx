@@ -60,8 +60,8 @@ function ImageLightboxModal({ url, filename, onClose }) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(6px)',
+        background: 'rgba(15, 23, 42, 0.88)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -128,6 +128,164 @@ function ImageLightboxModal({ url, filename, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PDF Preview Modal (Matches Community Chat)
+// ─────────────────────────────────────────────────────────────────────────────
+function PdfPreviewModal({ doc, onClose }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(false);
+    fetch(doc.url)
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to load file');
+        return r.blob();
+      })
+      .then(b => {
+        if (!active) return;
+        const objectUrl = window.URL.createObjectURL(b);
+        setBlobUrl(objectUrl);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) {
+          setError(true);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      if (blobUrl) window.URL.revokeObjectURL(blobUrl);
+    };
+  }, [doc.url]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '94vw', maxWidth: '1020px', height: '88vh',
+          background: '#ffffff',
+          borderRadius: '16px', border: '1px solid #e2e8f0',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden', position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            padding: '14px 20px',
+            background: '#0f172a',
+            borderBottom: '1px solid #334155',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '12px', flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px',
+              background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0,
+            }}>
+              <i className="fa-solid fa-file-pdf" />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontSize: '14px', fontWeight: 600, color: '#ffffff',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '420px',
+              }}>
+                {doc.name || 'Document.pdf'}
+              </div>
+              {doc.size > 0 && (
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  {(doc.size / 1024 / 1024).toFixed(2)} MB
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => downloadMedia(blobUrl || doc.url, doc.name || 'document.pdf')}
+              style={{
+                background: 'linear-gradient(135deg, #5A70D3, #4355B9)',
+                border: 'none', color: '#fff',
+                borderRadius: '8px', padding: '8px 18px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                fontSize: '13px', fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
+              }}
+            >
+              <i className="fa-solid fa-download" />
+              <span>Download</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                borderRadius: '50%', width: '36px', height: '36px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '15px',
+              }}
+              aria-label="Close"
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, position: 'relative', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {loading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#fff' }}>
+              <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '32px', color: '#5A70D3' }} />
+              <span style={{ fontSize: '13px' }}>Loading document preview…</span>
+            </div>
+          )}
+          {error && (
+            <div style={{ textAlign: 'center', color: '#fff', padding: '20px' }}>
+              <p style={{ margin: '0 0 12px' }}>Preview is not supported for this file type.</p>
+              <button
+                type="button"
+                onClick={() => downloadMedia(doc.url, doc.name || 'document')}
+                style={{
+                  background: '#5A70D3', color: '#fff', border: 'none',
+                  borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '13px',
+                }}
+              >
+                Download File
+              </button>
+            </div>
+          )}
+          {!loading && !error && blobUrl && (
+            <iframe
+              src={blobUrl}
+              title={doc.name}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN STUDENT 1-ON-1 DOUBT CLEARANCE COMPONENT (WhatsApp Style)
 // ─────────────────────────────────────────────────────────────────────────────
 export default function StudentTutorDoubtView({
@@ -150,6 +308,7 @@ export default function StudentTutorDoubtView({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewImage, setPreviewImage] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -689,7 +848,8 @@ export default function StudentTutorDoubtView({
                     <div key={msg.id} style={{ display: 'flex', flexDirection: 'column' }}>
                       {/* Date Separator Pill */}
                       {showDate && (
-                        <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '14px 0 10px' }}>
+                          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
                           <span style={{
                             padding: '3px 12px',
                             background: '#e2e8f0',
@@ -701,6 +861,7 @@ export default function StudentTutorDoubtView({
                           }}>
                             {formatDate(msg.createdAt)}
                           </span>
+                          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
                         </div>
                       )}
 
@@ -807,7 +968,7 @@ export default function StudentTutorDoubtView({
                             {/* Document / PDF attachment */}
                             {(msg.messageType === 'pdf' || msg.messageType === 'file') && msg.mediaUrl && (
                               <div
-                                onClick={() => downloadMedia(resolveMediaUrl(msg.mediaUrl), msg.mediaName || 'attachment.pdf')}
+                                onClick={() => setPreviewDoc({ url: resolveMediaUrl(msg.mediaUrl), name: msg.mediaName || 'Document.pdf', size: msg.mediaSize })}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -816,7 +977,7 @@ export default function StudentTutorDoubtView({
                                   padding: '8px 6px',
                                   cursor: 'pointer'
                                 }}
-                                title="Click to download file"
+                                title="Click to preview or download file"
                               >
                                 <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', color: isStudent ? '#ffffff' : '#ef4444' }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -829,7 +990,7 @@ export default function StudentTutorDoubtView({
                                     </div>
                                   )}
                                 </div>
-                                <i className="fa-solid fa-download" style={{ fontSize: '13px', opacity: 0.8 }} />
+                                <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '13px', opacity: 0.8 }} />
                               </div>
                             )}
                           </div>
@@ -1041,6 +1202,14 @@ export default function StudentTutorDoubtView({
         <ImageLightboxModal
           url={previewImage}
           onClose={() => setPreviewImage(null)}
+        />
+      )}
+
+      {/* PDF / Document Preview Modal */}
+      {previewDoc && (
+        <PdfPreviewModal
+          doc={previewDoc}
+          onClose={() => setPreviewDoc(null)}
         />
       )}
     </div>

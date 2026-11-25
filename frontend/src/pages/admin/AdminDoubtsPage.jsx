@@ -42,96 +42,287 @@ function getInitials(name = '') {
 
 function downloadMedia(url, filename = 'download') {
   if (!url) return;
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  fetch(url)
+    .then(resp => {
+      if (!resp.ok) throw new Error('Network error');
+      return resp.blob();
+    })
+    .then(blob => {
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    })
+    .catch(() => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lightbox Modal for Image Previews
+// PDF Preview Modal (Matches AdminCommunityPage)
 // ─────────────────────────────────────────────────────────────────────────────
-function ImageLightboxModal({ url, filename, onClose }) {
-  if (!url) return null;
+function PdfPreviewModal({ doc, onClose }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(false);
+    fetch(doc.url)
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to load file');
+        return r.blob();
+      })
+      .then(b => {
+        if (!active) return;
+        const objectUrl = window.URL.createObjectURL(b);
+        setBlobUrl(objectUrl);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) {
+          setError(true);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      if (blobUrl) window.URL.revokeObjectURL(blobUrl);
+    };
+  }, [doc.url]);
+
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px'
-      }}
       onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+      }}
     >
-      <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '10px', zIndex: 100000 }}>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); downloadMedia(url, filename || 'image.jpg'); }}
-          style={{
-            background: '#5A70D3',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <i className="fa-solid fa-download" /> Download
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            background: 'rgba(255,255,255,0.2)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '50%',
-            width: '36px',
-            height: '36px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <i className="fa-solid fa-xmark" />
-        </button>
-      </div>
-
-      <img
-        src={url}
-        alt=""
+      <div
+        onClick={e => e.stopPropagation()}
         style={{
-          maxWidth: '90vw',
-          maxHeight: '85vh',
-          objectFit: 'contain',
-          borderRadius: '12px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+          width: '94vw', maxWidth: '1020px', height: '88vh',
+          background: 'var(--bg-surface, #1e293b)',
+          borderRadius: '16px', border: '1px solid var(--border-default)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden', position: 'relative',
         }}
-        onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <div
+          style={{
+            padding: '14px 20px',
+            background: 'var(--bg-elevated, #0f172a)',
+            borderBottom: '1px solid var(--border-default)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '12px', flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px',
+              background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0,
+            }}>
+              <i className="fa-solid fa-file-pdf" />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '420px',
+              }}>
+                {doc.name || 'Document.pdf'}
+              </div>
+              {doc.size > 0 && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {(doc.size / 1024 / 1024).toFixed(2)} MB
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => downloadMedia(blobUrl || doc.url, doc.name || 'document.pdf')}
+              style={{
+                background: 'var(--accent-gradient, linear-gradient(135deg, #5A70D3, #4355B9))',
+                border: 'none', color: '#fff',
+                borderRadius: '8px', padding: '8px 18px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                fontSize: '13px', fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(90, 112, 211, 0.3)',
+                transition: 'opacity 0.2s',
+              }}
+            >
+              <i className="fa-solid fa-download" />
+              <span>Download</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'var(--bg-surface, rgba(255,255,255,0.1))',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-secondary, #fff)',
+                borderRadius: '50%', width: '36px', height: '36px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '15px', transition: 'all 0.2s',
+              }}
+              aria-label="Close"
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, position: 'relative', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {loading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#fff' }}>
+              <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '32px', color: 'var(--accent-primary)' }} />
+              <span style={{ fontSize: '13px' }}>Loading document preview…</span>
+            </div>
+          )}
+          {error && (
+            <div style={{ textAlign: 'center', color: '#fff', padding: '20px' }}>
+              <p style={{ margin: '0 0 12px' }}>Preview is not supported for this file type.</p>
+              <button
+                type="button"
+                onClick={() => downloadMedia(doc.url, doc.name || 'document')}
+                style={{
+                  background: 'var(--accent-primary)', color: '#fff', border: 'none',
+                  borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '13px',
+                }}
+              >
+                Download File
+              </button>
+            </div>
+          )}
+          {!loading && !error && blobUrl && (
+            <iframe
+              src={blobUrl}
+              title={doc.name}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN ADMIN DOUBTS PAGE (WhatsApp Exact Layout & Styling)
+// Lightbox Image Preview Modal (Matches AdminCommunityPage)
+// ─────────────────────────────────────────────────────────────────────────────
+function ImageLightboxModal({ image, onClose }) {
+  if (!image) return null;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0, 0, 0, 0.88)', backdropFilter: 'blur(8px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      {/* Top Bar */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          padding: '16px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)',
+          color: '#fff',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          <i className="fa-solid fa-image" style={{ color: 'var(--accent-primary, #5A70D3)', fontSize: '18px' }} />
+          <span style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {image.name || 'Image'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            onClick={() => downloadMedia(image.url, image.name || 'image.jpg')}
+            style={{
+              background: 'rgba(255, 255, 255, 0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#fff',
+              borderRadius: '8px',
+              padding: '7px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+            }}
+          >
+            <i className="fa-solid fa-download" />
+            <span>Download</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'rgba(255, 255, 255, 0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#fff',
+              borderRadius: '50%',
+              width: '34px',
+              height: '34px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '15px',
+              transition: 'all 0.2s',
+            }}
+            aria-label="Close"
+          >
+            <i className="fa-solid fa-xmark" />
+          </button>
+        </div>
+      </div>
+
+      {/* Centered Image */}
+      <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img
+          src={image.url}
+          alt={image.name || 'Image'}
+          style={{
+            maxWidth: '90vw', maxHeight: '80vh', objectFit: 'contain',
+            borderRadius: '8px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN ADMIN DOUBTS PAGE (Matches AdminCommunityPage Exact Layout & Design)
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AdminDoubtsPage() {
   const { user } = useAuth();
@@ -151,6 +342,7 @@ export default function AdminDoubtsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewImage, setPreviewImage] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -195,7 +387,6 @@ export default function AdminDoubtsPage() {
         setThreads(valid);
 
         if (valid.length > 0) {
-          // If previous selection exists in new list, maintain it; otherwise select first
           const stillThere = valid.find(t =>
             selectedThread &&
             t.studentId === selectedThread.studentId &&
@@ -393,739 +584,520 @@ export default function AdminDoubtsPage() {
 
   const waitingCount = threads.filter(t => t.status === 'waiting_for_tutor').length;
 
-  return (
-    <div className="page" style={{ paddingBottom: '24px' }}>
-      {/* Page Header */}
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div className="page-title-wrap">
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <i className="fa-solid fa-circle-question" style={{ color: '#5A70D3' }} />
-            <span>Doubt Clearance Desk</span>
-          </h1>
-          <p className="page-subtitle">
-            Private 1-on-1 clearance space: answer student doubts and provide academic guidance.
-          </p>
-        </div>
+  // Group messages for WhatsApp date separators
+  const groupedMessages = messages.reduce((acc, msg, idx) => {
+    const prev = messages[idx - 1];
+    if (!prev || !isSameDay(prev.createdAt, msg.createdAt)) {
+      acc.push({ type: 'separator', date: msg.createdAt });
+    }
+    acc.push({ type: 'message', msg });
+    return acc;
+  }, []);
 
-        {/* Quick KPI stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 14px',
-            borderRadius: '9999px',
-            background: 'rgba(90, 112, 211, 0.1)',
-            color: '#5A70D3',
-            fontSize: '0.84rem',
-            fontWeight: 700
-          }}>
-            <i className="fa-solid fa-circle-question" />
-            <span>{stats.totalDoubtsAsked} Doubts Asked</span>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 14px',
-            borderRadius: '9999px',
-            background: waitingCount > 0 ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.1)',
-            color: waitingCount > 0 ? '#b45309' : '#16a34a',
-            fontSize: '0.84rem',
-            fontWeight: 700
-          }}>
-            <i className={`fa-solid ${waitingCount > 0 ? 'fa-clock' : 'fa-check-circle'}`} />
-            <span>{waitingCount > 0 ? `${waitingCount} Waiting for Reply` : 'All Cleared'}</span>
-          </div>
-        </div>
+  if (loadingThreads && threads.length === 0) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '28px', color: 'var(--accent-primary)' }} />
       </div>
+    );
+  }
 
-      {/* Main WhatsApp-Style Split Card */}
-      <div
-        className="card"
-        style={{
-          padding: 0,
-          overflow: 'hidden',
-          height: 'calc(100vh - 170px)',
-          minHeight: '620px',
-          display: 'flex',
-          border: '1px solid var(--border-default)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
-        }}
-      >
-        {/* ──────────────────────────────────────────────────────────────────
-            1. Left Sidebar: Doubt Threads (WhatsApp Chats List)
-            ────────────────────────────────────────────────────────────────── */}
-        <div style={{
-          width: '320px',
-          borderRight: '1px solid var(--border-default)',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          background: 'var(--bg-surface)'
-        }}>
-          {/* Header Controls */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {/* Course Filter Dropdown */}
+  return (
+    <div style={{ display: 'flex', height: 'calc(100vh - 80px)', overflow: 'hidden', background: 'var(--bg-page)' }}>
+      {/* ──────────────────────────────────────────────────────────────────
+          1. Left Sidebar: Channels / Threads List (Exact Community Style)
+          ────────────────────────────────────────────────────────────────── */}
+      <div style={{
+        width: '300px', flexShrink: 0, borderRight: '1px solid var(--border-default)',
+        background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        {/* Sidebar Header */}
+        <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid var(--border-default)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fa-solid fa-circle-question" style={{ color: 'var(--accent-primary, #5A70D3)' }} />
+              Doubt Clearance
+            </h2>
+            <span style={{
+              fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px',
+              background: waitingCount > 0 ? 'rgba(217, 119, 6, 0.15)' : 'rgba(22, 163, 74, 0.15)',
+              color: waitingCount > 0 ? '#b45309' : '#15803d'
+            }}>
+              {waitingCount > 0 ? `${waitingCount} waiting` : 'All cleared'}
+            </span>
+          </div>
+
+          <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            {threads.length} thread{threads.length !== 1 ? 's' : ''} • {stats.totalDoubtsAsked || 0} asked • {stats.totalDoubtsReplied || 0} answered
+          </p>
+
+          {/* Course filter select */}
+          <div style={{ marginBottom: '8px' }}>
             <select
               value={selectedCourseId}
               onChange={e => setSelectedCourseId(e.target.value)}
               style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-default)',
-                background: 'var(--bg-elevated)',
-                color: 'var(--text-primary)',
-                fontSize: '0.84rem',
-                outline: 'none',
-                cursor: 'pointer'
+                width: '100%', padding: '7px 10px', fontSize: '12px',
+                background: 'var(--bg-input)', color: 'var(--text-primary)',
+                border: '1px solid var(--border-default)', borderRadius: '8px', outline: 'none',
+                boxSizing: 'border-box', cursor: 'pointer'
               }}
             >
               <option value="">All Courses ({courses.length})</option>
               {courses.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name || c.title}
-                </option>
+                <option key={c.id} value={c.id}>{c.name || c.title}</option>
               ))}
             </select>
-
-            {/* Search Input */}
-            <div style={{ position: 'relative' }}>
-              <i className="fa-solid fa-magnifying-glass" style={{
-                position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
-                color: 'var(--text-muted)', fontSize: '0.8rem'
-              }} />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search student or course…"
-                style={{
-                  width: '100%',
-                  padding: '7px 10px 7px 30px',
-                  borderRadius: '20px',
-                  border: '1px solid var(--border-default)',
-                  background: 'var(--bg-elevated)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            {/* Filter Pills */}
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => setFilter('all')}
-                style={{
-                  flex: 1,
-                  padding: '5px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: filter === 'all' ? '#5A70D3' : 'var(--bg-elevated)',
-                  color: filter === 'all' ? '#ffffff' : 'var(--text-muted)'
-                }}
-              >
-                All ({threads.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('waiting')}
-                style={{
-                  flex: 1,
-                  padding: '5px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: filter === 'waiting' ? '#d97706' : 'rgba(217, 119, 6, 0.1)',
-                  color: filter === 'waiting' ? '#ffffff' : '#b45309'
-                }}
-              >
-                Waiting ({waitingCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('answered')}
-                style={{
-                  flex: 1,
-                  padding: '5px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: filter === 'answered' ? '#15803d' : 'rgba(21, 128, 61, 0.1)',
-                  color: filter === 'answered' ? '#ffffff' : '#15803d'
-                }}
-              >
-                Answered
-              </button>
-            </div>
           </div>
 
-          {/* Threads List */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {loadingThreads ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#5A70D3' }}>
-                <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '24px' }} />
-              </div>
-            ) : filteredThreads.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                No doubts match your search
-              </div>
-            ) : (
-              filteredThreads.map(t => {
-                const isSelected = selectedThread &&
-                  selectedThread.studentId === t.studentId &&
-                  selectedThread.courseId === t.courseId;
-                const isWaiting = t.status === 'waiting_for_tutor';
+          {/* Search Bar */}
+          <div style={{ position: 'relative', marginBottom: '10px' }}>
+            <i className="fa-solid fa-magnifying-glass" style={{
+              position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+              color: 'var(--text-muted)', fontSize: '12px'
+            }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search student or course…"
+              style={{
+                width: '100%', padding: '8px 10px 8px 30px', fontSize: '13px',
+                background: 'var(--bg-input)', color: 'var(--text-primary)',
+                border: '1px solid var(--border-default)', borderRadius: '8px', outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
 
-                return (
-                  <button
-                    key={`${t.courseId}-${t.studentId}`}
-                    type="button"
-                    onClick={() => handleSelectThread(t)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '12px 14px',
-                      background: isSelected ? 'rgba(90, 112, 211, 0.08)' : 'none',
-                      border: 'none',
-                      borderLeft: isSelected ? '3px solid #5A70D3' : '3px solid transparent',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-elevated)'; }}
-                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'none'; }}
-                  >
-                    {/* Avatar */}
-                    <div style={{
-                      width: '42px',
-                      height: '42px',
-                      borderRadius: '50%',
-                      background: '#5A70D3',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      flexShrink: 0,
-                      overflow: 'hidden'
-                    }}>
-                      {t.studentAvatar ? (
-                        <img src={resolveMediaUrl(t.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        getInitials(t.studentName)
-                      )}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                        <span style={{
-                          fontWeight: 700,
-                          fontSize: '0.88rem',
-                          color: isSelected ? '#5A70D3' : 'var(--text-primary)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {t.studentName}
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                          {formatTime(t.lastMessageTime)}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '0.74rem', color: '#5A70D3', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>
-                        {t.courseName}
-                      </div>
-
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                        {t.lastMessage || 'No messages'}
-                      </div>
-                    </div>
-
-                    {/* Status badge / unread */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                      <span style={{
-                        fontSize: '0.64rem',
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        background: isWaiting ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.12)',
-                        color: isWaiting ? '#b45309' : '#15803d'
-                      }}>
-                        {isWaiting ? 'Waiting' : 'Answered'}
-                      </span>
-
-                      {t.unreadCount > 0 && (
-                        <div style={{
-                          minWidth: '18px',
-                          height: '18px',
-                          borderRadius: '9999px',
-                          padding: '0 4px',
-                          background: '#5A70D3',
-                          color: '#ffffff',
-                          fontSize: '0.65rem',
-                          fontWeight: 800,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {t.unreadCount > 99 ? '99+' : t.unreadCount}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
+          {/* Filter Tabs: All / Waiting / Answered */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              style={{
+                flex: 1, padding: '5px 4px', fontSize: '11px', fontWeight: 600, borderRadius: '6px',
+                border: 'none', cursor: 'pointer',
+                background: filter === 'all' ? 'var(--accent-primary, #5A70D3)' : 'var(--bg-elevated)',
+                color: filter === 'all' ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              All ({threads.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('waiting')}
+              style={{
+                flex: 1, padding: '5px 4px', fontSize: '11px', fontWeight: 600, borderRadius: '6px',
+                border: 'none', cursor: 'pointer',
+                background: filter === 'waiting' ? '#d97706' : 'rgba(217, 119, 6, 0.1)',
+                color: filter === 'waiting' ? '#fff' : '#b45309',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Waiting ({waitingCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('answered')}
+              style={{
+                flex: 1, padding: '5px 4px', fontSize: '11px', fontWeight: 600, borderRadius: '6px',
+                border: 'none', cursor: 'pointer',
+                background: filter === 'answered' ? '#16a34a' : 'rgba(22, 163, 74, 0.1)',
+                color: filter === 'answered' ? '#fff' : '#16a34a',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Answered
+            </button>
           </div>
         </div>
 
-        {/* ──────────────────────────────────────────────────────────────────
-            2. Right Area: Conversation Pane (WhatsApp Style Chat Screen)
-            ────────────────────────────────────────────────────────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {selectedThread ? (
-            <>
-              {/* WhatsApp Header */}
-              <div style={{
-                padding: '12px 20px',
-                background: 'var(--bg-surface)',
-                borderBottom: '1px solid var(--border-default)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: 'var(--shadow-sm)',
-                flexShrink: 0
-              }}>
+        {/* Threads List */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {filteredThreads.map(t => {
+            const isSelected = selectedThread &&
+              selectedThread.studentId === t.studentId &&
+              selectedThread.courseId === t.courseId;
+            const isWaiting = t.status === 'waiting_for_tutor';
+
+            return (
+              <button
+                key={`${t.courseId}-${t.studentId}`}
+                type="button"
+                onClick={() => handleSelectThread(t)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '12px 16px', background: isSelected ? 'var(--accent-subtle)' : 'none',
+                  border: 'none', borderLeft: isSelected ? '3px solid var(--accent-primary, #5A70D3)' : '3px solid transparent',
+                  cursor: 'pointer', textAlign: 'left', transition: 'all var(--transition-fast)',
+                }}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-elevated)'; }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'none'; }}
+              >
+                {/* Thumbnail / Avatar */}
                 <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: '#5A70D3',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                  flexShrink: 0,
-                  overflow: 'hidden'
+                  width: '40px', height: '40px', borderRadius: '8px', flexShrink: 0, overflow: 'hidden',
+                  background: isSelected ? 'var(--accent-gradient, linear-gradient(135deg, #5A70D3, #4355B9))' : 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: '14px', fontWeight: 700
                 }}>
-                  {selectedThread.studentAvatar ? (
-                    <img src={resolveMediaUrl(selectedThread.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    getInitials(selectedThread.studentName)
-                  )}
+                  {t.studentAvatar
+                    ? <img src={resolveMediaUrl(t.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : getInitials(t.studentName)}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      {selectedThread.studentName}
-                    </h3>
-                    <span style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      background: 'rgba(90, 112, 211, 0.1)',
-                      color: '#5A70D3'
+                  <div style={{
+                    fontSize: '13px', fontWeight: 600, color: isSelected ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px',
+                  }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.studentName}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400, flexShrink: 0 }}>
+                      {formatTime(t.lastMessageTime)}
+                    </span>
+                  </div>
+                  <div style={{
+                    fontSize: '11px', color: 'var(--accent-primary, #5A70D3)', fontWeight: 600,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px'
+                  }}>
+                    {t.courseName}
+                  </div>
+                  <div style={{
+                    fontSize: '11px', color: 'var(--text-muted)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px',
+                  }}>
+                    {t.lastMessage || 'No messages yet'}
+                  </div>
+                </div>
+
+                {/* Status or unread badge */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px',
+                    background: isWaiting ? 'rgba(217, 119, 6, 0.15)' : 'rgba(22, 163, 74, 0.15)',
+                    color: isWaiting ? '#b45309' : '#15803d'
+                  }}>
+                    {isWaiting ? 'Waiting' : 'Replied'}
+                  </span>
+                  {t.unreadCount > 0 && (
+                    <div style={{
+                      minWidth: '20px', height: '20px', borderRadius: '10px', padding: '0 5px',
+                      background: '#22c55e', color: '#fff', fontSize: '10px', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      boxShadow: '0 2px 4px rgba(34,197,94,0.3)',
                     }}>
-                      Student
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {selectedThread.studentEmail} • <strong style={{ color: '#5A70D3' }}>{selectedThread.courseName}</strong>
-                  </div>
-                </div>
-
-                <div style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  background: selectedThread.status === 'waiting_for_tutor' ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.12)',
-                  color: selectedThread.status === 'waiting_for_tutor' ? '#b45309' : '#15803d'
-                }}>
-                  {selectedThread.status === 'waiting_for_tutor' ? 'Waiting for your reply' : 'Answered'}
-                </div>
-              </div>
-
-              {/* Chat Messages Container */}
-              <div
-                ref={messagesContainerRef}
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  padding: '16px 20px',
-                  background: 'var(--bg-elevated)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}
-              >
-                {loadingMessages ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5A70D3' }}>
-                    <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '26px' }} />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    No messages in this thread
-                  </div>
-                ) : (
-                  messages.map((msg, index) => {
-                    const isTutor = msg.senderId === user?.id || (msg.senderRole && msg.senderRole !== 'student');
-                    const prevMsg = index > 0 ? messages[index - 1] : null;
-                    const showDate = !prevMsg || !isSameDay(prevMsg.createdAt, msg.createdAt);
-
-                    return (
-                      <div key={msg.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                        {/* Date Group Pill */}
-                        {showDate && (
-                          <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 10px' }}>
-                            <span style={{
-                              padding: '3px 12px',
-                              background: 'var(--border-default)',
-                              color: 'var(--text-secondary)',
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              borderRadius: '9999px'
-                            }}>
-                              {formatDate(msg.createdAt)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* WhatsApp Message Bubble */}
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: isTutor ? 'flex-end' : 'flex-start',
-                          marginBottom: '6px'
-                        }}>
-                          {!isTutor && (
-                            <div style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              background: '#5A70D3',
-                              color: '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '12px',
-                              fontWeight: 800,
-                              marginRight: '8px',
-                              marginTop: '2px',
-                              flexShrink: 0,
-                              overflow: 'hidden'
-                            }}>
-                              {msg.senderAvatar ? (
-                                <img src={resolveMediaUrl(msg.senderAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                getInitials(msg.senderName || selectedThread.studentName)
-                              )}
-                            </div>
-                          )}
-
-                          <div className="cc-bubble-wrap" style={{ maxWidth: '68%', position: 'relative' }}>
-                            {!isTutor && (
-                              <div style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                color: 'var(--text-secondary)',
-                                marginBottom: '2px',
-                                paddingLeft: '2px'
-                              }}>
-                                {msg.senderName || selectedThread.studentName}
-                              </div>
-                            )}
-
-                            <div style={{
-                              background: isTutor
-                                ? 'linear-gradient(135deg, #5A70D3 0%, #4355B9 100%)'
-                                : 'var(--bg-surface)',
-                              color: isTutor ? '#ffffff' : 'var(--text-primary)',
-                              padding: msg.messageType === 'text' ? '9px 13px' : '6px',
-                              borderRadius: isTutor ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                              boxShadow: isTutor
-                                ? '0 2px 8px rgba(90, 112, 211, 0.22)'
-                                : 'var(--shadow-sm)',
-                              border: isTutor ? 'none' : '1px solid var(--border-default)',
-                              position: 'relative'
-                            }}>
-                              {/* Text message */}
-                              {msg.content && (
-                                <p style={{
-                                  margin: 0,
-                                  fontSize: '0.88rem',
-                                  lineHeight: 1.5,
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word'
-                                }}>
-                                  {msg.content}
-                                </p>
-                              )}
-
-                              {/* Image message */}
-                              {msg.messageType === 'image' && msg.mediaUrl && (
-                                <div
-                                  onClick={() => setPreviewImage(resolveMediaUrl(msg.mediaUrl))}
-                                  style={{ cursor: 'pointer', display: 'inline-block', position: 'relative' }}
-                                  title="Click to view image"
-                                >
-                                  <img
-                                    src={resolveMediaUrl(msg.mediaUrl)}
-                                    alt=""
-                                    style={{ maxWidth: '240px', maxHeight: '180px', borderRadius: '10px', display: 'block', objectFit: 'cover' }}
-                                  />
-                                </div>
-                              )}
-
-                              {/* Video message */}
-                              {msg.messageType === 'video' && msg.mediaUrl && (
-                                <video
-                                  src={resolveMediaUrl(msg.mediaUrl)}
-                                  controls
-                                  style={{ maxWidth: '260px', borderRadius: '10px', display: 'block' }}
-                                />
-                              )}
-
-                              {/* PDF / Document message */}
-                              {(msg.messageType === 'pdf' || msg.messageType === 'file') && msg.mediaUrl && (
-                                <div
-                                  onClick={() => downloadMedia(resolveMediaUrl(msg.mediaUrl), msg.mediaName || 'attachment.pdf')}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    color: isTutor ? '#ffffff' : 'var(--text-primary)',
-                                    padding: '8px 6px',
-                                    cursor: 'pointer'
-                                  }}
-                                  title="Click to download file"
-                                >
-                                  <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', color: isTutor ? '#ffffff' : '#ef4444' }} />
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 700, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      {msg.mediaName || 'Document.pdf'}
-                                    </div>
-                                    {msg.mediaSize > 0 && (
-                                      <div style={{ fontSize: '10px', opacity: 0.8 }}>
-                                        {(msg.mediaSize / 1024 / 1024).toFixed(1)} MB
-                                      </div>
-                                    )}
-                                  </div>
-                                  <i className="fa-solid fa-download" style={{ fontSize: '13px', opacity: 0.8 }} />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Timestamp */}
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              justifyContent: isTutor ? 'flex-end' : 'flex-start',
-                              marginTop: '2px',
-                              padding: '0 2px'
-                            }}>
-                              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                                {formatTime(msg.createdAt)}
-                              </span>
-                              {isTutor && (
-                                <i className="fa-solid fa-check-double" style={{ fontSize: '10px', color: '#5A70D3' }} />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* File Upload Preview Banner */}
-              {selectedFile && (
-                <div style={{
-                  padding: '8px 16px',
-                  background: 'var(--bg-surface)',
-                  borderTop: '1px solid var(--border-default)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                    <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3', fontSize: '14px' }} />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {selectedFile.name}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFile(null)}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                  >
-                    <i className="fa-solid fa-xmark" />
-                  </button>
-                </div>
-              )}
-
-              {/* Bottom Input Bar */}
-              <div style={{
-                padding: '12px 16px',
-                background: 'var(--bg-surface)',
-                borderTop: '1px solid var(--border-default)',
-                display: 'flex',
-                alignItems: 'flex-end',
-                gap: '10px',
-                flexShrink: 0
-              }}>
-                {/* Paperclip attachment */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*,.pdf,.doc,.docx,.txt"
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sendingReply || uploading}
-                  title="Attach file"
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    border: '1px solid var(--border-default)',
-                    background: 'var(--bg-elevated)',
-                    color: 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    fontSize: '15px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#5A70D3'; e.currentTarget.style.borderColor = '#5A70D3'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
-                >
-                  <i className="fa-solid fa-paperclip" />
-                </button>
-
-                {/* Textarea */}
-                <textarea
-                  ref={textareaRef}
-                  value={replyText}
-                  onChange={e => {
-                    setReplyText(e.target.value);
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`Reply to ${selectedThread.studentName}'s doubt (Shift+Enter for new line)...`}
-                  rows={1}
-                  disabled={sendingReply || uploading}
-                  style={{
-                    flex: 1,
-                    padding: '9px 14px',
-                    fontSize: '0.88rem',
-                    borderRadius: '20px',
-                    border: '1px solid var(--border-default)',
-                    background: 'var(--bg-elevated)',
-                    color: 'var(--text-primary)',
-                    outline: 'none',
-                    resize: 'none',
-                    maxHeight: '120px',
-                    fontFamily: 'inherit',
-                    lineHeight: 1.4,
-                    boxSizing: 'border-box'
-                  }}
-                />
-
-                {/* Send Button */}
-                <button
-                  type="button"
-                  onClick={() => handleSendReply()}
-                  disabled={(!replyText.trim() && !selectedFile) || sendingReply || uploading}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: (!replyText.trim() && !selectedFile) || sendingReply || uploading ? 'var(--border-default)' : '#5A70D3',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: (!replyText.trim() && !selectedFile) || sendingReply || uploading ? 'not-allowed' : 'pointer',
-                    flexShrink: 0,
-                    fontSize: '15px',
-                    boxShadow: (!replyText.trim() && !selectedFile) ? 'none' : '0 2px 8px rgba(90, 112, 211, 0.35)',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {sendingReply || uploading ? (
-                    <i className="fa-solid fa-spinner fa-spin" />
-                  ) : (
-                    <i className="fa-solid fa-paper-plane" />
+                      {t.unreadCount > 99 ? '99+' : t.unreadCount}
+                    </div>
                   )}
-                </button>
-              </div>
-            </>
-          ) : (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '14px', color: 'var(--text-muted)' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'rgba(90, 112, 211, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '28px',
-                color: '#5A70D3'
-              }}>
-                <i className="fa-solid fa-circle-question" />
-              </div>
-              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
-                Select a Doubt Thread
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.86rem', maxWidth: '320px', lineHeight: 1.4 }}>
-                Choose a student doubt thread from the list on the left to view question history and reply.
-              </p>
+                </div>
+              </button>
+            );
+          })}
+
+          {filteredThreads.length === 0 && (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No doubt threads found
             </div>
           )}
         </div>
       </div>
 
+      {/* ──────────────────────────────────────────────────────────────────
+          2. Right Chat Area: WhatsApp Screen (Matches AdminCommunityPage)
+          ────────────────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {selectedThread ? (
+          <>
+            {/* WhatsApp Header */}
+            <div style={{
+              padding: '12px 20px', background: 'var(--bg-surface)',
+              borderBottom: '1px solid var(--border-default)',
+              display: 'flex', alignItems: 'center', gap: '12px',
+              boxShadow: 'var(--shadow-sm)', flexShrink: 0,
+            }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '8px', flexShrink: 0, overflow: 'hidden',
+                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: '15px', fontWeight: 700
+              }}>
+                {selectedThread.studentAvatar
+                  ? <img src={resolveMediaUrl(selectedThread.studentAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : getInitials(selectedThread.studentName)}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {selectedThread.studentName}
+                  </h3>
+                  <span style={{
+                    fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px',
+                    background: 'var(--accent-subtle)', color: 'var(--accent-primary, #5A70D3)'
+                  }}>
+                    Student
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                  {selectedThread.studentEmail} • <span style={{ color: 'var(--accent-primary, #5A70D3)', fontWeight: 600 }}>{selectedThread.courseName}</span>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
+                background: selectedThread.status === 'waiting_for_tutor' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(22, 163, 74, 0.15)',
+                color: selectedThread.status === 'waiting_for_tutor' ? '#b45309' : '#15803d'
+              }}>
+                {selectedThread.status === 'waiting_for_tutor' ? '⏳ Waiting for your reply' : '✓ Answered'}
+              </div>
+            </div>
+
+            {/* Messages Stream */}
+            <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--bg-page)' }}>
+              {loadingMessages && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                  <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--accent-primary)' }} />
+                </div>
+              )}
+
+              {!loadingMessages && messages.length === 0 && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', gap: '12px' }}>
+                  <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: 'var(--accent-primary)' }}>
+                    <i className="fa-solid fa-comments" />
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '14px' }}>No messages in this doubt thread yet.</p>
+                </div>
+              )}
+
+              {groupedMessages.map((item, idx) => {
+                if (item.type === 'separator') {
+                  return (
+                    <div key={`sep-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '12px 0 6px' }}>
+                      <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 10px', borderRadius: '20px', border: '1px solid var(--border-default)' }}>
+                        {formatDate(item.date)}
+                      </span>
+                      <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
+                    </div>
+                  );
+                }
+                const msg = item.msg;
+                const isOwn = msg.senderId === user?.id || (msg.senderRole && msg.senderRole !== 'student');
+
+                return (
+                  <div key={msg.id} style={{
+                    display: 'flex', gap: '10px', alignItems: 'flex-end',
+                    flexDirection: isOwn ? 'row-reverse' : 'row', marginBottom: '4px'
+                  }}>
+                    {!isOwn && (
+                      <div style={{
+                        width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+                        background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '12px', fontWeight: 700, color: '#fff', overflow: 'hidden'
+                      }}>
+                        {msg.senderAvatar
+                          ? <img src={resolveMediaUrl(msg.senderAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : getInitials(msg.senderName || selectedThread.studentName)}
+                      </div>
+                    )}
+
+                    <div className="cc-bubble-wrap" style={{ maxWidth: '65%', position: 'relative' }}>
+                      {!isOwn && (
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px', paddingLeft: '2px' }}>
+                          {msg.senderName || selectedThread.studentName}
+                        </div>
+                      )}
+
+                      <div style={{
+                        background: isOwn ? 'linear-gradient(135deg, #5A70D3 0%, #4355B9 100%)' : 'var(--bg-elevated)',
+                        color: isOwn ? '#fff' : 'var(--text-primary)',
+                        padding: msg.messageType === 'text' ? '10px 14px' : '8px',
+                        borderRadius: isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                        boxShadow: isOwn ? '0 2px 8px rgba(90, 112, 211, 0.22)' : 'var(--shadow-sm)',
+                        border: isOwn ? 'none' : '1px solid var(--border-default)',
+                        position: 'relative'
+                      }}>
+                        {/* Text */}
+                        {msg.content && (
+                          <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                            {msg.content}
+                          </p>
+                        )}
+
+                        {/* Image */}
+                        {msg.messageType === 'image' && msg.mediaUrl && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewImage({ url: resolveMediaUrl(msg.mediaUrl), name: msg.mediaName || 'doubt_attachment.jpg' });
+                            }}
+                            style={{ cursor: 'pointer', display: 'inline-block', position: 'relative' }}
+                            title="Click to view image"
+                          >
+                            <img
+                              src={resolveMediaUrl(msg.mediaUrl)}
+                              alt={msg.mediaName || 'Image'}
+                              style={{ maxWidth: '240px', maxHeight: '180px', borderRadius: '10px', display: 'block', objectFit: 'cover' }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Video */}
+                        {msg.messageType === 'video' && msg.mediaUrl && (
+                          <video src={resolveMediaUrl(msg.mediaUrl)} controls style={{ maxWidth: '260px', borderRadius: '10px', display: 'block' }} />
+                        )}
+
+                        {/* PDF / File */}
+                        {(msg.messageType === 'pdf' || msg.messageType === 'file') && msg.mediaUrl && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewDoc({ url: resolveMediaUrl(msg.mediaUrl), name: msg.mediaName || 'Document.pdf', size: msg.mediaSize });
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '10px',
+                              color: isOwn ? '#fff' : 'var(--text-primary)', padding: '8px 4px', cursor: 'pointer'
+                            }}
+                            title="Click to open document"
+                          >
+                            <i className="fa-solid fa-file-pdf" style={{ fontSize: '24px', opacity: 0.9, color: isOwn ? '#fff' : '#ef4444' }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 600, maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {msg.mediaName || 'Document.pdf'}
+                              </div>
+                              {msg.mediaSize > 0 && (
+                                <div style={{ fontSize: '11px', opacity: 0.7 }}>{(msg.mediaSize / 1024 / 1024).toFixed(1)} MB</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Timestamp & checks */}
+                        <div style={{
+                          fontSize: '11px', opacity: isOwn ? 0.85 : 0.65, marginTop: '4px',
+                          textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px'
+                        }}>
+                          <span>{formatTime(msg.createdAt)}</span>
+                          {isOwn && <i className="fa-solid fa-check-double" style={{ fontSize: '11px' }} />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Bar */}
+            <div style={{ padding: '12px 16px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-default)' }}>
+              {selectedFile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', marginBottom: '8px' }}>
+                  <i className="fa-solid fa-paperclip" style={{ color: 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '13px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedFile.name}</span>
+                  <button onClick={() => setSelectedFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    <i className="fa-solid fa-xmark" />
+                  </button>
+                </div>
+              )}
+
+              {uploading && (
+                <div style={{ padding: '4px 0 8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>
+                    <span>Uploading attachment…</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div style={{ height: '3px', borderRadius: '3px', background: 'var(--border-default)' }}>
+                    <div style={{ height: '100%', borderRadius: '3px', background: 'var(--accent-gradient, #5A70D3)', width: `${uploadProgress}%`, transition: 'width 0.2s' }} />
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={e => { e.preventDefault(); handleSendReply(); }} style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                  accept="image/*,video/*,application/pdf,.doc,.docx"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach file (image, video, PDF)"
+                  style={{
+                    width: '38px', height: '38px', borderRadius: '50%',
+                    background: 'none', border: '1px solid var(--border-default)',
+                    color: 'var(--text-muted)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                  }}
+                >
+                  <i className="fa-solid fa-paperclip" />
+                </button>
+
+                <textarea
+                  ref={textareaRef}
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={`Reply to ${selectedThread.studentName}'s doubt…`}
+                  rows={1}
+                  style={{
+                    flex: 1, padding: '9px 12px', fontSize: '13px', resize: 'none', lineHeight: 1.5,
+                    background: 'var(--bg-input)', color: 'var(--text-primary)',
+                    border: '1px solid var(--border-default)', borderRadius: '20px', outline: 'none',
+                    fontFamily: 'inherit', maxHeight: '100px', overflowY: 'auto'
+                  }}
+                  onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
+                />
+
+                <button
+                  type="submit"
+                  disabled={uploading || (!replyText.trim() && !selectedFile)}
+                  title="Send reply"
+                  style={{
+                    width: '38px', height: '38px', borderRadius: '50%', border: 'none',
+                    background: (uploading || (!replyText.trim() && !selectedFile)) ? 'var(--border-default)' : 'var(--accent-gradient, linear-gradient(135deg, #5A70D3, #4355B9))',
+                    color: '#fff', cursor: (uploading || (!replyText.trim() && !selectedFile)) ? 'default' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '14px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <i className="fa-solid fa-paper-plane" />
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--accent-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: 'var(--accent-primary, #5A70D3)' }}>
+              <i className="fa-solid fa-circle-question" />
+            </div>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '16px', fontWeight: 700 }}>
+              Select a Doubt Thread
+            </h3>
+            <p style={{ margin: 0, fontSize: '13px', maxWidth: '320px', lineHeight: 1.5 }}>
+              Choose a student doubt thread from the list on the left to view question history and reply.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Image Lightbox Modal */}
       {previewImage && (
         <ImageLightboxModal
-          url={previewImage}
+          image={previewImage}
           onClose={() => setPreviewImage(null)}
+        />
+      )}
+
+      {/* PDF / Document Preview Modal */}
+      {previewDoc && (
+        <PdfPreviewModal
+          doc={previewDoc}
+          onClose={() => setPreviewDoc(null)}
         />
       )}
     </div>
