@@ -318,12 +318,12 @@ export default function AdminCoursesPage() {
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '36%' }}>Course</th>
-                <th>Category</th>
-                <th>Pricing</th>
-                <th>Version</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '34%' }}>Course</th>
+                <th style={{ width: '16%', whiteSpace: 'nowrap' }}>Category</th>
+                <th style={{ width: '16%', minWidth: '135px', whiteSpace: 'nowrap' }}>Pricing</th>
+                <th style={{ width: '8%', whiteSpace: 'nowrap' }}>Version</th>
+                <th style={{ width: '12%', whiteSpace: 'nowrap' }}>Status</th>
+                <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -392,7 +392,7 @@ export default function AdminCoursesPage() {
                         {c.categoryName || 'Uncategorized'}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       {(() => {
                         const plans = getCourseSellingPlans(c.id, c);
                         const isPaid = (c.pricingType === 'subscription' || c.pricingType === 'paid') && Number(c.price) > 0;
@@ -403,14 +403,15 @@ export default function AdminCoursesPage() {
                               fontWeight: 700,
                               color: '#059669',
                               background: '#ecfdf5',
-                              padding: '3px 8px',
+                              padding: '4px 10px',
                               borderRadius: '6px',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
-                              border: '1px solid #a7f3d0'
+                              gap: '5px',
+                              border: '1px solid #a7f3d0',
+                              whiteSpace: 'nowrap'
                             }}>
-                              <i className="fa-solid fa-gift" style={{ fontSize: '0.7rem' }}></i>
+                              <i className="fa-solid fa-gift" style={{ fontSize: '0.72rem' }}></i>
                               Free
                             </span>
                           );
@@ -423,26 +424,51 @@ export default function AdminCoursesPage() {
                           ? Math.min(...activePlans.map(([, p]) => Number(p.price)))
                           : Number(c.price);
 
+                        if (activePlans.length > 1) {
+                          return (
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '3px', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '5px', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                  From
+                                </span>
+                                <span style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                                  {c.currency === 'USD' ? '$' : '₹'}{minPrice.toLocaleString()}
+                                </span>
+                              </div>
+                              <span style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                color: '#4338ca',
+                                background: '#e0e7ff',
+                                border: '1px solid #c7d2fe',
+                                padding: '2px 7px',
+                                borderRadius: '4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                width: 'fit-content',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                <i className="fa-solid fa-layer-group" style={{ fontSize: '0.62rem' }}></i>
+                                {activePlans.length} Selling Plans
+                              </span>
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span style={{
-                              fontSize: '0.84rem',
-                              fontWeight: 800,
-                              color: '#4f46e5',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}>
-                              <i className="fa-solid fa-gem" style={{ fontSize: '0.7rem' }}></i>
-                              {activePlans.length > 1 ? `From ${c.currency === 'USD' ? '$' : '₹'}${minPrice.toLocaleString()}` : `${c.currency === 'USD' ? '$' : '₹'}${minPrice.toLocaleString()}`}
+                          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '2px', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                              {c.currency === 'USD' ? '$' : '₹'}{minPrice.toLocaleString()}
                             </span>
                             <span style={{
                               fontSize: '0.68rem',
-                              color: activePlans.length > 1 ? '#0284c7' : 'var(--text-muted)',
-                              fontWeight: 700,
-                              letterSpacing: '0.02em'
+                              color: 'var(--text-muted)',
+                              fontWeight: 600,
+                              textTransform: 'capitalize',
+                              whiteSpace: 'nowrap'
                             }}>
-                              {activePlans.length > 1 ? `${activePlans.length} Selling Plans` : c.pricingType}
+                              {c.pricingType === 'subscription' ? 'Subscription' : 'One-time'}
                             </span>
                           </div>
                         );
