@@ -329,7 +329,9 @@ export default function AdminDoubtsPage() {
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const [highlightedCourseIdx, setHighlightedCourseIdx] = useState(0);
   const courseDropdownRef = useRef(null);
+  const courseItemRefs = useRef([]);
   const [stats, setStats] = useState({ totalDoubtsAsked: 0, totalDoubtsReplied: 0, pendingDoubts: 0 });
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -387,6 +389,61 @@ export default function AdminDoubtsPage() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [courseDropdownOpen]);
+
+  // Sync highlighted course dropdown option when opened
+  useEffect(() => {
+    if (courseDropdownOpen) {
+      const idx = selectedCourseId
+        ? courses.findIndex(c => String(c.id) === String(selectedCourseId)) + 1
+        : 0;
+      setHighlightedCourseIdx(idx >= 0 ? idx : 0);
+    }
+  }, [courseDropdownOpen, selectedCourseId, courses]);
+
+  // Auto-scroll highlighted option into view in dropdown
+  useEffect(() => {
+    if (courseDropdownOpen && courseItemRefs.current[highlightedCourseIdx]) {
+      courseItemRefs.current[highlightedCourseIdx].scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth'
+      });
+    }
+  }, [highlightedCourseIdx, courseDropdownOpen]);
+
+  const totalCourseOptions = courses.length + 1;
+
+  function handleCourseDropdownKeyDown(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!courseDropdownOpen) {
+        setCourseDropdownOpen(true);
+      } else {
+        setHighlightedCourseIdx(prev => (prev + 1 < totalCourseOptions ? prev + 1 : 0));
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!courseDropdownOpen) {
+        setCourseDropdownOpen(true);
+      } else {
+        setHighlightedCourseIdx(prev => (prev - 1 >= 0 ? prev - 1 : totalCourseOptions - 1));
+      }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!courseDropdownOpen) {
+        setCourseDropdownOpen(true);
+      } else {
+        if (highlightedCourseIdx === 0) {
+          setSelectedCourseId('');
+        } else if (courses[highlightedCourseIdx - 1]) {
+          setSelectedCourseId(courses[highlightedCourseIdx - 1].id);
+        }
+        setCourseDropdownOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setCourseDropdownOpen(false);
+    }
+  }
 
   // Load doubt threads whenever course filter changes
   useEffect(() => {
@@ -646,11 +703,15 @@ export default function AdminDoubtsPage() {
             {threads.length} thread{threads.length !== 1 ? 's' : ''} • {stats.totalDoubtsAsked || 0} asked • {stats.totalDoubtsReplied || 0} answered
           </p>
 
-          {/* Course filter custom dropdown (Constrained to sidebar width) */}
+          {/* Course filter custom dropdown (Constrained to sidebar width with keyboard navigation) */}
           <div ref={courseDropdownRef} style={{ position: 'relative', marginBottom: '8px', width: '100%' }}>
             <button
               type="button"
               onClick={() => setCourseDropdownOpen(!courseDropdownOpen)}
+              onKeyDown={handleCourseDropdownKeyDown}
+              tabIndex={0}
+              aria-haspopup="listbox"
+              aria-expanded={courseDropdownOpen}
               style={{
                 width: '100%',
                 padding: '7px 10px',
@@ -690,6 +751,9 @@ export default function AdminDoubtsPage() {
 
             {courseDropdownOpen && (
               <div
+                role="listbox"
+                tabIndex={-1}
+                onKeyDown={handleCourseDropdownKeyDown}
                 style={{
                   position: 'absolute',
                   top: 'calc(100% + 4px)',
@@ -707,62 +771,68 @@ export default function AdminDoubtsPage() {
                   boxSizing: 'border-box'
                 }}
               >
+                {/* 0. All Courses */}
                 <div
+                  ref={el => courseItemRefs.current[0] = el}
+                  role="option"
+                  aria-selected={!selectedCourseId}
                   onClick={() => {
                     setSelectedCourseId('');
                     setCourseDropdownOpen(false);
                   }}
+                  onMouseEnter={() => setHighlightedCourseIdx(0)}
                   title={`All Courses (${courses.length})`}
                   style={{
                     padding: '8px 12px',
                     fontSize: '12px',
-                    fontWeight: !selectedCourseId ? 700 : 500,
-                    color: !selectedCourseId ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
-                    background: !selectedCourseId ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'transparent',
+                    fontWeight: !selectedCourseId || highlightedCourseIdx === 0 ? 700 : 500,
+                    color: !selectedCourseId || highlightedCourseIdx === 0 ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
+                    background: highlightedCourseIdx === 0
+                      ? 'var(--accent-subtle, rgba(90, 112, 211, 0.14))'
+                      : (!selectedCourseId ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'transparent'),
+                    borderLeft: highlightedCourseIdx === 0 ? '3px solid var(--accent-primary, #5A70D3)' : '3px solid transparent',
                     cursor: 'pointer',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    transition: 'background 0.15s ease'
-                  }}
-                  onMouseEnter={e => {
-                    if (selectedCourseId) e.currentTarget.style.background = 'var(--bg-elevated, #f8fafc)';
-                  }}
-                  onMouseLeave={e => {
-                    if (selectedCourseId) e.currentTarget.style.background = 'transparent';
+                    transition: 'all 0.12s ease'
                   }}
                 >
                   All Courses ({courses.length})
                 </div>
 
-                {courses.map(c => {
+                {/* 1..N. Courses List */}
+                {courses.map((c, idx) => {
+                  const optionIdx = idx + 1;
                   const isCur = String(c.id) === String(selectedCourseId);
+                  const isHighlighted = highlightedCourseIdx === optionIdx;
                   const courseTitle = c.name || c.title || `Course #${c.id}`;
                   return (
                     <div
                       key={c.id}
+                      ref={el => courseItemRefs.current[optionIdx] = el}
+                      role="option"
+                      aria-selected={isCur}
                       onClick={() => {
                         setSelectedCourseId(c.id);
                         setCourseDropdownOpen(false);
                       }}
+                      onMouseEnter={() => setHighlightedCourseIdx(optionIdx)}
                       title={courseTitle}
                       style={{
                         padding: '8px 12px',
                         fontSize: '12px',
-                        fontWeight: isCur ? 700 : 500,
-                        color: isCur ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
-                        background: isCur ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'transparent',
+                        fontWeight: isCur || isHighlighted ? 700 : 500,
+                        color: isCur || isHighlighted ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
+                        background: isHighlighted
+                          ? 'var(--accent-subtle, rgba(90, 112, 211, 0.14))'
+                          : (isCur ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'transparent'),
+                        borderLeft: isHighlighted ? '3px solid var(--accent-primary, #5A70D3)' : '3px solid transparent',
                         cursor: 'pointer',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        transition: 'background 0.15s ease'
-                      }}
-                      onMouseEnter={e => {
-                        if (!isCur) e.currentTarget.style.background = 'var(--bg-elevated, #f8fafc)';
-                      }}
-                      onMouseLeave={e => {
-                        if (!isCur) e.currentTarget.style.background = 'transparent';
+                        transition: 'all 0.12s ease'
                       }}
                     >
                       {courseTitle}
