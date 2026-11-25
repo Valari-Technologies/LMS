@@ -894,7 +894,7 @@ export default function AdminDoubtsPage() {
                     {!isOwn && (
                       <div style={{
                         width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                        background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                        background: 'linear-gradient(135deg, #5A70D3 0%, #4355B9 100%)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '12px', fontWeight: 700, color: '#fff', overflow: 'hidden'
                       }}>
@@ -974,15 +974,20 @@ export default function AdminDoubtsPage() {
                             </div>
                           </div>
                         )}
+                      </div>
 
-                        {/* Timestamp & checks */}
-                        <div style={{
-                          fontSize: '11px', opacity: isOwn ? 0.85 : 0.65, marginTop: '4px',
-                          textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px'
-                        }}>
-                          <span>{formatTime(msg.createdAt)}</span>
-                          {isOwn && <i className="fa-solid fa-check-double" style={{ fontSize: '11px' }} />}
-                        </div>
+                      {/* Timestamp & checks row below bubble (matches Community Chat) */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        justifyContent: isOwn ? 'flex-end' : 'flex-start',
+                        marginTop: '3px', paddingLeft: '2px', paddingRight: '2px'
+                      }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          {formatTime(msg.createdAt)}
+                        </span>
+                        {isOwn && (
+                          <i className="fa-solid fa-check-double" style={{ fontSize: '10px', color: 'var(--accent-primary, #5A70D3)' }} />
+                        )}
                       </div>
                     </div>
                   </div>
