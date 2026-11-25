@@ -515,16 +515,16 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            {/* 7. TODAY NEW LOGINS */}
+            {/* 7. TODAY NEW USERS */}
             <Link to="/admin/students" className="animated-kpi-card" style={{ animationDelay: '280ms' }}>
               <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
-                <i className="fa-solid fa-right-to-bracket"></i>
+                <i className="fa-solid fa-user-plus"></i>
               </div>
               <div className="kpi-info">
                 <span className="kpi-val" style={{ color: '#0284c7' }}><AnimatedNumber value={stats?.todayNewLogins ?? 0} /></span>
-                <span className="kpi-label">Today New Logins</span>
+                <span className="kpi-label">Today New Users</span>
                 <span className="kpi-sub" style={{ color: '#0284c7', fontWeight: 600 }}>
-                  {(stats?.todayNewLogins || 0) > 0 ? `${stats.todayNewLogins} student login${stats.todayNewLogins > 1 ? 's' : ''} today` : 'No student logins today'}
+                  {(stats?.todayNewLogins || 0) > 0 ? `${stats.todayNewLogins} new account${stats.todayNewLogins > 1 ? 's' : ''} created today` : 'No new accounts created today'}
                 </span>
               </div>
             </Link>
@@ -532,7 +532,7 @@ export default function AdminDashboard() {
             {/* 8. TODAY ENROLLMENTS */}
             <Link to="/admin/enrollments" className="animated-kpi-card" style={{ animationDelay: '320ms' }}>
               <div className="kpi-icon" style={{ background: 'rgba(13, 148, 136, 0.1)', color: '#0d9488' }}>
-                <i className="fa-solid fa-user-plus"></i>
+                <i className="fa-solid fa-graduation-cap"></i>
               </div>
               <div className="kpi-info">
                 <span className="kpi-val" style={{ color: '#0d9488' }}><AnimatedNumber value={stats?.todayEnrollments ?? 0} /></span>
