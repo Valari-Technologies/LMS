@@ -354,7 +354,11 @@ public class TutorDoubtService {
             String preview = hasContent ? req.content().trim() : "Sent an attachment";
             if (preview.length() > 70) preview = preview.substring(0, 67) + "...";
             String title = "Tutor Replied to Your Doubt in " + course.getName();
-            String body = tutor.getName() + ": " + preview;
+            String senderDisplayName = (tutor.getName() != null && !tutor.getName().equalsIgnoreCase("Super Admin")
+                    && !tutor.getName().toLowerCase().contains("super admin")
+                    && tutor.getRole() != UserRole.super_admin)
+                    ? tutor.getName() : "One Tutor";
+            String body = senderDisplayName + ": " + preview;
             String linkUrl = "/student/courses/" + courseId + "/dashboard?tab=doubts";
 
             notificationService.notify(student, title, body,

@@ -841,6 +841,8 @@ export default function StudentTutorDoubtView({
               ) : (
                 messages.map((msg, index) => {
                   const isStudent = msg.senderId === currentUser?.id;
+                  const isSuperAdminTutor = (!msg.senderName || msg.senderName.toLowerCase().includes('super admin') || msg.senderRole === 'super_admin' || msg.senderRole === 'admin');
+                  const tutorDisplayName = isSuperAdminTutor ? 'One Tutor' : (msg.senderName || 'Instructor');
                   const prevMsg = index > 0 ? messages[index - 1] : null;
                   const showDate = !prevMsg || !isSameDay(prevMsg.createdAt, msg.createdAt);
 
@@ -891,7 +893,7 @@ export default function StudentTutorDoubtView({
                             {msg.senderAvatar ? (
                               <img src={resolveMediaUrl(msg.senderAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                              getInitials(msg.senderName || 'Instructor')
+                              getInitials(tutorDisplayName)
                             )}
                           </div>
                         )}
@@ -908,7 +910,7 @@ export default function StudentTutorDoubtView({
                               alignItems: 'center',
                               gap: '4px'
                             }}>
-                              <span>{msg.senderName || 'Instructor'}</span>
+                              <span>{tutorDisplayName}</span>
                               <span style={{ fontSize: '9px', background: 'rgba(90, 112, 211, 0.12)', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>
                                 Tutor
                               </span>

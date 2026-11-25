@@ -490,6 +490,8 @@ function PdfPreviewModal({ doc, onClose }) {
 function MessageBubble({ msg, currentUser, courseId, onDelete, onEdit, onShare, onImageClick, onDocClick }) {
   const isOwn = msg.senderId === currentUser?.id;
   const isAdmin = msg.senderRole === 'admin';
+  const isSuperAdmin = (msg.senderName && msg.senderName.toLowerCase().includes('super admin')) || msg.senderRole === 'super_admin' || msg.senderRole === 'superadmin';
+  const effectiveSenderName = isSuperAdmin ? 'One Tutor' : (msg.senderName || 'Instructor');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const touchTimerRef = useRef(null);
@@ -539,7 +541,7 @@ function MessageBubble({ msg, currentUser, courseId, onDelete, onEdit, onShare, 
         }}>
           {msg.senderAvatar
             ? <img src={resolveMediaUrl(msg.senderAvatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : getInitials(msg.senderName)}
+            : getInitials(effectiveSenderName)}
         </div>
       )}
 
@@ -552,7 +554,7 @@ function MessageBubble({ msg, currentUser, courseId, onDelete, onEdit, onShare, 
       >
         {!isOwn && (
           <div style={{ fontSize: '11px', fontWeight: 600, color: isAdmin ? '#f59e0b' : 'var(--text-secondary)', marginBottom: '3px', paddingLeft: '2px' }}>
-            {msg.senderName}{isAdmin && ' ⭐'}
+            {effectiveSenderName}{isAdmin && ' ⭐'}
           </div>
         )}
         <div

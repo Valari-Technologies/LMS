@@ -59,6 +59,8 @@ function getFileIcon(type, mime) {
 function MessageBubble({ msg, currentUser, onDelete, onEdit }) {
   const isOwn   = msg.senderId === currentUser?.id;
   const isAdmin = msg.senderRole === 'admin' || msg.senderRole === 'super_admin' || msg.senderRole === 'superadmin';
+  const isSuperAdmin = (msg.senderName && msg.senderName.toLowerCase().includes('super admin')) || msg.senderRole === 'super_admin' || msg.senderRole === 'superadmin';
+  const effectiveSenderName = isSuperAdmin ? 'One Tutor' : (msg.senderName || 'Instructor');
   const isDeleted = msg.deleted;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef  = useRef(null);
@@ -80,14 +82,14 @@ function MessageBubble({ msg, currentUser, onDelete, onEdit }) {
         <div className={`cc-avatar ${isAdmin ? 'cc-avatar-admin' : ''}`}>
           {msg.senderAvatar
             ? <img src={resolveMediaUrl(msg.senderAvatar)} alt="" />
-            : getInitials(msg.senderName)}
+            : getInitials(effectiveSenderName)}
         </div>
       )}
 
       <div className="cc-bubble-wrap">
         {!isOwn && (
           <div className={`cc-sender-name ${isAdmin ? 'cc-admin-name' : ''}`}>
-            {msg.senderName}{isAdmin && ' ⭐'}
+            {effectiveSenderName}{isAdmin && ' ⭐'}
           </div>
         )}
 

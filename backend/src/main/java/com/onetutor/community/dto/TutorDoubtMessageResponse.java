@@ -26,15 +26,23 @@ public record TutorDoubtMessageResponse(
         Instant updatedAt
 ) {
     public static TutorDoubtMessageResponse from(TutorDoubtMessage m) {
+        String senderName = m.getSender().getName();
+        String senderRole = m.getSender().getRole() != null ? m.getSender().getRole().name() : "";
+        if (senderName == null || senderName.equalsIgnoreCase("Super Admin")
+                || senderName.toLowerCase().contains("super admin")
+                || "super_admin".equalsIgnoreCase(senderRole)) {
+            senderName = "One Tutor";
+        }
+
         if (m.isDeleted()) {
             return new TutorDoubtMessageResponse(
                     m.getId(),
                     m.getCourse().getId(),
                     m.getStudent().getId(),
                     m.getSender().getId(),
-                    m.getSender().getName(),
+                    senderName,
                     m.getSender().getProfileImage(),
-                    m.getSender().getRole().name(),
+                    senderRole,
                     "This doubt message was deleted",
                     "text",
                     null,
@@ -72,9 +80,9 @@ public record TutorDoubtMessageResponse(
                 m.getCourse().getId(),
                 m.getStudent().getId(),
                 m.getSender().getId(),
-                m.getSender().getName(),
+                senderName,
                 m.getSender().getProfileImage(),
-                m.getSender().getRole().name(),
+                senderRole,
                 m.getContent(),
                 m.getMessageType().name(),
                 mediaId,

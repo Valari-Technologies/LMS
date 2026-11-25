@@ -64,7 +64,7 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         User admin = userRepository.findByEmail(adminEmail).orElseGet(() -> {
             User a = new User();
-            a.setName("Super Admin");
+            a.setName("One Tutor");
             a.setEmail(adminEmail);
             a.setPasswordHash(passwordEncoder.encode(adminPassword));
             a.setRole(UserRole.super_admin);
@@ -74,11 +74,20 @@ public class DataSeeder implements CommandLineRunner {
             log.info("Seeded dev super admin account: {}", adminEmail);
             return a;
         });
-        if (admin != null && (admin.getRole() == UserRole.admin || admin.getRole() == null)) {
-            admin.setRole(UserRole.super_admin);
-            admin.setName("Super Admin");
-            userRepository.save(admin);
-            log.info("Updated existing admin account to Super Admin: {}", adminEmail);
+        if (admin != null) {
+            boolean changed = false;
+            if (admin.getRole() == UserRole.admin || admin.getRole() == null) {
+                admin.setRole(UserRole.super_admin);
+                changed = true;
+            }
+            if ("Super Admin".equalsIgnoreCase(admin.getName())) {
+                admin.setName("One Tutor");
+                changed = true;
+            }
+            if (changed) {
+                userRepository.save(admin);
+                log.info("Updated existing admin account to One Tutor: {}", adminEmail);
+            }
         }
 
         User student = userRepository.findByEmail("student@onetutor.local").orElseGet(() -> {
