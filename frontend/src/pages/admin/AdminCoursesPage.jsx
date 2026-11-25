@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { publishCourse, unpublishCourse, archiveCourse, unarchiveCourse, duplicateCourse, approveCourseEdits, rejectCourseEdits } from '../../api/courses';
 import { listCategories } from '../../api/categories';
+import { getCourseBatches } from '../../api/batches';
 import { listSections } from '../../api/sections';
 import { listContents } from '../../api/contents';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
@@ -10,6 +11,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import AlertBanner from '../../components/AlertBanner';
+import CoursePublishBatchModal from '../../components/CoursePublishBatchModal';
 import { usePermission } from '../../hooks/usePermission';
 import { getCourseSellingPlans } from '../../utils/courseSellingPlans';
 
@@ -31,6 +33,9 @@ export default function AdminCoursesPage() {
   const [reviewSections, setReviewSections] = useState([]);
   const [reviewContentsMap, setReviewContentsMap] = useState({});
   const [loadingReviewSections, setLoadingReviewSections] = useState(false);
+
+  // Batch Notice & Creation Modal State when publishing without batches
+  const [publishBatchModal, setPublishBatchModal] = useState(null);
 
   async function openReviewModal(courseItem) {
     setReviewCourse(courseItem);
@@ -120,6 +125,62 @@ export default function AdminCoursesPage() {
       toast.error(msg);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleInitiatePublish = async (courseItem, publishFn = publishCourse) => {
+    if (isReadOnly) return;
+    setActionLoading(courseItem.id);
+    setAlert('');
+    try {
+      const batches = await getCourseBatches(courseItem.id);
+      const hasBatches = Array.isArray(batches) && batches.length > 0;
+      if (!hasBatches) {
+        // Course has no batches -> open No-Batch Notice Modal
+        setPublishBatchModal({
+          course: courseItem,
+          publishFn,
+          actionName: publishFn === approveCourseEdits ? 'approved & published live' : 'published'
+        });
+        return;
+      }
+
+      // Course already has at least one batch -> publish directly
+      await handleAction(publishFn, courseItem.id, publishFn === approveCourseEdits ? 'approved & published live' : 'published');
+      if (reviewCourse) setReviewCourse(null);
+    } catch (err) {
+      console.error('Error checking course batches before publishing:', err);
+      // Fallback: proceed with publishing
+      await handleAction(publishFn, courseItem.id, publishFn === approveCourseEdits ? 'approved & published live' : 'published');
+      if (reviewCourse) setReviewCourse(null);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePublishWithoutBatch = async () => {
+    if (!publishBatchModal) return;
+    const { course: c, publishFn, actionName } = publishBatchModal;
+    setPublishBatchModal(null);
+    if (reviewCourse) setReviewCourse(null);
+    await handleAction(publishFn, c.id, actionName);
+  };
+
+  const handleBatchCreatedAndPublished = async (courseItem, createdBatchName) => {
+    if (!publishBatchModal) return;
+    const { publishFn, actionName } = publishBatchModal;
+    setPublishBatchModal(null);
+    if (reviewCourse) setReviewCourse(null);
+    try {
+      await publishFn(courseItem.id);
+      const msg = `Batch "${createdBatchName}" created and course ${actionName}!`;
+      setAlert(msg);
+      toast.success(msg);
+      load();
+    } catch (err) {
+      const msg = err.response?.data?.message || `Failed to ${actionName} course.`;
+      setAlert(`Error: ${msg}`);
+      toast.error(msg);
     }
   };
 
@@ -467,9 +528,9 @@ export default function AdminCoursesPage() {
                             {/* Publish & Unpublish actions restricted to Super Admin only */}
                             {(() => {
                               const canPublish = user?.role === 'super_admin' || user?.role === 'superadmin' || user?.role === 'admin';
-                              const hasPendingEdits = c.pendingApproval || c.pending_approval || c.status === 'draft';
+                              const hasPendingEdits = c.pendingApproval || c.pending_approval;
 
-                              if (!canPublish && hasPendingEdits) {
+                              if (!canPublish && (hasPendingEdits || c.status === 'draft')) {
                                 return (
                                   <span
                                     style={{
@@ -504,6 +565,22 @@ export default function AdminCoursesPage() {
                                   >
                                     <i className="fa-solid fa-clipboard-check"></i>
                                     <span>Verify & Approve Edits</span>
+                                  </button>
+                                );
+                              }
+
+                              if (canPublish && c.status === 'draft') {
+                                return (
+                                  <button
+                                    onClick={() => handleInitiatePublish(c, publishCourse)}
+                                    disabled={actionLoading === c.id}
+                                    className="btn btn-sm"
+                                    style={{ background: '#5A70D3', color: '#fff', fontWeight: 700, borderRadius: '8px', padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                                    title="Publish course live to students"
+                                    aria-label="Publish course live to students"
+                                  >
+                                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                                    <span>Publish</span>
                                   </button>
                                 );
                               }
@@ -902,8 +979,7 @@ export default function AdminCoursesPage() {
 
                 <button
                   onClick={() => {
-                    handleAction(approveCourseEdits, reviewCourse.id, 'approved & published live');
-                    setReviewCourse(null);
+                    handleInitiatePublish(reviewCourse, approveCourseEdits);
                   }}
                   disabled={actionLoading === reviewCourse.id}
                   style={{ background: '#5A70D3', color: '#FFFFFF', border: 'none', padding: '10px 22px', borderRadius: '10px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(90, 112, 211, 0.3)' }}
@@ -916,6 +992,17 @@ export default function AdminCoursesPage() {
           </div>
         </div>
       )}
+
+      {/* Course Publish Batch Notice & Creation Modal */}
+      <CoursePublishBatchModal
+        isOpen={Boolean(publishBatchModal)}
+        course={publishBatchModal?.course}
+        onClose={() => setPublishBatchModal(null)}
+        onPublishWithoutBatch={handlePublishWithoutBatch}
+        onBatchCreatedAndPublished={handleBatchCreatedAndPublished}
+        isReadOnly={isReadOnly}
+        toast={toast}
+      />
     </div>
   );
 }

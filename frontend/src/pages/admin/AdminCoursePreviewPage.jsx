@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { previewCourse, publishCourse, approveCourseEdits } from '../../api/courses';
+import { getCourseBatches } from '../../api/batches';
 import { listSections } from '../../api/sections';
 import { listContents } from '../../api/contents';
 import CourseCard from '../../components/CourseCard';
@@ -8,6 +9,7 @@ import { usePermission } from '../../hooks/usePermission';
 import { useAuth } from '../../auth/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
+import CoursePublishBatchModal from '../../components/CoursePublishBatchModal';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 
 export default function AdminCoursePreviewPage() {
@@ -23,10 +25,37 @@ export default function AdminCoursePreviewPage() {
   const [sectionContents, setSectionContents] = useState({});
   const [expandedSections, setExpandedSections] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showBatchModal, setShowBatchModal] = useState(false);
 
   const canPublish = user?.role === 'super_admin' || user?.role === 'superadmin' || user?.role === 'admin';
 
   async function handleApprovePublish() {
+    if (isReadOnly) return;
+    try {
+      const batches = await getCourseBatches(id);
+      const hasBatches = Array.isArray(batches) && batches.length > 0;
+      if (!hasBatches) {
+        setShowBatchModal(true);
+        return;
+      }
+      await approveCourseEdits(id);
+      toast.success('Course edits approved and published live to student pages!');
+      loadPreview();
+    } catch (err) {
+      console.error('Error during course batch check/publish:', err);
+      // Fallback: proceed with approval
+      try {
+        await approveCourseEdits(id);
+        toast.success('Course edits approved and published live to student pages!');
+        loadPreview();
+      } catch {
+        toast.error('Failed to approve course edits.');
+      }
+    }
+  }
+
+  const handlePublishWithoutBatch = async () => {
+    setShowBatchModal(false);
     try {
       await approveCourseEdits(id);
       toast.success('Course edits approved and published live to student pages!');
@@ -34,7 +63,18 @@ export default function AdminCoursePreviewPage() {
     } catch (err) {
       toast.error('Failed to approve course edits.');
     }
-  }
+  };
+
+  const handleBatchCreatedAndPublished = async (courseItem, batchName) => {
+    setShowBatchModal(false);
+    try {
+      await approveCourseEdits(id);
+      toast.success(`Batch "${batchName}" created and course edits published live!`);
+      loadPreview();
+    } catch (err) {
+      toast.error('Failed to approve course edits.');
+    }
+  };
 
   // Active view: 'page' (Course Details Landing Page) or 'player' (Curriculum Lesson Player)
   const [activeTab, setActiveTab] = useState('page');
@@ -1062,6 +1102,17 @@ export default function AdminCoursePreviewPage() {
           </div>
         )}
       </div>
+
+      {/* Course Publish Batch Notice & Creation Modal */}
+      <CoursePublishBatchModal
+        isOpen={showBatchModal}
+        course={course}
+        onClose={() => setShowBatchModal(false)}
+        onPublishWithoutBatch={handlePublishWithoutBatch}
+        onBatchCreatedAndPublished={handleBatchCreatedAndPublished}
+        isReadOnly={isReadOnly}
+        toast={toast}
+      />
     </div>
   );
 }
