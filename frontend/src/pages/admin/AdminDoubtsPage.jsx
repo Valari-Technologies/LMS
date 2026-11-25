@@ -328,6 +328,8 @@ export default function AdminDoubtsPage() {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const courseDropdownRef = useRef(null);
   const [stats, setStats] = useState({ totalDoubtsAsked: 0, totalDoubtsReplied: 0, pendingDoubts: 0 });
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -372,6 +374,19 @@ export default function AdminDoubtsPage() {
     }
     loadMeta();
   }, []);
+
+  // Close course dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (courseDropdownRef.current && !courseDropdownRef.current.contains(e.target)) {
+        setCourseDropdownOpen(false);
+      }
+    }
+    if (courseDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [courseDropdownOpen]);
 
   // Load doubt threads whenever course filter changes
   useEffect(() => {
@@ -631,23 +646,131 @@ export default function AdminDoubtsPage() {
             {threads.length} thread{threads.length !== 1 ? 's' : ''} • {stats.totalDoubtsAsked || 0} asked • {stats.totalDoubtsReplied || 0} answered
           </p>
 
-          {/* Course filter select */}
-          <div style={{ marginBottom: '8px' }}>
-            <select
-              value={selectedCourseId}
-              onChange={e => setSelectedCourseId(e.target.value)}
+          {/* Course filter custom dropdown (Constrained to sidebar width) */}
+          <div ref={courseDropdownRef} style={{ position: 'relative', marginBottom: '8px', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => setCourseDropdownOpen(!courseDropdownOpen)}
               style={{
-                width: '100%', padding: '7px 10px', fontSize: '12px',
-                background: 'var(--bg-input)', color: 'var(--text-primary)',
-                border: '1px solid var(--border-default)', borderRadius: '8px', outline: 'none',
-                boxSizing: 'border-box', cursor: 'pointer'
+                width: '100%',
+                padding: '7px 10px',
+                fontSize: '12px',
+                background: 'var(--bg-input)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '8px',
+                outline: 'none',
+                boxSizing: 'border-box',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                textAlign: 'left'
               }}
             >
-              <option value="">All Courses ({courses.length})</option>
-              {courses.map(c => (
-                <option key={c.id} value={c.id}>{c.name || c.title}</option>
-              ))}
-            </select>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                {selectedCourseId
+                  ? (courses.find(c => String(c.id) === String(selectedCourseId))?.name ||
+                     courses.find(c => String(c.id) === String(selectedCourseId))?.title ||
+                     'Selected Course')
+                  : `All Courses (${courses.length})`}
+              </span>
+              <i
+                className="fa-solid fa-chevron-down"
+                style={{
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                  transition: 'transform 0.2s ease',
+                  transform: courseDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  flexShrink: 0
+                }}
+              />
+            </button>
+
+            {courseDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  width: '100%',
+                  maxWidth: '100%',
+                  background: 'var(--bg-surface, #ffffff)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: '8px',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
+                  zIndex: 9999,
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <div
+                  onClick={() => {
+                    setSelectedCourseId('');
+                    setCourseDropdownOpen(false);
+                  }}
+                  title={`All Courses (${courses.length})`}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    fontWeight: !selectedCourseId ? 700 : 500,
+                    color: !selectedCourseId ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
+                    background: !selectedCourseId ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'transparent',
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => {
+                    if (selectedCourseId) e.currentTarget.style.background = 'var(--bg-elevated, #f8fafc)';
+                  }}
+                  onMouseLeave={e => {
+                    if (selectedCourseId) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  All Courses ({courses.length})
+                </div>
+
+                {courses.map(c => {
+                  const isCur = String(c.id) === String(selectedCourseId);
+                  const courseTitle = c.name || c.title || `Course #${c.id}`;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        setSelectedCourseId(c.id);
+                        setCourseDropdownOpen(false);
+                      }}
+                      title={courseTitle}
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        fontWeight: isCur ? 700 : 500,
+                        color: isCur ? 'var(--accent-primary, #5A70D3)' : 'var(--text-primary)',
+                        background: isCur ? 'var(--accent-subtle, rgba(90, 112, 211, 0.08))' : 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={e => {
+                        if (!isCur) e.currentTarget.style.background = 'var(--bg-elevated, #f8fafc)';
+                      }}
+                      onMouseLeave={e => {
+                        if (!isCur) e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      {courseTitle}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Search Bar */}
