@@ -327,7 +327,7 @@ export default function AdminCoursePreviewPage() {
             <div>
               <div style={{ fontWeight: 800, color: '#18131F', fontSize: '1.05rem', marginBottom: '2px' }}>Pending Content Creator Edits</div>
               <div style={{ color: '#5F5868', fontSize: '0.86rem' }}>
-                Content Creator submitted edits pending Super Admin approval. Proposed changes highlighted below.
+                Content Creator submitted edits pending One Tutor approval. Proposed changes highlighted below.
               </div>
             </div>
           </div>

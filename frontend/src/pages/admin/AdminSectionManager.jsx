@@ -832,7 +832,7 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
           gap: '10px'
         }}>
           <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '1rem', color: '#ca8a04' }}></i>
-          <span>Curriculum updates made by Content Creators will move the course to Draft status until Super Admin approves and publishes the changes to student pages.</span>
+          <span>Curriculum updates made by Content Creators will move the course to Draft status until One Tutor approves and publishes the changes to student pages.</span>
         </div>
       )}
 

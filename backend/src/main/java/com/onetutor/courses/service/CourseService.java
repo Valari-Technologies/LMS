@@ -165,7 +165,7 @@ public class CourseService {
             }
             courseRepository.save(course);
             auditService.log(actor, "COURSE_EDIT_SUBMITTED", "course", course.getId(),
-                    "Content Creator submitted edits for course '" + course.getName() + "' pending Super Admin approval");
+                    "Content Creator submitted edits for course '" + course.getName() + "' pending One Tutor approval");
             return toDetail(course);
         }
 
@@ -204,7 +204,7 @@ public class CourseService {
     @Transactional
     public CourseDetailResponse approveEdits(Long id, User actor) {
         if (actor != null && actor.getRole() == UserRole.content_creator) {
-            throw new ForbiddenException("APPROVE_RESTRICTED", "Content Creators cannot approve edits. Only Super Admins can approve course edits.");
+            throw new ForbiddenException("APPROVE_RESTRICTED", "Content Creators cannot approve edits. Only One Tutor administrators can approve course edits.");
         }
         Course course = findOrThrow(id);
         if (course.getPendingEdits() != null && !course.getPendingEdits().isBlank()) {
@@ -283,7 +283,7 @@ public class CourseService {
     @Transactional
     public CourseDetailResponse publish(Long id, User actor) {
         if (actor != null && actor.getRole() == UserRole.content_creator) {
-            throw new ForbiddenException("PUBLISH_RESTRICTED", "Content Creators cannot publish courses directly. Edits require Super Admin approval.");
+            throw new ForbiddenException("PUBLISH_RESTRICTED", "Content Creators cannot publish courses directly. Edits require One Tutor approval.");
         }
         Course course = findOrThrow(id);
         if (sectionRepository.countByCourseId(id) == 0) {
@@ -323,7 +323,7 @@ public class CourseService {
     @Transactional
     public CourseDetailResponse unpublish(Long id, User actor) {
         if (actor != null && actor.getRole() == UserRole.content_creator) {
-            throw new ForbiddenException("UNPUBLISH_RESTRICTED", "Content Creators cannot unpublish courses. Only Super Admins can publish or unpublish courses.");
+            throw new ForbiddenException("UNPUBLISH_RESTRICTED", "Content Creators cannot unpublish courses. Only One Tutor administrators can publish or unpublish courses.");
         }
         Course course = findOrThrow(id);
         course.setStatus(CourseStatus.draft);
@@ -337,7 +337,7 @@ public class CourseService {
     @Transactional
     public CourseDetailResponse archive(Long id, User actor) {
         if (actor != null && actor.getRole() == UserRole.content_creator) {
-            throw new ForbiddenException("ARCHIVE_RESTRICTED", "Content Creators cannot archive courses. Only Super Admins can archive courses.");
+            throw new ForbiddenException("ARCHIVE_RESTRICTED", "Content Creators cannot archive courses. Only One Tutor administrators can archive courses.");
         }
         Course course = findOrThrow(id);
         course.setStatus(CourseStatus.archived);

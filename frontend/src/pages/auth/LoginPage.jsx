@@ -192,7 +192,7 @@ export default function LoginPage() {
               className="btn btn-secondary btn-sm"
               style={{ fontSize: '0.76rem' }}
             >
-              Demo Super Admin
+              Demo One Tutor Admin
             </button>
             <button 
               type="button" 

@@ -8,11 +8,20 @@ const AuthContext = (typeof window !== 'undefined' && window.__OneTutorAuthConte
   ? window.__OneTutorAuthContext
   : ((typeof window !== 'undefined') ? (window.__OneTutorAuthContext = createContext(null)) : createContext(null));
 
+function sanitizeUser(u) {
+  if (!u) return null;
+  const name = u.name;
+  if (!name || name.toLowerCase().includes('super admin')) {
+    return { ...u, name: 'One Tutor' };
+  }
+  return u;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const raw = localStorage.getItem('onetutor_auth_user');
-      return raw ? JSON.parse(raw) : null;
+      return raw ? sanitizeUser(JSON.parse(raw)) : null;
     } catch {
       return null;
     }
@@ -22,8 +31,9 @@ export function AuthProvider({ children }) {
   // Helper to persist or clear onetutor_auth_user in sync with state
   const updateStoredUser = (userData) => {
     try {
-      if (userData) {
-        localStorage.setItem('onetutor_auth_user', JSON.stringify(userData));
+      const clean = sanitizeUser(userData);
+      if (clean) {
+        localStorage.setItem('onetutor_auth_user', JSON.stringify(clean));
       } else {
         localStorage.removeItem('onetutor_auth_user');
       }
@@ -55,8 +65,9 @@ export function AuthProvider({ children }) {
     }
     try {
       const me = await getCurrentUser();
-      setUser(me);
-      updateStoredUser(me);
+      const cleanMe = sanitizeUser(me);
+      setUser(cleanMe);
+      updateStoredUser(cleanMe);
     } catch {
       setUser(null);
       updateStoredUser(null);

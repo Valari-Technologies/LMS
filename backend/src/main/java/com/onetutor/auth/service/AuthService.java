@@ -517,8 +517,14 @@ public class AuthService {
         refreshToken.setExpiresAt(Instant.now().plusMillis(jwtService.getRefreshExpirationMs()));
         refreshTokenRepository.save(refreshToken);
 
+        String displayName = user.getName();
+        if (displayName == null || displayName.equalsIgnoreCase("Super Admin")
+                || displayName.toLowerCase().contains("super admin")
+                || (user.getRole() == com.onetutor.users.entity.UserRole.super_admin && "Admin".equalsIgnoreCase(displayName))) {
+            displayName = "One Tutor";
+        }
         UserSummary summary = new UserSummary(
-                user.getId(), user.getName(), user.getEmail(),
+                user.getId(), displayName, user.getEmail(),
                 user.getRole().name(), user.isEmailVerified(), user.getProfileImage(), user.getPermissions());
 
         return new AuthResponse(accessToken, refreshToken.getToken(),

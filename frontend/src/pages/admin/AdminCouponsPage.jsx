@@ -333,7 +333,7 @@ export default function AdminCouponsPage() {
               Coupons &amp; Discount Management
             </h1>
             <span className="badge" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', fontWeight: '700', padding: '4px 10px', borderRadius: '12px' }}>
-              Super Admin
+              One Tutor
             </span>
           </div>
           <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>

@@ -17,9 +17,15 @@ public record UserResponse(
         String permissions
 ) {
     public static UserResponse from(User user) {
+        String displayName = user.getName();
+        if (displayName == null || displayName.equalsIgnoreCase("Super Admin")
+                || displayName.toLowerCase().contains("super admin")
+                || (user.getRole() == com.onetutor.users.entity.UserRole.super_admin && "Admin".equalsIgnoreCase(displayName))) {
+            displayName = "One Tutor";
+        }
         return new UserResponse(
                 user.getId(),
-                user.getName(),
+                displayName,
                 user.getEmail(),
                 user.getRole().name(),
                 user.getStatus().name(),

@@ -621,7 +621,7 @@ export default function AdminReviewsPage() {
             {statsLoading ? '…' : (activeStats.pendingReviewsCount || 0)}
           </div>
           <div style={{ fontSize: '0.78rem', color: activeStats.pendingReviewsCount > 0 ? '#d97706' : 'var(--text-secondary)', marginTop: '4px', fontWeight: activeStats.pendingReviewsCount > 0 ? '600' : '400' }}>
-            {activeStats.pendingReviewsCount > 0 ? 'Requires Super Admin comment publishing' : 'All comments published'}
+            {activeStats.pendingReviewsCount > 0 ? 'Requires One Tutor comment publishing' : 'All comments published'}
           </div>
         </div>
       </div>

@@ -153,7 +153,10 @@ export default function AdminLayout() {
     navigate('/login');
   }
 
-  const userInitials = user?.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'AD';
+  const rawName = user?.name;
+  const isSuperAdminName = !rawName || rawName.toLowerCase().includes('super admin') || rawName.toLowerCase() === 'admin';
+  const userDisplayName = isSuperAdminName ? 'One Tutor' : rawName;
+  const userInitials = userDisplayName ? userDisplayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'OT';
 
   const userRole = user?.role?.toLowerCase();
   const isContentCreator = userRole === 'content_creator' || userRole === 'creator';
@@ -334,7 +337,7 @@ export default function AdminLayout() {
           <Link
             to="/admin"
             className="admin-sidebar-brand"
-            title="One Tutor Super Admin"
+            title="One Tutor"
             style={{
               justifyContent: collapsed ? 'center' : 'flex-start',
               width: collapsed ? '100%' : 'auto'
@@ -387,7 +390,7 @@ export default function AdminLayout() {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  {isReadOnlyAdmin ? 'READ-ONLY ADMIN' : isContentCreator ? 'CONTENT CREATOR' : 'SUPER ADMIN'}
+                  {isReadOnlyAdmin ? 'READ-ONLY ADMIN' : isContentCreator ? 'CONTENT CREATOR' : 'ONE TUTOR'}
                 </span>
               </>
             )}
@@ -475,7 +478,7 @@ export default function AdminLayout() {
             </div>
             {!collapsed && (
               <div className="admin-profile-meta">
-                <div className="admin-name" title={user?.name}>{user?.name}</div>
+                <div className="admin-name" title={userDisplayName}>{userDisplayName}</div>
                 <div className="admin-email" title={user?.email}>{user?.email}</div>
               </div>
             )}
@@ -591,7 +594,7 @@ export default function AdminLayout() {
                 <div className="card admin-notifications-dropdown">
                   <div className="admin-notifications-header">
                     <div className="notif-title-wrap">
-                      <strong className="notif-title-text">Super Admin Alerts</strong>
+                      <strong className="notif-title-text">One Tutor Alerts</strong>
                       {unreadCount > 0 && (
                         <span className="unread-pill-badge">
                           {unreadCount} unread
@@ -740,12 +743,12 @@ export default function AdminLayout() {
             </div>
 
             {/* Profile Avatar Chip */}
-            <div className="admin-topbar-user" title={`Logged in as ${user?.name}`}>
+            <div className="admin-topbar-user" title={`Logged in as ${userDisplayName}`}>
               <div className="avatar-circle small">
                 {user?.profileImage && !avatarImgError ? (
                   <img
                     src={user.profileImage}
-                    alt={user.name}
+                    alt={userDisplayName}
                     referrerPolicy="no-referrer"
                     onError={() => setAvatarImgError(true)}
                   />
@@ -753,7 +756,7 @@ export default function AdminLayout() {
                   userInitials
                 )}
               </div>
-              <span className="desktop-only admin-topbar-name">{user?.name}</span>
+              <span className="desktop-only admin-topbar-name">{userDisplayName}</span>
             </div>
           </div>
         </header>

@@ -572,9 +572,9 @@ export default function AdminCoursesPage() {
                                       gap: '4px',
                                       whiteSpace: 'nowrap'
                                     }}
-                                    title="Edits require Super Admin approval to update live on student pages"
+                                    title="Edits require One Tutor approval to update live on student pages"
                                   >
-                                    <i className="fa-solid fa-clock"></i> Pending Super Admin Approval
+                                    <i className="fa-solid fa-clock"></i> Pending One Tutor Approval
                                   </span>
                                 );
                               }
@@ -768,7 +768,7 @@ export default function AdminCoursesPage() {
                   <div style={{ background: 'rgba(90, 112, 211, 0.12)', border: '1px solid rgba(90, 112, 211, 0.3)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', color: '#18131F', fontSize: '0.86rem' }}>
                     <i className="fa-solid fa-shield-halved" style={{ fontSize: '1.3rem', color: '#5A70D3' }}></i>
                     <span>
-                      <strong>Super Admin Verification Required:</strong> {proposed ? 'Review side-by-side proposed changes below.' : 'Review submitted course details below.'} Clicking <strong>Approve & Publish Live</strong> will apply all changes live to student pages.
+                      <strong>One Tutor Verification Required:</strong> {proposed ? 'Review side-by-side proposed changes below.' : 'Review submitted course details below.'} Clicking <strong>Approve & Publish Live</strong> will apply all changes live to student pages.
                     </span>
                   </div>
 

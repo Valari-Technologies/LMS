@@ -356,12 +356,12 @@ export default function AdminContactMessagesPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  <th style={{ padding: '14px 20px', fontWeight: 800 }}>Sender</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 800 }}>Topic / Subject</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 800 }}>Message Snippet</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 800 }}>Status</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 800 }}>Received</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 800, textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '14px 20px', fontWeight: 800, whiteSpace: 'nowrap', minWidth: '220px' }}>Sender</th>
+                  <th style={{ padding: '14px 20px', fontWeight: 800, whiteSpace: 'nowrap', minWidth: '130px' }}>Topic / Subject</th>
+                  <th style={{ padding: '14px 20px', fontWeight: 800, minWidth: '220px' }}>Message Snippet</th>
+                  <th style={{ padding: '14px 20px', fontWeight: 800, whiteSpace: 'nowrap', minWidth: '120px' }}>Status</th>
+                  <th style={{ padding: '14px 20px', fontWeight: 800, whiteSpace: 'nowrap', minWidth: '135px' }}>Received</th>
+                  <th style={{ padding: '14px 20px', fontWeight: 800, textAlign: 'right', whiteSpace: 'nowrap', minWidth: '130px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -413,7 +413,7 @@ export default function AdminContactMessagesPage() {
                       </td>
 
                       {/* Topic / Subject */}
-                      <td style={{ padding: '16px 20px' }}>
+                      <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
                         <span style={{
                           display: 'inline-block',
                           padding: '4px 10px',
@@ -458,7 +458,7 @@ export default function AdminContactMessagesPage() {
                       </td>
 
                       {/* Status */}
-                      <td style={{ padding: '16px 20px' }}>
+                      <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
                         {isPending && (
                           <span style={{
                             display: 'inline-flex',
@@ -510,15 +510,17 @@ export default function AdminContactMessagesPage() {
                       </td>
 
                       {/* Received Date */}
-                      <td style={{ padding: '16px 20px', color: '#64748b', fontSize: '0.84rem' }}>
-                        <div>{new Date(msg.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                      <td style={{ padding: '16px 20px', color: '#64748b', fontSize: '0.84rem', whiteSpace: 'nowrap', minWidth: '135px' }}>
+                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                          {new Date(msg.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                      <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }} onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => handleOpenModal(msg)}

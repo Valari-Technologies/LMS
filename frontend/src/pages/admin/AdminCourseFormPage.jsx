@@ -221,7 +221,7 @@ export default function AdminCourseFormPage() {
         await updateCourse(id, payload);
         saveCourseSellingPlans(id, form.sellingPlans);
         const msg = isContentCreator
-          ? 'Course details saved! Changes are pending approval from Super Admin before updating live on student pages.'
+          ? 'Course details saved! Changes are pending approval from One Tutor before updating live on student pages.'
           : 'Course details saved successfully!';
         setSuccess(msg);
         toast.success(msg);
@@ -230,7 +230,7 @@ export default function AdminCourseFormPage() {
         setSavedCourseId(created.id);
         saveCourseSellingPlans(created.id, form.sellingPlans);
         const msg = isContentCreator
-          ? 'Course created! It is saved as draft and will require Super Admin approval before going live to students.'
+          ? 'Course created! It is saved as draft and will require One Tutor approval before going live to students.'
           : 'Course created successfully! You can now build sections & lessons.';
         toast.success(msg);
         navigate(`/admin/courses/${created.id}/edit`, { replace: true });

@@ -247,7 +247,7 @@ public class UserService {
             throw new BadRequestException("CANNOT_DISABLE_SELF", "You cannot disable your own account");
         }
         if (target.getRole() == UserRole.super_admin) {
-            throw new BadRequestException("CANNOT_DISABLE_SUPER_ADMIN", "Super Admin accounts cannot be disabled");
+            throw new BadRequestException("CANNOT_DISABLE_SUPER_ADMIN", "One Tutor admin accounts cannot be disabled");
         }
         target.setStatus(UserStatus.disabled);
         userRepository.save(target);
