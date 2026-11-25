@@ -211,7 +211,14 @@ function fallbackWindowNotification(title, options) {
     if (link) {
       notif.onclick = () => {
         window.focus();
-        window.location.href = link;
+        if (link.startsWith('http://') || link.startsWith('https://')) {
+          window.location.href = link;
+        } else {
+          const base = import.meta.env.BASE_URL || '/';
+          const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
+          const cleanLink = link.startsWith('/') ? link : '/' + link;
+          window.location.href = (cleanBase && !cleanLink.startsWith(cleanBase)) ? cleanBase + cleanLink : cleanLink;
+        }
       };
     }
     return notif;

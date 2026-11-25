@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../../context/NotificationContext';
 import { sendAdminBroadcast, resendAdminBroadcast, getAdminBroadcasts } from '../../api/notifications';
+import { listAdminCourses } from '../../api/courses';
 import { uploadMedia } from '../../api/media';
 import { showSystemNotification } from '../../utils/firebase';
 import { usePermission } from '../../hooks/usePermission';
@@ -49,11 +50,27 @@ const CATEGORIES = [
   { id: 'SYSTEM', label: 'System Notice', icon: 'fa-gear', color: '#059669', bg: 'rgba(5, 150, 105, 0.1)', border: 'rgba(5, 150, 105, 0.25)' },
 ];
 
-const QUICK_LINKS = [
-  { label: 'All Courses', url: '/student/courses' },
-  { label: 'Live Classes', url: '/student/live-classes' },
-  { label: 'Community', url: '/student/community' },
-  { label: 'My Learning', url: '/student/dashboard' },
+const STUDENT_QUICK_LINKS = [
+  { label: 'All Courses', url: '/student/courses', icon: 'fa-book-open' },
+  { label: 'My Learning', url: '/student/my-courses', icon: 'fa-graduation-cap' },
+  { label: 'Live Classes', url: '/student/live-classes', icon: 'fa-video' },
+  { label: 'Community', url: '/student/community', icon: 'fa-comments' },
+  { label: 'Student Home', url: '/student', icon: 'fa-house' },
+  { label: 'Notifications', url: '/student/notifications', icon: 'fa-bell' },
+  { label: 'Profile', url: '/student/profile', icon: 'fa-user' },
+  { label: 'Contact Us', url: '/contact', icon: 'fa-headset' },
+];
+
+const ADMIN_QUICK_LINKS = [
+  { label: 'Admin Dashboard', url: '/admin', icon: 'fa-gauge' },
+  { label: 'Courses', url: '/admin/courses', icon: 'fa-book-open' },
+  { label: 'Live Sessions', url: '/admin/live-sessions', icon: 'fa-video' },
+  { label: 'Batches', url: '/admin/batches', icon: 'fa-layer-group' },
+  { label: 'Doubt Clearance', url: '/admin/doubts', icon: 'fa-circle-question' },
+  { label: 'Community', url: '/admin/community', icon: 'fa-comments' },
+  { label: 'Inquiries', url: '/admin/contact-messages', icon: 'fa-envelope' },
+  { label: 'Students', url: '/admin/students', icon: 'fa-users' },
+  { label: 'Notifications', url: '/admin/notifications', icon: 'fa-bell' },
 ];
 
 export default function AdminNotificationCenterPage() {
@@ -73,6 +90,8 @@ export default function AdminNotificationCenterPage() {
 
   // History & Table State
   const [broadcasts, setBroadcasts] = useState([]);
+  const [coursesList, setCoursesList] = useState([]);
+  const [linkGroupTab, setLinkGroupTab] = useState('auto'); // 'auto' | 'student' | 'admin'
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -90,6 +109,15 @@ export default function AdminNotificationCenterPage() {
   useEffect(() => {
     loadBroadcastHistory(page);
   }, [page]);
+
+  useEffect(() => {
+    listAdminCourses({ size: 100 })
+      .then(res => {
+        const list = res?.content || (Array.isArray(res) ? res : []);
+        setCoursesList(list);
+      })
+      .catch(() => {});
+  }, []);
 
   async function loadBroadcastHistory(targetPage = 0) {
     setLoadingHistory(true);
@@ -824,48 +852,177 @@ export default function AdminNotificationCenterPage() {
 
             {/* Click Action Link & Quick Chips */}
             <div className="form-group" style={{ marginBottom: '26px' }}>
-              <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', display: 'block', fontSize: '0.92rem' }}>
-                Action Link Destination (Optional)
-              </label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="e.g. /student/courses or /student/live-classes"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '11px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-default, #cbd5e1)',
-                  background: 'var(--bg-input, #ffffff)',
-                  color: 'var(--text-primary, #0f172a)',
-                  fontSize: '0.92rem',
-                  marginBottom: '8px'
-                }}
-              />
-              {/* Quick Link Chips */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Quick insert:</span>
-                {QUICK_LINKS.map((ql, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setLinkUrl(ql.url)}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontSize: '0.92rem' }}>
+                  Action Link Destination (Optional)
+                </label>
+                {linkUrl && (
+                  <a
+                    href={linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Test destination link in new tab"
                     style={{
-                      background: 'none',
-                      border: '1px solid var(--border-default, #cbd5e1)',
-                      borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '0.74rem',
+                      fontSize: '0.76rem',
                       color: 'var(--accent-primary, #4f46e5)',
-                      cursor: 'pointer',
-                      fontWeight: 600
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                   >
-                    {ql.label}
+                    <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.7rem' }}></i>
+                    Test Link
+                  </a>
+                )}
+              </div>
+
+              {/* Input field with clear button */}
+              <div style={{ position: 'relative', marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. /student/courses or /student/live-classes"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 38px 11px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-default, #cbd5e1)',
+                    background: 'var(--bg-input, #ffffff)',
+                    color: 'var(--text-primary, #0f172a)',
+                    fontSize: '0.92rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {linkUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setLinkUrl('')}
+                    title="Clear action link"
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted, #94a3b8)',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      padding: '4px 6px',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <i className="fa-solid fa-xmark"></i>
                   </button>
-                ))}
+                )}
+              </div>
+
+              {/* Quick Link Selector Header & Audience Switcher */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600 }}>Quick insert:</span>
+                  <div style={{ display: 'inline-flex', background: 'var(--border-subtle, #f1f5f9)', padding: '2px', borderRadius: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setLinkGroupTab('student')}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        background: (linkGroupTab === 'student' || (linkGroupTab === 'auto' && targetRole !== 'ADMIN')) ? 'var(--bg-card, #ffffff)' : 'transparent',
+                        color: (linkGroupTab === 'student' || (linkGroupTab === 'auto' && targetRole !== 'ADMIN')) ? 'var(--accent-primary, #4f46e5)' : 'var(--text-secondary)',
+                        boxShadow: (linkGroupTab === 'student' || (linkGroupTab === 'auto' && targetRole !== 'ADMIN')) ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                      }}
+                    >
+                      Learner Links
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLinkGroupTab('admin')}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        background: (linkGroupTab === 'admin' || (linkGroupTab === 'auto' && targetRole === 'ADMIN')) ? 'var(--bg-card, #ffffff)' : 'transparent',
+                        color: (linkGroupTab === 'admin' || (linkGroupTab === 'auto' && targetRole === 'ADMIN')) ? 'var(--accent-primary, #4f46e5)' : 'var(--text-secondary)',
+                        boxShadow: (linkGroupTab === 'admin' || (linkGroupTab === 'auto' && targetRole === 'ADMIN')) ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                      }}
+                    >
+                      Staff Links
+                    </button>
+                  </div>
+                </div>
+
+                {/* Direct Course Link Dropdown */}
+                {coursesList.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Course link:</span>
+                    <select
+                      value={linkUrl.startsWith('/student/courses/') ? linkUrl : ''}
+                      onChange={(e) => {
+                        if (e.target.value) setLinkUrl(e.target.value);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.74rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-default, #cbd5e1)',
+                        background: 'var(--bg-card, #ffffff)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        maxWidth: '200px'
+                      }}
+                    >
+                      <option value="">Choose course...</option>
+                      {coursesList.map(c => (
+                        <option key={c.id} value={`/student/courses/${c.id}`}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Link Chips */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {((linkGroupTab === 'admin' || (linkGroupTab === 'auto' && targetRole === 'ADMIN')) ? ADMIN_QUICK_LINKS : STUDENT_QUICK_LINKS).map((ql, idx) => {
+                  const isSelected = linkUrl === ql.url;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setLinkUrl(ql.url)}
+                      style={{
+                        background: isSelected ? 'var(--accent-primary, #4f46e5)' : 'none',
+                        color: isSelected ? '#ffffff' : 'var(--accent-primary, #4f46e5)',
+                        border: `1px solid ${isSelected ? 'var(--accent-primary, #4f46e5)' : 'var(--border-default, #cbd5e1)'}`,
+                        borderRadius: '6px',
+                        padding: '3px 9px',
+                        fontSize: '0.74rem',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {ql.icon && <i className={`fa-solid ${ql.icon}`} style={{ fontSize: '0.68rem' }}></i>}
+                      {ql.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

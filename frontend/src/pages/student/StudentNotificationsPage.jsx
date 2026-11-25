@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../api/notifications';
 
 export default function StudentNotificationsPage() {
@@ -177,26 +178,51 @@ export default function StudentNotificationsPage() {
                     </button>
                   )}
                   {n.linkUrl && (
-                    <a
-                      href={n.linkUrl}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!n.read) handleMarkRead(n.id);
-                      }}
-                      style={{
-                        marginLeft: 'auto',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        color: 'var(--ud-purple)',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <span>View details</span>
-                      <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem' }}></i>
-                    </a>
+                    n.linkUrl.startsWith('http://') || n.linkUrl.startsWith('https://') ? (
+                      <a
+                        href={n.linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!n.read) handleMarkRead(n.id);
+                        }}
+                        style={{
+                          marginLeft: 'auto',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          color: 'var(--ud-purple)',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <span>View details</span>
+                        <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem' }}></i>
+                      </a>
+                    ) : (
+                      <Link
+                        to={n.linkUrl}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!n.read) handleMarkRead(n.id);
+                        }}
+                        style={{
+                          marginLeft: 'auto',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          color: 'var(--ud-purple)',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <span>View details</span>
+                        <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem' }}></i>
+                      </Link>
+                    )
                   )}
                 </div>
               </div>

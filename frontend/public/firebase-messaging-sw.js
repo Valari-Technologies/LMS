@@ -88,7 +88,17 @@ self.addEventListener('push', function(event) {
 // Handle notification click -> open or focus browser tab to the link
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const targetUrl = event.notification.data?.linkUrl || '/student/notifications';
+  let targetUrl = event.notification.data?.linkUrl || '/student/notifications';
+
+  if (targetUrl && targetUrl.startsWith('/') && !targetUrl.startsWith('http')) {
+    try {
+      const scopeUrl = new URL(self.registration.scope);
+      const scopePath = scopeUrl.pathname.replace(/\/$/, '');
+      if (scopePath && !targetUrl.startsWith(scopePath)) {
+        targetUrl = scopePath + targetUrl;
+      }
+    } catch (e) {}
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
