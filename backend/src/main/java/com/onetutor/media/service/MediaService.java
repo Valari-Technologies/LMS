@@ -90,13 +90,16 @@ public class MediaService {
     }
 
     /**
-     * Read / List assets with pagination and search.
+     * Read / List assets with pagination, search, and uploader source filter (ONETUTOR vs USER).
      */
     @Transactional
-    public PageResponse<MediaAssetResponse> list(String search, Pageable pageable) {
+    public PageResponse<MediaAssetResponse> list(String search, String source, Pageable pageable) {
+        String s = (source != null && !source.isBlank()) ? source.trim().toUpperCase() : "ALL";
         Page<MediaAsset> page;
         if (search != null && !search.isBlank()) {
-            page = mediaAssetRepository.searchActive(search.trim(), pageable);
+            page = mediaAssetRepository.searchFiltered(search.trim(), s, pageable);
+        } else if (!"ALL".equalsIgnoreCase(s)) {
+            page = mediaAssetRepository.findBySource(s, pageable);
         } else {
             page = mediaAssetRepository.findByStatusOrderByCreatedAtDesc("active", pageable);
         }
@@ -106,6 +109,11 @@ public class MediaService {
             }
         }
         return PageResponse.from(page.map(MediaAssetResponse::from));
+    }
+
+    @Transactional
+    public PageResponse<MediaAssetResponse> list(String search, Pageable pageable) {
+        return list(search, null, pageable);
     }
 
     @Transactional(readOnly = true)

@@ -64,9 +64,10 @@ public class MediaController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'CONTENT_CREATOR')")
     public ApiResponse<PageResponse<MediaAssetResponse>> list(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String source,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(mediaService.list(search, PageRequest.of(page, size)));
+            @RequestParam(defaultValue = "24") int size) {
+        return ApiResponse.ok(mediaService.list(search, source, PageRequest.of(page, size)));
     }
 
     @GetMapping("/admin/media/{id}")

@@ -30,9 +30,10 @@ export async function uploadUserMedia(file, onProgress) {
   return res.data.data;
 }
 
-export async function listMedia({ search = '', page = 0, size = 20 } = {}) {
+export async function listMedia({ search = '', source = '', page = 0, size = 24 } = {}) {
   const params = { page, size };
   if (search) params.search = search;
+  if (source && source !== 'ALL') params.source = source;
   const res = await api.get('/admin/media', { params });
   return res.data.data;
 }

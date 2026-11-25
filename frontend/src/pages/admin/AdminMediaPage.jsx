@@ -13,6 +13,7 @@ export default function AdminMediaPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileName, setUploadFileName] = useState('');
   const [search, setSearch] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('ALL'); // 'ALL' | 'ONETUTOR' | 'USER'
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -29,12 +30,12 @@ export default function AdminMediaPage() {
 
   useEffect(() => {
     loadMedia();
-  }, [search, page]);
+  }, [search, sourceFilter, page]);
 
   async function loadMedia() {
     setLoading(true);
     try {
-      const res = await listMedia({ search, page, size: 24 });
+      const res = await listMedia({ search, source: sourceFilter, page, size: 24 });
       setMediaList(res?.content || []);
       setTotalPages(res?.totalPages || 1);
     } catch (e) {
@@ -196,7 +197,26 @@ export default function AdminMediaPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
+  function isUserSideAsset(asset) {
+    if (!asset) return false;
+    if (asset.uploaderSource === 'USER') return true;
+    if (asset.uploaderSource === 'ONETUTOR') return false;
+    if (asset.uploadedByRole === 'student') return true;
+    if (['admin', 'super_admin', 'content_creator', 'readonly_admin'].includes(asset.uploadedByRole)) return false;
+    const email = (asset.uploadedBy || '').toLowerCase();
+    if (email && !email.includes('admin') && !email.includes('onetutor') && email.includes('@')) {
+      return true;
+    }
+    return false;
+  }
+
   const filteredMedia = mediaList.filter((asset) => {
+    // 1. Source filter (One Tutor vs User)
+    const isUser = isUserSideAsset(asset);
+    if (sourceFilter === 'ONETUTOR' && isUser) return false;
+    if (sourceFilter === 'USER' && !isUser) return false;
+
+    // 2. Category filter
     const cat = getFileCategory(asset.filename || asset.fileName, asset.mimeType);
     if (categoryFilter === 'IMAGE') return cat === 'image';
     if (categoryFilter === 'VIDEO') return cat === 'video';
@@ -287,34 +307,94 @@ export default function AdminMediaPage() {
       </div>
 
       {/* Search & Category Filter Bar */}
-      <div className="table-card" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          type="search"
-          className="form-control"
-          placeholder="Search media & documents by name..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          style={{ flex: 1, minWidth: '220px' }}
-        />
+      <div className="table-card" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Row 1: Source Filter (One Tutor vs User) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-subtle, #f1f5f9)', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              Source:
+            </span>
+            <div style={{
+              display: 'inline-flex',
+              background: 'var(--border-subtle, #f1f5f9)',
+              padding: '3px',
+              borderRadius: '10px',
+              border: '1px solid var(--border-default, #e2e8f0)',
+              gap: '4px'
+            }}>
+              {[
+                { id: 'ALL', label: 'All Media', icon: 'fa-layer-group', desc: 'All assets' },
+                { id: 'ONETUTOR', label: 'One Tutor', icon: 'fa-graduation-cap', desc: 'Added by One Tutor side' },
+                { id: 'USER', label: 'User', icon: 'fa-user', desc: 'Added by user side' }
+              ].map((s) => {
+                const isActive = sourceFilter === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => { setSourceFilter(s.id); setPage(0); }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      padding: '6px 16px',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: isActive ? 'var(--accent-primary, #4f46e5)' : 'transparent',
+                      color: isActive ? '#ffffff' : 'var(--text-secondary, #64748b)',
+                      boxShadow: isActive ? '0 2px 6px rgba(79, 70, 229, 0.28)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={s.desc}
+                  >
+                    <i className={`fa-solid ${s.icon}`} style={{ fontSize: '0.8rem' }}></i>
+                    <span>{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {[
-            { id: 'ALL', label: 'All Assets', icon: 'fa-layer-group' },
-            { id: 'IMAGE', label: 'Images', icon: 'fa-image' },
-            { id: 'DOCUMENT', label: 'Documents & PDFs', icon: 'fa-file-lines' },
-            { id: 'VIDEO', label: 'Videos', icon: 'fa-film' },
-            { id: 'AUDIO', label: 'Audio', icon: 'fa-music' },
-            { id: 'ARCHIVE', label: 'Archives', icon: 'fa-file-zipper' }
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              className={`btn btn-sm ${categoryFilter === cat.id ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setCategoryFilter(cat.id)}
-            >
-              <i className={`fa-solid ${cat.icon}`} style={{ marginRight: '5px' }}></i>
-              {cat.label}
-            </button>
-          ))}
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            {sourceFilter === 'ONETUTOR' && 'Showing only assets added by One Tutor (courses, curriculum & staff)'}
+            {sourceFilter === 'USER' && 'Showing only assets uploaded by user side (doubt clearance & community)'}
+            {sourceFilter === 'ALL' && 'Showing all Cloudinary assets from One Tutor and users'}
+          </span>
+        </div>
+
+        {/* Row 2: Search Input & Asset Types */}
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="search"
+            className="form-control"
+            placeholder="Search media & documents by name..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            style={{ flex: 1, minWidth: '220px' }}
+          />
+
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'ALL', label: 'All Types', icon: 'fa-shapes' },
+              { id: 'IMAGE', label: 'Images', icon: 'fa-image' },
+              { id: 'DOCUMENT', label: 'Documents & PDFs', icon: 'fa-file-lines' },
+              { id: 'VIDEO', label: 'Videos', icon: 'fa-film' },
+              { id: 'AUDIO', label: 'Audio', icon: 'fa-music' },
+              { id: 'ARCHIVE', label: 'Archives', icon: 'fa-file-zipper' }
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                className={`btn btn-sm ${categoryFilter === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setCategoryFilter(cat.id)}
+              >
+                <i className={`fa-solid ${cat.icon}`} style={{ marginRight: '5px' }}></i>
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -334,6 +414,7 @@ export default function AdminMediaPage() {
             const fileName = asset.filename || asset.fileName || 'file';
             const cat = getFileCategory(fileName, asset.mimeType);
             const isCloudinary = asset.url?.includes('cloudinary.com') || asset.url?.startsWith('http');
+            const isUser = isUserSideAsset(asset);
 
             return (
               <div key={asset.id} className="card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -389,6 +470,26 @@ export default function AdminMediaPage() {
                     </span>
                   )}
 
+                  {/* Source Badge: One Tutor vs User */}
+                  <span style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '10px',
+                    fontSize: '0.68rem',
+                    fontWeight: '800',
+                    background: isUser ? 'rgba(245, 158, 11, 0.95)' : 'rgba(90, 112, 211, 0.95)',
+                    color: '#ffffff',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <i className={`fa-solid ${isUser ? 'fa-user' : 'fa-graduation-cap'}`}></i>
+                    {isUser ? 'User' : 'One Tutor'}
+                  </span>
+
                   <span style={{
                     position: 'absolute',
                     top: '10px',
@@ -410,6 +511,24 @@ export default function AdminMediaPage() {
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                     {formatBytes(asset.fileSize)} • {new Date(asset.createdAt).toLocaleDateString()}
+                  </div>
+
+                  {/* Uploader Display */}
+                  <div style={{
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    marginTop: '4px',
+                    color: isUser ? '#d97706' : '#5A70D3',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <i className={`fa-solid ${isUser ? 'fa-user' : 'fa-graduation-cap'}`}></i>
+                    <span>
+                      {isUser
+                        ? `User: ${asset.uploaderName || asset.uploadedBy || 'Student'}`
+                        : 'One Tutor'}
+                    </span>
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
@@ -514,10 +633,23 @@ export default function AdminMediaPage() {
               })()}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                {formatBytes(selectedAsset.fileSize)} • {selectedAsset.mimeType}
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                <span>{formatBytes(selectedAsset.fileSize)} • {selectedAsset.mimeType}</span>
+                <span>•</span>
+                <span style={{
+                  fontWeight: 700,
+                  fontSize: '0.76rem',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: isUserSideAsset(selectedAsset) ? 'rgba(245, 158, 11, 0.12)' : 'rgba(90, 112, 211, 0.12)',
+                  color: isUserSideAsset(selectedAsset) ? '#d97706' : '#5A70D3'
+                }}>
+                  {isUserSideAsset(selectedAsset)
+                    ? `Uploaded by User (${selectedAsset.uploaderName || selectedAsset.uploadedBy || 'Student'})`
+                    : 'Uploaded by One Tutor'}
+                </span>
+              </div>
               <button className="btn btn-primary btn-sm" onClick={() => copyUrl(selectedAsset)}>
                 {copiedId === selectedAsset.id ? '✓ Copied' : 'Copy Cloudinary URL'}
               </button>
