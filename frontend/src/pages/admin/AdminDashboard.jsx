@@ -5,6 +5,51 @@ import { getDashboardStats } from '../../api/admin';
 
 import ContentCreatorDashboard from './ContentCreatorDashboard';
 
+function AnimatedNumber({ value, duration = 1000, suffix = '', prefix = '' }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const target = typeof value === 'number'
+    ? value
+    : (typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) || 0 : 0);
+
+  useEffect(() => {
+    if (!target || target === 0) {
+      setDisplayValue(0);
+      return;
+    }
+
+    let startTimestamp = null;
+    let animationFrameId;
+
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const elapsed = timestamp - startTimestamp;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Smooth ease-out cubic curve
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(easeOut * target);
+
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(step);
+      } else {
+        setDisplayValue(target);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(step);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [target, duration]);
+
+  return <>{prefix}{displayValue.toLocaleString()}{suffix}</>;
+}
+
 function AnimatedDonutChart({ data, total, centerValue, centerLabel }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const radius = 52;
@@ -118,7 +163,15 @@ function AnimatedDonutChart({ data, total, centerValue, centerLabel }) {
               transform: activeItem ? 'scale(1.08)' : 'scale(1)'
             }}
           >
-            {activeItem ? `${activeItem.percentage}%` : centerValue}
+            {activeItem ? (
+              `${activeItem.percentage}%`
+            ) : typeof centerValue === 'number' ? (
+              <AnimatedNumber value={centerValue} />
+            ) : typeof centerValue === 'string' && centerValue.endsWith('%') ? (
+              <AnimatedNumber value={parseInt(centerValue, 10) || 0} suffix="%" />
+            ) : (
+              centerValue
+            )}
           </span>
           <span
             style={{
@@ -184,10 +237,10 @@ function AnimatedDonutChart({ data, total, centerValue, centerLabel }) {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.86rem', fontWeight: '800', color: slice.color }}>
-                  {slice.value}
+                  <AnimatedNumber value={slice.value} />
                 </span>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', minWidth: '36px', textAlign: 'right' }}>
-                  ({slice.percentage}%)
+                  (<AnimatedNumber value={slice.percentage} suffix="%" />)
                 </span>
               </div>
             </div>
@@ -400,7 +453,7 @@ export default function AdminDashboard() {
             <Link to="/admin/students" className="animated-kpi-card" style={{ animationDelay: '40ms' }}>
               <div className="kpi-icon"><i className="fa-solid fa-user-graduate"></i></div>
               <div className="kpi-info">
-                <span className="kpi-val">{stats?.totalStudents || 0}</span>
+                <span className="kpi-val"><AnimatedNumber value={stats?.totalStudents || 0} /></span>
                 <span className="kpi-label">Total Students</span>
                 <span className="kpi-sub">{stats?.activeStudents || 0} active, {stats?.disabledStudents || 0} disabled</span>
               </div>
@@ -410,7 +463,7 @@ export default function AdminDashboard() {
             <Link to="/admin/courses" className="animated-kpi-card" style={{ animationDelay: '80ms' }}>
               <div className="kpi-icon"><i className="fa-solid fa-book-open"></i></div>
               <div className="kpi-info">
-                <span className="kpi-val">{stats?.totalCourses || 0}</span>
+                <span className="kpi-val"><AnimatedNumber value={stats?.totalCourses || 0} /></span>
                 <span className="kpi-label">Total Courses</span>
                 <span className="kpi-sub">{stats?.publishedCourses || 0} published, {stats?.draftCourses || 0} draft, {stats?.archivedCourses || 0} archived</span>
               </div>
@@ -420,7 +473,7 @@ export default function AdminDashboard() {
             <Link to="/admin/enrollments" className="animated-kpi-card" style={{ animationDelay: '120ms' }}>
               <div className="kpi-icon"><i className="fa-solid fa-clipboard-list"></i></div>
               <div className="kpi-info">
-                <span className="kpi-val">{stats?.totalEnrollments || 0}</span>
+                <span className="kpi-val"><AnimatedNumber value={stats?.totalEnrollments || 0} /></span>
                 <span className="kpi-label">Total Enrollments</span>
                 <span className="kpi-sub">{stats?.activeEnrollments || 0} active registrations</span>
               </div>
@@ -430,7 +483,7 @@ export default function AdminDashboard() {
             <Link to="/admin/live-sessions" className="animated-kpi-card" style={{ animationDelay: '160ms' }}>
               <div className="kpi-icon"><i className="fa-solid fa-video"></i></div>
               <div className="kpi-info">
-                <span className="kpi-val">{stats?.upcomingLiveSessions || 0}</span>
+                <span className="kpi-val"><AnimatedNumber value={stats?.upcomingLiveSessions || 0} /></span>
                 <span className="kpi-label">Upcoming & Live Classes</span>
                 <span className="kpi-sub">Active & scheduled live sessions</span>
               </div>
@@ -442,7 +495,7 @@ export default function AdminDashboard() {
                 <i className="fa-solid fa-circle-question"></i>
               </div>
               <div className="kpi-info">
-                <span className="kpi-val" style={{ color: '#6d28d9' }}>{stats?.totalDoubtsAsked || 0}</span>
+                <span className="kpi-val" style={{ color: '#6d28d9' }}><AnimatedNumber value={stats?.totalDoubtsAsked || 0} /></span>
                 <span className="kpi-label">Doubts Asked</span>
                 <span className="kpi-sub" style={{ color: pendingDoubts > 0 ? '#b45309' : '#15803d', fontWeight: 700 }}>
                   {pendingDoubts > 0 ? `⚠️ ${pendingDoubts} waiting for reply` : '✓ All doubts cleared'}
@@ -456,7 +509,7 @@ export default function AdminDashboard() {
                 <i className="fa-solid fa-comments"></i>
               </div>
               <div className="kpi-info">
-                <span className="kpi-val" style={{ color: '#15803d' }}>{stats?.totalDoubtsReplied || 0}</span>
+                <span className="kpi-val" style={{ color: '#15803d' }}><AnimatedNumber value={stats?.totalDoubtsReplied || 0} /></span>
                 <span className="kpi-label">Doubts Replied</span>
                 <span className="kpi-sub">Tutor responses provided</span>
               </div>
@@ -468,7 +521,7 @@ export default function AdminDashboard() {
                 <i className="fa-solid fa-right-to-bracket"></i>
               </div>
               <div className="kpi-info">
-                <span className="kpi-val" style={{ color: '#0284c7' }}>{stats?.todayNewLogins ?? 0}</span>
+                <span className="kpi-val" style={{ color: '#0284c7' }}><AnimatedNumber value={stats?.todayNewLogins ?? 0} /></span>
                 <span className="kpi-label">Today New Logins</span>
                 <span className="kpi-sub" style={{ color: '#0284c7', fontWeight: 600 }}>
                   Active sessions & sign-ins today
@@ -482,7 +535,7 @@ export default function AdminDashboard() {
                 <i className="fa-solid fa-user-plus"></i>
               </div>
               <div className="kpi-info">
-                <span className="kpi-val" style={{ color: '#0d9488' }}>{stats?.todayEnrollments ?? 0}</span>
+                <span className="kpi-val" style={{ color: '#0d9488' }}><AnimatedNumber value={stats?.todayEnrollments ?? 0} /></span>
                 <span className="kpi-label">Today Enrollments</span>
                 <span className="kpi-sub" style={{ color: '#0d9488', fontWeight: 600 }}>
                   New course registrations today
