@@ -524,7 +524,7 @@ export default function AdminDashboard() {
                 <span className="kpi-val" style={{ color: '#0284c7' }}><AnimatedNumber value={stats?.todayNewLogins ?? 0} /></span>
                 <span className="kpi-label">Today New Logins</span>
                 <span className="kpi-sub" style={{ color: '#0284c7', fontWeight: 600 }}>
-                  Active sessions & sign-ins today
+                  {(stats?.todayNewLogins || 0) > 0 ? `${stats.todayNewLogins} student login${stats.todayNewLogins > 1 ? 's' : ''} today` : 'No student logins today'}
                 </span>
               </div>
             </Link>
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
                 <span className="kpi-val" style={{ color: '#0d9488' }}><AnimatedNumber value={stats?.todayEnrollments ?? 0} /></span>
                 <span className="kpi-label">Today Enrollments</span>
                 <span className="kpi-sub" style={{ color: '#0d9488', fontWeight: 600 }}>
-                  New course registrations today
+                  {(stats?.todayEnrollments || 0) > 0 ? `${stats.todayEnrollments} enrollment${stats.todayEnrollments > 1 ? 's' : ''} today` : 'No enrollments today'}
                 </span>
               </div>
             </Link>
