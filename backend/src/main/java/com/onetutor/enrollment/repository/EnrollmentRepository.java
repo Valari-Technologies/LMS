@@ -47,6 +47,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     long countByStatus(EnrollmentStatus status);
 
+    @Query("SELECT COUNT(e) FROM Enrollment e WHERE e.enrolledAt >= :since")
+    long countEnrolledSince(@Param("since") java.time.Instant since);
+
     long countByCourseIdAndStatus(Long courseId, EnrollmentStatus status);
 
     long countByBatchIdAndStatus(Long batchId, EnrollmentStatus status);

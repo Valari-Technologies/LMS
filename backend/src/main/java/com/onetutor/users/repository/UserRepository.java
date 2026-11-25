@@ -46,4 +46,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.lastActiveAt >= :cutoff")
     long countByRoleAndOnline(@Param("role") UserRole role, @Param("cutoff") java.time.Instant cutoff);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE (u.lastActiveAt >= :since OR u.createdAt >= :since)")
+    long countLoginsSince(@Param("since") java.time.Instant since);
 }

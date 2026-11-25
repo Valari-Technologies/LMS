@@ -502,6 +502,7 @@ public class AuthService {
         // Generate a new active session UUID
         String newSessionId = java.util.UUID.randomUUID().toString();
         user.setActiveSessionId(newSessionId);
+        user.setLastActiveAt(Instant.now());
         userRepository.save(user);
 
         return issueTokens(user);

@@ -462,30 +462,30 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            {/* 7. DOUBT RESOLUTION RATE (EXTRA CARD 1) */}
-            <Link to="/admin/doubts" className="animated-kpi-card" style={{ animationDelay: '280ms' }}>
+            {/* 7. TODAY NEW LOGINS */}
+            <Link to="/admin/students" className="animated-kpi-card" style={{ animationDelay: '280ms' }}>
               <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
-                <i className="fa-solid fa-chart-line"></i>
+                <i className="fa-solid fa-right-to-bracket"></i>
               </div>
               <div className="kpi-info">
-                <span className="kpi-val" style={{ color: '#0284c7' }}>{resolutionRate}%</span>
-                <span className="kpi-label">Resolution Rate</span>
+                <span className="kpi-val" style={{ color: '#0284c7' }}>{stats?.todayNewLogins ?? 0}</span>
+                <span className="kpi-label">Today New Logins</span>
                 <span className="kpi-sub" style={{ color: '#0284c7', fontWeight: 600 }}>
-                  {pendingDoubts === 0 ? '✓ 100% doubt turnaround' : `${pendingDoubts} pending query`}
+                  Active sessions & sign-ins today
                 </span>
               </div>
             </Link>
 
-            {/* 8. ACTIVE LEARNER RATIO (EXTRA CARD 2) */}
-            <Link to="/admin/students" className="animated-kpi-card" style={{ animationDelay: '320ms' }}>
+            {/* 8. TODAY ENROLLMENTS */}
+            <Link to="/admin/enrollments" className="animated-kpi-card" style={{ animationDelay: '320ms' }}>
               <div className="kpi-icon" style={{ background: 'rgba(13, 148, 136, 0.1)', color: '#0d9488' }}>
-                <i className="fa-solid fa-user-check"></i>
+                <i className="fa-solid fa-user-plus"></i>
               </div>
               <div className="kpi-info">
-                <span className="kpi-val" style={{ color: '#0d9488' }}>{activeStudentRate}%</span>
-                <span className="kpi-label">Active Learner Ratio</span>
+                <span className="kpi-val" style={{ color: '#0d9488' }}>{stats?.todayEnrollments ?? 0}</span>
+                <span className="kpi-label">Today Enrollments</span>
                 <span className="kpi-sub" style={{ color: '#0d9488', fontWeight: 600 }}>
-                  {activeStudents} of {totalStudents} students active
+                  New course registrations today
                 </span>
               </div>
             </Link>

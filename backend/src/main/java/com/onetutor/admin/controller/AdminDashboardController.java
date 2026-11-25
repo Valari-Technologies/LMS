@@ -75,6 +75,9 @@ public class AdminDashboardController {
         long totalDoubtsReplied = doubtMessageRepository.countTotalDoubtsReplied();
         long pendingDoubts = doubtMessageRepository.countPendingDoubts();
 
+        long todayNewLogins = userRepository.countLoginsSince(startOfToday);
+        long todayEnrollments = enrollmentRepository.countEnrolledSince(startOfToday);
+
         var recentLogsPage = auditLogRepository.findAllByOrderByCreatedAtDesc(
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
 
@@ -105,6 +108,8 @@ public class AdminDashboardController {
                 totalDoubtsAsked,
                 totalDoubtsReplied,
                 pendingDoubts,
+                todayNewLogins,
+                todayEnrollments,
                 recentLogs
         ));
     }
