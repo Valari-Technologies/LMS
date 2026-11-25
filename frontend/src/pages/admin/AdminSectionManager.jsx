@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   listSections,
   createSection,
@@ -1454,6 +1455,26 @@ export default function AdminSectionManager({ courseId, isReadOnly: propIsReadOn
                                 >
                                   <i className="fa-solid fa-list-check" style={{ marginRight: '4px' }}></i> Assessment
                                 </button>
+                              )}
+
+                              {/* Schedule Live Class for this Lesson */}
+                              {!isLessonArchived && (
+                                <Link
+                                  to={`/admin/live-sessions?courseId=${courseId}&lessonTitle=${encodeURIComponent(c.title)}&openSchedule=true`}
+                                  className="btn btn-secondary btn-sm"
+                                  title="Schedule a live interactive class for this lesson"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    color: '#4f46e5',
+                                    borderColor: 'rgba(79, 70, 229, 0.35)',
+                                    background: 'rgba(79, 70, 229, 0.06)'
+                                  }}
+                                >
+                                  <i className="fa-solid fa-video" style={{ fontSize: '0.78rem' }}></i>
+                                  <span>+ Live Class</span>
+                                </Link>
                               )}
 
                               {/* Generate Subtitles Button (only active video lessons) */}

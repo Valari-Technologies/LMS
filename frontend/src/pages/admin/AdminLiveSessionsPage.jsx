@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   getAdminLiveSessions,
   createLiveSession,
@@ -18,6 +18,8 @@ import {
 } from '../../api/live';
 import { listMedia, uploadMedia } from '../../api/media';
 import { listAdminCourses } from '../../api/courses';
+import { listSections } from '../../api/sections';
+import { listContents } from '../../api/contents';
 import { getCourseBatches, getAdminBatches, getBatchStudents } from '../../api/batches';
 import { getAdminEnrollments } from '../../api/admin';
 import {
@@ -125,6 +127,7 @@ function isSessionToday(session) {
 export default function AdminLiveSessionsPage() {
   const { isReadOnly } = usePermission();
   const { toast, confirm } = useNotification();
+  const [searchParams] = useSearchParams();
   const [sessions, setSessions] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -311,6 +314,10 @@ export default function AdminLiveSessionsPage() {
 
   const [createBatches, setCreateBatches] = useState([]);
   const [editBatches, setEditBatches] = useState([]);
+  const [createCourseLessons, setCreateCourseLessons] = useState([]);
+  const [createLoadingLessons, setCreateLoadingLessons] = useState(false);
+  const [editCourseLessons, setEditCourseLessons] = useState([]);
+  const [editLoadingLessons, setEditLoadingLessons] = useState(false);
 
   const [recordingForm, setRecordingForm] = useState({
     title: '',
@@ -367,13 +374,60 @@ export default function AdminLiveSessionsPage() {
     }
   }, [selectedCourseId]);
 
+  // Pre-fill and open Schedule modal if arrived with query params (e.g. from Course Edit page)
+  useEffect(() => {
+    const qCourseId = searchParams.get('courseId');
+    const qTitle = searchParams.get('title') || searchParams.get('lessonTitle');
+    const qOpen = searchParams.get('openSchedule');
+
+    if (qCourseId || qTitle || qOpen === 'true') {
+      if (qCourseId) {
+        setSelectedCourseId(qCourseId);
+      }
+      setCreateForm(prev => ({
+        ...prev,
+        courseId: qCourseId || prev.courseId,
+        title: qTitle || prev.title
+      }));
+      setShowCreateModal(true);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (createForm.courseId) {
       getCourseBatches(createForm.courseId)
         .then(data => setCreateBatches(data || []))
         .catch(() => setCreateBatches([]));
+
+      // Fetch course sections and lessons to provide Title options
+      setCreateLoadingLessons(true);
+      listSections(createForm.courseId)
+        .then(async (sections) => {
+          const secList = sections || [];
+          const lessonsArr = [];
+          for (const s of secList) {
+            try {
+              const contents = await listContents(s.id);
+              (contents || []).forEach(c => {
+                lessonsArr.push({
+                  id: c.id,
+                  title: c.title,
+                  sectionId: s.id,
+                  sectionTitle: s.title,
+                  contentType: c.contentType || 'VIDEO'
+                });
+              });
+            } catch (e) {
+              // ignore
+            }
+          }
+          setCreateCourseLessons(lessonsArr);
+        })
+        .catch(() => setCreateCourseLessons([]))
+        .finally(() => setCreateLoadingLessons(false));
     } else {
       setCreateBatches([]);
+      setCreateCourseLessons([]);
     }
   }, [createForm.courseId]);
 
@@ -382,8 +436,36 @@ export default function AdminLiveSessionsPage() {
       getCourseBatches(editForm.courseId)
         .then(data => setEditBatches(data || []))
         .catch(() => setEditBatches([]));
+
+      // Fetch course sections and lessons for edit modal Title options
+      setEditLoadingLessons(true);
+      listSections(editForm.courseId)
+        .then(async (sections) => {
+          const secList = sections || [];
+          const lessonsArr = [];
+          for (const s of secList) {
+            try {
+              const contents = await listContents(s.id);
+              (contents || []).forEach(c => {
+                lessonsArr.push({
+                  id: c.id,
+                  title: c.title,
+                  sectionId: s.id,
+                  sectionTitle: s.title,
+                  contentType: c.contentType || 'VIDEO'
+                });
+              });
+            } catch (e) {
+              // ignore
+            }
+          }
+          setEditCourseLessons(lessonsArr);
+        })
+        .catch(() => setEditCourseLessons([]))
+        .finally(() => setEditLoadingLessons(false));
     } else {
       setEditBatches([]);
+      setEditCourseLessons([]);
     }
   }, [editForm.courseId]);
 
@@ -1415,15 +1497,84 @@ export default function AdminLiveSessionsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Session Title *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ margin: 0 }}>Session Title *</label>
+                    {createLoadingLessons ? (
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '4px' }}></i> Loading lessons…
+                      </span>
+                    ) : createCourseLessons.length > 0 ? (
+                      <span style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 700, background: '#eef2ff', padding: '2px 8px', borderRadius: '4px' }}>
+                        <i className="fa-solid fa-book-bookmark" style={{ marginRight: '4px' }}></i>
+                        {createCourseLessons.length} Course Lessons Available
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Option Dropdown to Select from Course Lessons */}
+                  {createForm.courseId && createCourseLessons.length > 0 && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <select
+                        className="form-select"
+                        style={{
+                          fontSize: '0.88rem',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #c7d2fe',
+                          background: '#f8faff',
+                          color: '#1e1b4b',
+                          fontWeight: 600
+                        }}
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const selected = createCourseLessons.find(l => String(l.id) === String(e.target.value));
+                            if (selected) {
+                              setCreateForm(prev => ({
+                                ...prev,
+                                title: selected.title,
+                                sectionId: selected.sectionId || prev.sectionId
+                              }));
+                            }
+                          }
+                        }}
+                      >
+                        <option value="">▼ Select from Course Lessons (Click to auto-fill title)…</option>
+                        {(() => {
+                          const sectionsMap = {};
+                          createCourseLessons.forEach(l => {
+                            const secName = l.sectionTitle || 'Course Curriculum';
+                            if (!sectionsMap[secName]) sectionsMap[secName] = [];
+                            sectionsMap[secName].push(l);
+                          });
+                          return Object.entries(sectionsMap).map(([secName, list]) => (
+                            <optgroup key={secName} label={`Section: ${secName}`}>
+                              {list.map(l => (
+                                <option key={l.id} value={l.id}>
+                                  {l.title} ({l.contentType || 'Lesson'})
+                                </option>
+                              ))}
+                            </optgroup>
+                          ));
+                        })()}
+                      </select>
+                    </div>
+                  )}
+
                   <input
                     type="text"
                     required
+                    list="create-live-lessons-list"
                     className="form-control"
-                    placeholder="e.g. Live Q&A and Architecture Walkthrough"
+                    placeholder={createCourseLessons.length > 0 ? "Select from lesson options above or type custom title…" : "e.g. Live Q&A and Architecture Walkthrough"}
                     value={createForm.title}
                     onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                   />
+                  <datalist id="create-live-lessons-list">
+                    {createCourseLessons.map(l => (
+                      <option key={l.id} value={l.title} label={`${l.sectionTitle} (${l.contentType})`} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1550,15 +1701,84 @@ export default function AdminLiveSessionsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Session Title *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ margin: 0 }}>Session Title *</label>
+                    {editLoadingLessons ? (
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '4px' }}></i> Loading lessons…
+                      </span>
+                    ) : editCourseLessons.length > 0 ? (
+                      <span style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 700, background: '#eef2ff', padding: '2px 8px', borderRadius: '4px' }}>
+                        <i className="fa-solid fa-book-bookmark" style={{ marginRight: '4px' }}></i>
+                        {editCourseLessons.length} Course Lessons Available
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Option Dropdown to Select from Course Lessons */}
+                  {editForm.courseId && editCourseLessons.length > 0 && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <select
+                        className="form-select"
+                        style={{
+                          fontSize: '0.88rem',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #c7d2fe',
+                          background: '#f8faff',
+                          color: '#1e1b4b',
+                          fontWeight: 600
+                        }}
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const selected = editCourseLessons.find(l => String(l.id) === String(e.target.value));
+                            if (selected) {
+                              setEditForm(prev => ({
+                                ...prev,
+                                title: selected.title,
+                                sectionId: selected.sectionId || prev.sectionId
+                              }));
+                            }
+                          }
+                        }}
+                      >
+                        <option value="">▼ Select from Course Lessons (Click to auto-fill title)…</option>
+                        {(() => {
+                          const sectionsMap = {};
+                          editCourseLessons.forEach(l => {
+                            const secName = l.sectionTitle || 'Course Curriculum';
+                            if (!sectionsMap[secName]) sectionsMap[secName] = [];
+                            sectionsMap[secName].push(l);
+                          });
+                          return Object.entries(sectionsMap).map(([secName, list]) => (
+                            <optgroup key={secName} label={`Section: ${secName}`}>
+                              {list.map(l => (
+                                <option key={l.id} value={l.id}>
+                                  {l.title} ({l.contentType || 'Lesson'})
+                                </option>
+                              ))}
+                            </optgroup>
+                          ));
+                        })()}
+                      </select>
+                    </div>
+                  )}
+
                   <input
                     type="text"
                     required
+                    list="edit-live-lessons-list"
                     className="form-control"
-                    placeholder="e.g. Live Q&A and Architecture Walkthrough"
+                    placeholder={editCourseLessons.length > 0 ? "Select from lesson options above or type custom title…" : "e.g. Live Q&A and Architecture Walkthrough"}
                     value={editForm.title}
                     onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                   />
+                  <datalist id="edit-live-lessons-list">
+                    {editCourseLessons.map(l => (
+                      <option key={l.id} value={l.title} label={`${l.sectionTitle} (${l.contentType})`} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
