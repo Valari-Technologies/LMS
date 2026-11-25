@@ -405,13 +405,8 @@ export default function AdminContactMessagesPage() {
                             <div style={{ fontWeight: 700, color: '#0b1f3a', fontSize: '0.92rem' }}>
                               {msg.name}
                             </div>
-                            <div style={{ color: '#64748b', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>{msg.email}</span>
-                              {msg.userId && (
-                                <span style={{ background: '#e0e7ff', color: '#4338ca', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                                  User #{msg.userId}
-                                </span>
-                              )}
+                            <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                              {msg.email}
                             </div>
                           </div>
                         </div>
