@@ -818,6 +818,7 @@ export default function AdminAssessmentsPage() {
         <AssessmentAdminEditor
           contentId={activeEditorContent.id}
           contentTitle={activeEditorContent.title}
+          backLabel="Back to Assessments"
           onClose={() => {
             setActiveEditorContent(null);
             loadAllData();

@@ -156,14 +156,30 @@ export default function StudentCourseDashboardPage() {
     setLoadingAssessments(true);
     try {
       // 1. Try course-level endpoint first
-      const direct = await getCourseAssessments(courseId);
-      if (Array.isArray(direct) && direct.length > 0) {
-        setCourseAssessments(direct);
-        return;
+      try {
+        const direct = await getCourseAssessments(courseId);
+        if (Array.isArray(direct) && direct.length > 0) {
+          setCourseAssessments(direct);
+          return;
+        }
+      } catch (directErr) {
+        console.warn('Course assessment endpoint direct query:', directErr);
       }
 
-      // 2. Fallback: inspect syllabus contents from courseData
-      const sections = courseData?.sections || [];
+      // 2. Fallback: inspect syllabus contents from courseData or fetch fresh details
+      let currentCourse = courseData;
+      if (!currentCourse?.sections || currentCourse.sections.length === 0) {
+        try {
+          const detail = await getCourse(courseId);
+          if (detail?.sections) {
+            currentCourse = detail;
+          }
+        } catch (detailErr) {
+          console.warn('Could not fetch course detail for assessments fallback:', detailErr);
+        }
+      }
+
+      const sections = currentCourse?.sections || [];
       const allLessons = [];
       sections.forEach(sec => {
         if (sec.contents && Array.isArray(sec.contents)) {
@@ -186,7 +202,7 @@ export default function StudentCourseDashboardPage() {
         allLessons.map(async (lesson) => {
           try {
             const info = await getAssessmentInfo(lesson.contentId);
-            if (info && info.enabled && info.totalQuestions > 0) {
+            if (info && info.enabled) {
               return {
                 ...info,
                 contentId: lesson.contentId,
@@ -2011,21 +2027,25 @@ export default function StudentCourseDashboardPage() {
               ) : null}
             </button>
 
-            {/* Assessments Link (Dynamically displayed if course has assessments configured) */}
-            {courseAssessments.length > 0 && (
-              <button
-                type="button"
-                className={`ot-course-nav-link ${activeTab === 'assessments' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('assessments'); setMobileSidebarOpen(false); }}
-                title="Course Assessments & Practice Tests"
-              >
-                <span className="ot-course-nav-icon"><i className="fa-solid fa-file-pen"></i></span>
-                <span className="ot-course-nav-text">Assessments</span>
+            {/* Assessments Link (Permanent Course Spaces Nav Item) */}
+            <button
+              type="button"
+              className={`ot-course-nav-link ${activeTab === 'assessments' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('assessments');
+                setMobileSidebarOpen(false);
+                fetchCourseAssessments();
+              }}
+              title="Course Assessments & Tests"
+            >
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-file-pen"></i></span>
+              <span className="ot-course-nav-text">Assessments</span>
+              {courseAssessments.length > 0 && (
                 <span className={`ot-course-badge ${activeTab === 'assessments' ? 'active' : ''}`}>
                   {courseAssessments.length}
                 </span>
-              </button>
-            )}
+              )}
+            </button>
 
           </div>
 
@@ -3668,23 +3688,40 @@ export default function StudentCourseDashboardPage() {
                                 </span>
                               )}
 
-                              <button
-                                type="button"
-                                onClick={() => setPlayingAssessment(ass)}
-                                className="btn btn-primary btn-sm"
-                                style={{
-                                  background: isPassed ? '#10b981' : '#5A70D3',
-                                  borderColor: isPassed ? '#10b981' : '#5A70D3',
-                                  padding: '8px 18px',
-                                  fontWeight: 700,
-                                  fontSize: '0.85rem',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px'
-                                }}
-                              >
-                                {isInProgress ? 'Resume Test →' : isPassed ? 'Review / Retake →' : isCompleted ? 'Retake Test →' : 'Attend Test →'}
-                              </button>
+                              {ass.totalQuestions === 0 ? (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="btn btn-secondary btn-sm"
+                                  style={{
+                                    padding: '8px 18px',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    cursor: 'not-allowed',
+                                    opacity: 0.65
+                                  }}
+                                >
+                                  Questions Coming Soon
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setPlayingAssessment(ass)}
+                                  className="btn btn-primary btn-sm"
+                                  style={{
+                                    background: isPassed ? '#10b981' : '#5A70D3',
+                                    borderColor: isPassed ? '#10b981' : '#5A70D3',
+                                    padding: '8px 18px',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  {isInProgress ? 'Resume Test →' : isPassed ? 'Review / Retake →' : isCompleted ? 'Retake Test →' : 'Attend Test →'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

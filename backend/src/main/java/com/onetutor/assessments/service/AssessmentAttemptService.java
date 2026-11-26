@@ -105,7 +105,7 @@ public class AssessmentAttemptService {
                         return null;
                     }
                 })
-                .filter(r -> r != null && r.totalQuestions() > 0)
+                .filter(r -> r != null)
                 .toList();
     }
 
@@ -176,7 +176,7 @@ public class AssessmentAttemptService {
         }
 
         Content content = assessment.getContent();
-        enrollmentService.assertActiveEnrollment(student.getId(), content.getSection().getCourse().getId());
+        enrollmentService.assertActiveEnrollment(student, content.getSection().getCourse().getId());
 
         // Invalidate any existing IN_PROGRESS attempt (multiple tab switch / restart protection)
         List<AssessmentAttempt> activeAttempts = attemptRepository.findByStudentIdAndContentIdAndStatus(

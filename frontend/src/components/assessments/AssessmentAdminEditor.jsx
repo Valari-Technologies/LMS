@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getAdminAssessment, saveAssessment, deleteAssessment } from '../../api/assessments';
 import { useNotification } from '../../context/NotificationContext';
 
-export default function AssessmentAdminEditor({ contentId, contentTitle, onClose }) {
+export default function AssessmentAdminEditor({ contentId, contentTitle, onClose, backLabel = 'Back to Assessments' }) {
   const { toast } = useNotification();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -12,7 +12,7 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
 
   // Assessment Settings
   const [enabled, setEnabled] = useState(true);
-  const [required, setRequired] = useState(true);
+  const [required, setRequired] = useState(false);
   const [passPercentage, setPassPercentage] = useState(60);
   const [completionMode, setCompletionMode] = useState('PASS_ASSESSMENT');
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -170,7 +170,7 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
     try {
       const payload = {
         enabled,
-        required,
+        required: false,
         passPercentage: Number(passPercentage),
         completionMode,
         timerEnabled,
@@ -248,18 +248,18 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
                 gap: '6px'
               }}
             >
-              <i className="fa-solid fa-arrow-left"></i> Back to Curriculum
+              <i className="fa-solid fa-arrow-left"></i> {backLabel}
             </button>
           )}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
               <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                One-Mark Assessment
+                Course Assessment
               </span>
-              <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>Lesson ID #{contentId}</span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>Common Batch Test</span>
             </div>
             <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#ffffff' }}>
-              {contentTitle || 'Lesson Assessment'}
+              {contentTitle || 'Course Assessment'}
             </h2>
           </div>
         </div>
@@ -608,20 +608,6 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-              {/* Assessment Required */}
-              <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--text-primary)' }}>Assessment Required</strong>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #64748b)' }}>Mandatory requirement before unlocking next lesson</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={required}
-                  onChange={(e) => setRequired(e.target.checked)}
-                  style={{ width: '20px', height: '20px', accentColor: '#10b981', cursor: 'pointer' }}
-                />
-              </div>
-
               {/* Pass Percentage */}
               <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px' }}>
                 <label className="form-label" style={{ fontWeight: 700, fontSize: '0.88rem' }}>Pass Percentage (%)</label>
@@ -636,17 +622,17 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
                 />
               </div>
 
-              {/* Completion Mode */}
+              {/* Completion Mode / Evaluation */}
               <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px' }}>
-                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.88rem' }}>Completion Condition</label>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.88rem' }}>Passing Evaluation</label>
                 <select
                   className="form-control"
                   value={completionMode}
                   onChange={(e) => setCompletionMode(e.target.value)}
                   style={{ fontSize: '0.9rem' }}
                 >
-                  <option value="PASS_ASSESSMENT">Pass Assessment (Achieve Pass Percentage)</option>
-                  <option value="SUBMIT_ASSESSMENT">Submit Assessment (Any Submitted Attempt)</option>
+                  <option value="PASS_ASSESSMENT">Require Passing Score ({passPercentage}%) to Clear</option>
+                  <option value="SUBMIT_ASSESSMENT">Practice Test (Record Any Submitted Score)</option>
                 </select>
               </div>
 
