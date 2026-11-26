@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { getAdminAssessmentAttempts } from '../../api/assessments';
 
 export default function AssessmentResultsModal({ assessment, onClose }) {
@@ -833,7 +833,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 /* ========================================================
                    VIEW 1: UNIQUE STUDENTS VIEW (1 Row Per Student)
                    ======================================================== */
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                   <thead>
                     <tr style={{
                       background: '#f8fafc',
@@ -846,14 +846,14 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                       top: 0,
                       zIndex: 10
                     }}>
-                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Student</th>
-                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Batch</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Attempts</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Latest Marks</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Best Score</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Overall Status</th>
-                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Last Attended</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right', background: '#f8fafc' }}>Action</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc', minWidth: '220px', width: '22%', verticalAlign: 'middle' }}>Student</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc', textAlign: 'center', minWidth: '120px', width: '12%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Batch</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '110px', width: '11%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Attempts</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '120px', width: '12%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Latest Marks</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '100px', width: '10%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Best Score</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '130px', width: '13%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Overall Status</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc', minWidth: '160px', width: '15%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Last Attended</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '110px', width: '11%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -865,7 +865,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                       const isTerminated = latest.status === 'TERMINATED';
 
                       return (
-                        <div key={item.studentId} style={{ display: 'contents' }}>
+                        <Fragment key={item.studentId}>
                           <tr
                             style={{
                               borderBottom: isExpanded ? 'none' : '1px solid #f1f5f9',
@@ -876,7 +876,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                             onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}
                           >
                             {/* Student Info */}
-                            <td style={{ padding: '12px 16px' }}>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 {item.studentProfileImage ? (
                                   <img
@@ -913,17 +913,18 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                             </td>
 
                             {/* Batch Pill */}
-                            <td style={{ padding: '12px 16px' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                padding: '3px 8px',
+                                gap: '5px',
+                                padding: '4px 10px',
                                 borderRadius: '6px',
                                 background: '#ede9fe',
                                 color: '#6d28d9',
                                 fontWeight: 700,
-                                fontSize: '0.76rem'
+                                fontSize: '0.78rem',
+                                whiteSpace: 'nowrap'
                               }}>
                                 <i className="fa-solid fa-users-rectangle"></i>
                                 {item.batchName}
@@ -931,23 +932,24 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                             </td>
 
                             {/* Attempts Count Badge */}
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span style={{
                                 display: 'inline-block',
-                                padding: '3px 10px',
+                                padding: '4px 12px',
                                 borderRadius: '20px',
                                 background: '#f1f5f9',
                                 color: '#334155',
                                 fontWeight: 800,
-                                fontSize: '0.8rem'
+                                fontSize: '0.8rem',
+                                whiteSpace: 'nowrap'
                               }}>
                                 {item.totalAttempts} {item.totalAttempts === 1 ? 'attempt' : 'attempts'}
                               </span>
                             </td>
 
                             {/* Latest Marks */}
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', whiteSpace: 'nowrap' }}>
                                 <span style={{
                                   fontWeight: 900,
                                   fontSize: '0.98rem',
@@ -965,29 +967,31 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                             </td>
 
                             {/* Best Score */}
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span style={{
                                 fontWeight: 800,
                                 fontSize: '0.92rem',
-                                color: item.bestScore >= (assessment.passPercentage || 60) ? '#16a34a' : '#d97706'
+                                color: item.bestScore >= (assessment.passPercentage || 60) ? '#16a34a' : '#d97706',
+                                whiteSpace: 'nowrap'
                               }}>
                                 {item.bestScore}%
                               </span>
                             </td>
 
                             {/* Status */}
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {isPassed ? (
                                 <span style={{
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  padding: '3px 9px',
+                                  padding: '4px 10px',
                                   borderRadius: '9999px',
                                   background: '#dcfce7',
                                   color: '#16a34a',
                                   fontWeight: 800,
-                                  fontSize: '0.74rem'
+                                  fontSize: '0.74rem',
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   <i className="fa-solid fa-check"></i> Passed
                                 </span>
@@ -996,12 +1000,13 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  padding: '3px 9px',
+                                  padding: '4px 10px',
                                   borderRadius: '9999px',
                                   background: '#e0f2fe',
                                   color: '#0284c7',
                                   fontWeight: 800,
-                                  fontSize: '0.74rem'
+                                  fontSize: '0.74rem',
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   <i className="fa-solid fa-clock"></i> In Progress
                                 </span>
@@ -1010,12 +1015,13 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  padding: '3px 9px',
+                                  padding: '4px 10px',
                                   borderRadius: '9999px',
                                   background: '#fef3c7',
                                   color: '#b45309',
                                   fontWeight: 800,
-                                  fontSize: '0.74rem'
+                                  fontSize: '0.74rem',
+                                  whiteSpace: 'nowrap'
                                 }} title={`Terminated: ${latest.terminatedReason || 'Policy Violation'}`}>
                                   <i className="fa-solid fa-triangle-exclamation"></i> Terminated
                                 </span>
@@ -1024,12 +1030,13 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  padding: '3px 9px',
+                                  padding: '4px 10px',
                                   borderRadius: '9999px',
                                   background: '#fee2e2',
                                   color: '#dc2626',
                                   fontWeight: 800,
-                                  fontSize: '0.74rem'
+                                  fontSize: '0.74rem',
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   <i className="fa-solid fa-xmark"></i> Failed
                                 </span>
@@ -1037,14 +1044,14 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                             </td>
 
                             {/* Last Attended */}
-                            <td style={{ padding: '12px 16px' }}>
-                              <div style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>
+                            <td style={{ padding: '12px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                 {formatTimestamp(latest.startedAt)}
                               </div>
                             </td>
 
                             {/* Expand History Action */}
-                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <button
                                 type="button"
                                 onClick={() => toggleStudentExpand(item.studentId)}
@@ -1055,12 +1062,13 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                   border: '1px solid #bae6fd',
                                   fontWeight: 700,
                                   fontSize: '0.76rem',
-                                  padding: '4px 10px',
+                                  padding: '5px 12px',
                                   borderRadius: '6px',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '5px'
+                                  gap: '5px',
+                                  whiteSpace: 'nowrap'
                                 }}
                                 title="View individual attempt breakdown"
                               >
@@ -1093,45 +1101,46 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                   <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
                                     <thead>
                                       <tr style={{ background: '#ffffff', borderBottom: '1px solid #f1f5f9', color: '#64748b' }}>
-                                        <th style={{ padding: '8px 12px' }}>Attempt #</th>
-                                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Marks</th>
-                                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Score</th>
-                                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
-                                        <th style={{ padding: '8px 12px' }}>Started At</th>
-                                        <th style={{ padding: '8px 12px' }}>Duration</th>
+                                        <th style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>Attempt #</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>Marks</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>Score</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
+                                        <th style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>Started At</th>
+                                        <th style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>Duration</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {item.attempts.map((att) => (
                                         <tr key={att.attemptId} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                          <td style={{ padding: '8px 12px', fontWeight: 700 }}>
+                                          <td style={{ padding: '8px 12px', fontWeight: 700, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             #{att.attemptNumber}
                                           </td>
-                                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800 }}>
+                                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             {att.obtainedMarks} / {att.totalQuestions}
                                             <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 'normal', marginLeft: '4px' }}>
                                               ({att.correctAnswers} correct)
                                             </span>
                                           </td>
-                                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, color: att.passed ? '#16a34a' : '#ef4444' }}>
+                                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, color: att.passed ? '#16a34a' : '#ef4444', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             {att.percentage}%
                                           </td>
-                                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                          <td style={{ padding: '8px 12px', textAlign: 'center', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             <span style={{
-                                              padding: '2px 6px',
+                                              padding: '2px 8px',
                                               borderRadius: '4px',
                                               fontSize: '0.72rem',
                                               fontWeight: 700,
+                                              whiteSpace: 'nowrap',
                                               background: att.passed ? '#dcfce7' : (att.status === 'TERMINATED' ? '#fef3c7' : '#fee2e2'),
                                               color: att.passed ? '#15803d' : (att.status === 'TERMINATED' ? '#b45309' : '#dc2626')
                                             }}>
                                               {att.status} {att.terminatedReason ? `(${att.terminatedReason})` : ''}
                                             </span>
                                           </td>
-                                          <td style={{ padding: '8px 12px', color: '#475569' }}>
+                                          <td style={{ padding: '8px 12px', color: '#475569', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             {formatTimestamp(att.startedAt)}
                                           </td>
-                                          <td style={{ padding: '8px 12px', color: '#475569' }}>
+                                          <td style={{ padding: '8px 12px', color: '#475569', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                             {formatDuration(att.durationSeconds)}
                                           </td>
                                         </tr>
@@ -1142,7 +1151,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                               </td>
                             </tr>
                           )}
-                        </div>
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -1151,7 +1160,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 /* ========================================================
                    VIEW 2: ALL ATTEMPTS LOG (Every Attempt Record)
                    ======================================================== */
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                   <thead>
                     <tr style={{
                       background: '#f8fafc',
@@ -1164,13 +1173,13 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                       top: 0,
                       zIndex: 10
                     }}>
-                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Student</th>
-                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Batch</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Attempt</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Marks Obtained</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Score (%)</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Status</th>
-                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Time & Duration</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc', minWidth: '220px', width: '24%', verticalAlign: 'middle' }}>Student</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc', textAlign: 'center', minWidth: '120px', width: '12%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Batch</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '90px', width: '9%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Attempt</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '130px', width: '14%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Marks Obtained</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '110px', width: '11%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Score (%)</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc', minWidth: '130px', width: '13%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Status</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc', minWidth: '170px', width: '17%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Time & Duration</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1190,7 +1199,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                         >
                           {/* Student Info */}
-                          <td style={{ padding: '12px 16px' }}>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               {attempt.studentProfileImage ? (
                                 <img
@@ -1227,17 +1236,18 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                           </td>
 
                           {/* Batch Pill */}
-                          <td style={{ padding: '12px 16px' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <span style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
-                              padding: '3px 8px',
+                              gap: '5px',
+                              padding: '4px 10px',
                               borderRadius: '6px',
                               background: '#ede9fe',
                               color: '#6d28d9',
                               fontWeight: 700,
-                              fontSize: '0.76rem'
+                              fontSize: '0.78rem',
+                              whiteSpace: 'nowrap'
                             }}>
                               <i className="fa-solid fa-users-rectangle"></i>
                               {attempt.batchName || assessment?.batchName || 'Default Batch'}
@@ -1245,23 +1255,24 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                           </td>
 
                           {/* Attempt Number */}
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <span style={{
                               display: 'inline-block',
-                              padding: '2px 8px',
+                              padding: '3px 10px',
                               borderRadius: '6px',
                               background: '#f1f5f9',
                               color: '#475569',
                               fontWeight: 700,
-                              fontSize: '0.8rem'
+                              fontSize: '0.8rem',
+                              whiteSpace: 'nowrap'
                             }}>
                               #{attempt.attemptNumber}
                             </span>
                           </td>
 
                           {/* Marks Obtained */}
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', whiteSpace: 'nowrap' }}>
                               <span style={{
                                 fontWeight: 900,
                                 fontSize: '1.05rem',
@@ -1279,8 +1290,8 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                           </td>
 
                           {/* Percentage Badge */}
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                               <div style={{
                                 width: '60px',
                                 height: '6px',
@@ -1305,7 +1316,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                           </td>
 
                           {/* Status Badge */}
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             {isPassed ? (
                               <span style={{
                                 display: 'inline-flex',
@@ -1316,7 +1327,8 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                 background: '#dcfce7',
                                 color: '#16a34a',
                                 fontWeight: 800,
-                                fontSize: '0.75rem'
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap'
                               }}>
                                 <i className="fa-solid fa-check"></i> Passed
                               </span>
@@ -1330,7 +1342,8 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                 background: '#e0f2fe',
                                 color: '#0284c7',
                                 fontWeight: 800,
-                                fontSize: '0.75rem'
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap'
                               }}>
                                 <i className="fa-solid fa-clock"></i> In Progress
                               </span>
@@ -1344,7 +1357,8 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                 background: '#fef3c7',
                                 color: '#b45309',
                                 fontWeight: 800,
-                                fontSize: '0.75rem'
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap'
                               }} title={`Terminated due to: ${attempt.terminatedReason || 'Policy Violation'}`}>
                                 <i className="fa-solid fa-triangle-exclamation"></i> Terminated
                               </span>
@@ -1358,7 +1372,8 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                 background: '#fee2e2',
                                 color: '#dc2626',
                                 fontWeight: 800,
-                                fontSize: '0.75rem'
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap'
                               }}>
                                 <i className="fa-solid fa-xmark"></i> Failed
                               </span>
@@ -1366,11 +1381,11 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                           </td>
 
                           {/* Time & Duration */}
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontSize: '0.82rem', color: '#1e293b', fontWeight: 600 }}>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '0.82rem', color: '#1e293b', fontWeight: 600, whiteSpace: 'nowrap' }}>
                               {formatTimestamp(attempt.startedAt)}
                             </div>
-                            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                               Duration: <strong style={{ color: '#334155' }}>{formatDuration(attempt.durationSeconds)}</strong>
                             </div>
                           </td>
