@@ -3480,60 +3480,6 @@ export default function StudentCourseDashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
               {playingAssessment ? (
                 <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', minHeight: '600px' }}>
-                  <div style={{
-                    padding: '12px 18px',
-                    borderBottom: '1px solid #e2e8f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                    background: '#f8fafc'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlayingAssessment(null);
-                        fetchCourseAssessments();
-                      }}
-                      className="btn btn-secondary btn-sm"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '0.84rem',
-                        fontWeight: 700,
-                        padding: '6px 14px',
-                        borderRadius: '8px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        color: '#334155',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <i className="fa-solid fa-arrow-left"></i>
-                      <span>Back to Assessments</span>
-                    </button>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      color: '#475569',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      maxWidth: '100%',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <i className="fa-solid fa-file-pen" style={{ color: '#5A70D3' }}></i>
-                      <span>{playingAssessment.lessonTitle}</span>
-                    </div>
-                  </div>
                   <AssessmentPlayer
                     contentId={playingAssessment.contentId}
                     onClose={() => {
