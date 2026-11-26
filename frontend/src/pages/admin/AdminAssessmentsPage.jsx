@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { listAdminCourses, getCourse } from '../../api/courses';
+import { getCourseBatches } from '../../api/batches';
+import { listSections, createSection } from '../../api/sections';
+import { listContents, createContent } from '../../api/contents';
 import { getAdminAssessment, deleteAssessment } from '../../api/assessments';
 import AssessmentAdminEditor from '../../components/assessments/AssessmentAdminEditor';
 import { useNotification, confirmDialog } from '../../context/NotificationContext';
@@ -11,21 +14,25 @@ export default function AdminAssessmentsPage() {
 
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState([]);
-  const [lessonsData, setLessonsData] = useState([]); // [{ courseId, courseName, sectionId, sectionTitle, contentId, title, assessment }]
+  const [assessmentsData, setAssessmentsData] = useState([]); // [{ courseId, courseName, batchName, contentId, title, assessment }]
 
   // Filters
   const [selectedCourseId, setSelectedCourseId] = useState('ALL');
+  const [selectedBatchId, setSelectedBatchId] = useState('ALL');
+  const [filterBatches, setFilterBatches] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'CONFIGURED' | 'MISSING'
   const [searchQuery, setSearchQuery] = useState('');
 
   // Active Editor Modal
   const [activeEditorContent, setActiveEditorContent] = useState(null); // { id, title }
 
-  // New Assessment Picker Modal
+  // New Assessment Picker Modal: Course & Batch only
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [pickerCourseId, setPickerCourseId] = useState('');
-  const [pickerSectionId, setPickerSectionId] = useState('');
-  const [pickerContentId, setPickerContentId] = useState('');
+  const [pickerBatchId, setPickerBatchId] = useState('');
+  const [pickerBatches, setPickerBatches] = useState([]);
+  const [pickerLoadingBatches, setPickerLoadingBatches] = useState(false);
+  const [pickerSubmitting, setPickerSubmitting] = useState(false);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -34,36 +41,49 @@ export default function AdminAssessmentsPage() {
       const courseList = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.content || []);
       setCourses(courseList);
 
-      // Load full syllabus for all courses to gather all lessons and their assessments
-      const allLessons = [];
+      // Load all assessments across all courses
+      const allItems = [];
       for (const c of courseList) {
         try {
           const detail = await getCourse(c.id);
+          const batches = await getCourseBatches(c.id).catch(() => []);
+          const batchList = Array.isArray(batches) ? batches : [];
+
           if (detail?.sections && Array.isArray(detail.sections)) {
             for (const sec of detail.sections) {
               if (sec.contents && Array.isArray(sec.contents)) {
                 for (const lesson of sec.contents) {
-                  allLessons.push({
+                  // Infer or match batch name from title
+                  let matchedBatch = 'All Batches';
+                  for (const b of batchList) {
+                    if (lesson.title?.toLowerCase().includes(b.name.toLowerCase())) {
+                      matchedBatch = b.name;
+                      break;
+                    }
+                  }
+
+                  allItems.push({
                     courseId: c.id,
                     courseName: c.title || c.name || 'Untitled Course',
+                    batchName: matchedBatch,
                     sectionId: sec.id,
-                    sectionTitle: sec.title || 'Untitled Section',
+                    sectionTitle: sec.title || 'Course Section',
                     contentId: lesson.id,
                     title: lesson.title,
-                    assessment: null // will be populated
+                    assessment: null
                   });
                 }
               }
             }
           }
         } catch (e) {
-          console.warn(`Failed to load course details for ${c.id}`, e);
+          console.warn(`Failed to load details for course ${c.id}:`, e);
         }
       }
 
-      // Query assessments in parallel
-      const enrichedLessons = await Promise.all(
-        allLessons.map(async (item) => {
+      // Query assessment configuration for each lesson
+      const enriched = await Promise.all(
+        allItems.map(async (item) => {
           try {
             const ass = await getAdminAssessment(item.contentId);
             return { ...item, assessment: ass || null };
@@ -73,7 +93,7 @@ export default function AdminAssessmentsPage() {
         })
       );
 
-      setLessonsData(enrichedLessons);
+      setAssessmentsData(enriched);
     } catch (err) {
       console.error('Failed to load assessments overview:', err);
       toast.error('Failed to load courses syllabus data');
@@ -86,10 +106,56 @@ export default function AdminAssessmentsPage() {
     loadAllData();
   }, []);
 
+  // When top course filter changes, load its batches for the batch filter
+  useEffect(() => {
+    if (selectedCourseId === 'ALL') {
+      setFilterBatches([]);
+      setSelectedBatchId('ALL');
+      return;
+    }
+    getCourseBatches(selectedCourseId)
+      .then(res => {
+        const list = Array.isArray(res) ? res : [];
+        setFilterBatches(list);
+        setSelectedBatchId('ALL');
+      })
+      .catch(() => {
+        setFilterBatches([]);
+        setSelectedBatchId('ALL');
+      });
+  }, [selectedCourseId]);
+
+  // When pickerCourseId changes, fetch batches for the selected course
+  useEffect(() => {
+    if (!pickerCourseId) {
+      setPickerBatches([]);
+      setPickerBatchId('');
+      return;
+    }
+    setPickerLoadingBatches(true);
+    getCourseBatches(pickerCourseId)
+      .then(res => {
+        const list = Array.isArray(res) ? res : [];
+        setPickerBatches(list);
+        if (list.length > 0) {
+          setPickerBatchId(list[0].id);
+        } else {
+          setPickerBatchId('ALL');
+        }
+      })
+      .catch(() => {
+        setPickerBatches([]);
+        setPickerBatchId('ALL');
+      })
+      .finally(() => {
+        setPickerLoadingBatches(false);
+      });
+  }, [pickerCourseId]);
+
   // Compute Metrics
   const metrics = useMemo(() => {
-    const totalLessons = lessonsData.length;
-    const configuredAssessments = lessonsData.filter(l => l.assessment != null);
+    const totalItems = assessmentsData.length;
+    const configuredAssessments = assessmentsData.filter(l => l.assessment != null);
     const totalConfigured = configuredAssessments.length;
     const activeCount = configuredAssessments.filter(l => l.assessment?.enabled).length;
     const totalQuestions = configuredAssessments.reduce((sum, l) => sum + (l.assessment?.questions?.length || 0), 0);
@@ -98,20 +164,27 @@ export default function AdminAssessmentsPage() {
       : 60;
 
     return {
-      totalLessons,
+      totalItems,
       totalConfigured,
       activeCount,
       totalQuestions,
       avgPassPct
     };
-  }, [lessonsData]);
+  }, [assessmentsData]);
 
-  // Filtered Lessons
-  const filteredLessons = useMemo(() => {
-    return lessonsData.filter(item => {
+  // Filtered Assessments
+  const filteredList = useMemo(() => {
+    return assessmentsData.filter(item => {
       // Course filter
       if (selectedCourseId !== 'ALL' && String(item.courseId) !== String(selectedCourseId)) {
         return false;
+      }
+      // Batch filter
+      if (selectedBatchId !== 'ALL') {
+        const targetBatchObj = filterBatches.find(b => String(b.id) === String(selectedBatchId));
+        if (targetBatchObj && item.batchName !== targetBatchObj.name && item.batchName !== 'All Batches') {
+          return false;
+        }
       }
       // Status filter
       if (statusFilter === 'CONFIGURED' && !item.assessment) return false;
@@ -122,13 +195,13 @@ export default function AdminAssessmentsPage() {
         const q = searchQuery.toLowerCase();
         const matchTitle = item.title?.toLowerCase().includes(q);
         const matchCourse = item.courseName?.toLowerCase().includes(q);
-        const matchSection = item.sectionTitle?.toLowerCase().includes(q);
-        if (!matchTitle && !matchCourse && !matchSection) return false;
+        const matchBatch = item.batchName?.toLowerCase().includes(q);
+        if (!matchTitle && !matchCourse && !matchBatch) return false;
       }
 
       return true;
     });
-  }, [lessonsData, selectedCourseId, statusFilter, searchQuery]);
+  }, [assessmentsData, selectedCourseId, selectedBatchId, filterBatches, statusFilter, searchQuery]);
 
   // Handle Delete
   const handleDeleteAssessment = async (contentId, lessonTitle) => {
@@ -154,38 +227,64 @@ export default function AdminAssessmentsPage() {
     }
   };
 
-  // Helper for picker modal: available sections for chosen course
-  const pickerCourseObj = useMemo(() => {
-    return courses.find(c => String(c.id) === String(pickerCourseId));
-  }, [courses, pickerCourseId]);
-
-  const pickerSections = useMemo(() => {
-    if (!pickerCourseId) return [];
-    const secMap = new Map();
-    lessonsData
-      .filter(l => String(l.courseId) === String(pickerCourseId))
-      .forEach(l => {
-        if (!secMap.has(l.sectionId)) {
-          secMap.set(l.sectionId, l.sectionTitle);
-        }
-      });
-    return Array.from(secMap.entries()).map(([id, title]) => ({ id, title }));
-  }, [lessonsData, pickerCourseId]);
-
-  const pickerLessons = useMemo(() => {
-    if (!pickerSectionId) return [];
-    return lessonsData.filter(l => String(l.sectionId) === String(pickerSectionId));
-  }, [lessonsData, pickerSectionId]);
-
-  const handleLaunchFromPicker = () => {
-    if (!pickerContentId) {
-      toast.error('Please select a syllabus lesson');
+  // Launch Editor from Course & Batch selection
+  const handleLaunchFromPicker = async () => {
+    if (!pickerCourseId) {
+      toast.error('Please choose a course');
       return;
     }
-    const target = lessonsData.find(l => String(l.contentId) === String(pickerContentId));
-    if (!target) return;
-    setShowPickerModal(false);
-    setActiveEditorContent({ id: target.contentId, title: target.title });
+
+    setPickerSubmitting(true);
+    try {
+      const selectedCourse = courses.find(c => String(c.id) === String(pickerCourseId));
+      const courseTitle = selectedCourse?.title || selectedCourse?.name || 'Course';
+      const selectedBatch = pickerBatches.find(b => String(b.id) === String(pickerBatchId));
+      const batchName = selectedBatch ? selectedBatch.name : 'All Batches';
+
+      const assessmentTitle = `${batchName} Assessment`;
+
+      // 1. Get sections for course; find or create an "Assessments" section
+      const sections = await listSections(pickerCourseId);
+      let targetSection = (sections || []).find(s => s.title && s.title.toLowerCase().includes('assessment'));
+      if (!targetSection) {
+        if (sections && sections.length > 0) {
+          targetSection = sections[0];
+        } else {
+          targetSection = await createSection(pickerCourseId, {
+            title: 'Course Assessments & Tests',
+            description: 'Evaluations and knowledge quizzes'
+          });
+        }
+      }
+
+      // 2. Find or create content for this batch assessment
+      const contents = await listContents(targetSection.id);
+      let targetContent = (contents || []).find(c =>
+        c.title === assessmentTitle ||
+        (selectedBatch && c.title?.toLowerCase().includes(selectedBatch.name.toLowerCase()))
+      );
+
+      if (!targetContent) {
+        targetContent = await createContent(targetSection.id, {
+          title: assessmentTitle,
+          description: `Knowledge assessment for ${courseTitle} (${batchName})`,
+          contentType: 'RESOURCE',
+          mediaReference: '',
+          completionRule: 'ASSESSMENT'
+        });
+      }
+
+      setShowPickerModal(false);
+      setActiveEditorContent({
+        id: targetContent.id,
+        title: `${courseTitle} • ${assessmentTitle}`
+      });
+    } catch (err) {
+      console.error('Failed to prepare assessment for selected batch:', err);
+      toast.error('Failed to prepare assessment. Please try again.');
+    } finally {
+      setPickerSubmitting(false);
+    }
   };
 
   return (
@@ -209,7 +308,7 @@ export default function AdminAssessmentsPage() {
             Assessments &amp; Knowledge Tests
           </h1>
           <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            Configure 1-mark evaluations, chapter quizzes, time limits, and passing targets for course syllabus lessons.
+            Configure 1-mark evaluations, batch quizzes, time limits, and passing targets for enrolled students.
           </p>
         </div>
 
@@ -229,8 +328,7 @@ export default function AdminAssessmentsPage() {
               type="button"
               onClick={() => {
                 setPickerCourseId(courses[0]?.id || '');
-                setPickerSectionId('');
-                setPickerContentId('');
+                setPickerBatchId('');
                 setShowPickerModal(true);
               }}
               className="btn btn-primary btn-sm"
@@ -285,11 +383,11 @@ export default function AdminAssessmentsPage() {
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', flex: 1, minWidth: '260px' }}>
           {/* Search Box */}
-          <div style={{ position: 'relative', minWidth: '240px', flex: 1 }}>
+          <div style={{ position: 'relative', minWidth: '220px', flex: 1 }}>
             <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}></i>
             <input
               type="text"
-              placeholder="Search by lesson or course..."
+              placeholder="Search by assessment, course, batch..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
@@ -321,6 +419,26 @@ export default function AdminAssessmentsPage() {
             ))}
           </select>
 
+          {/* Batch Filter Dropdown (populated for selected course) */}
+          <select
+            value={selectedBatchId}
+            onChange={e => setSelectedBatchId(e.target.value)}
+            disabled={selectedCourseId === 'ALL'}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.88rem',
+              background: '#ffffff',
+              color: '#0f172a'
+            }}
+          >
+            <option value="ALL">All Batches</option>
+            {filterBatches.map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+
           {/* Status Filter */}
           <select
             value={statusFilter}
@@ -341,7 +459,7 @@ export default function AdminAssessmentsPage() {
         </div>
 
         <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-          Showing <strong>{filteredLessons.length}</strong> lessons
+          Showing <strong>{filteredList.length}</strong> modules
         </div>
       </div>
 
@@ -350,21 +468,22 @@ export default function AdminAssessmentsPage() {
         {loading ? (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: '#5A70D3' }}>
             <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2rem', marginBottom: '12px', display: 'block' }}></i>
-            <span>Scanning courses and assessments...</span>
+            <span>Scanning courses and batch assessments...</span>
           </div>
-        ) : filteredLessons.length === 0 ? (
+        ) : filteredList.length === 0 ? (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
             <i className="fa-regular fa-folder-open" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
-            <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>No lessons found</h4>
-            <p style={{ margin: 0, fontSize: '0.86rem' }}>Try adjusting your search criteria or course filter.</p>
+            <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>No assessments found</h4>
+            <p style={{ margin: 0, fontSize: '0.86rem' }}>Click "+ Create Assessment" above to add an assessment for a course batch.</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  <th style={{ padding: '14px 18px' }}>Course &amp; Section</th>
-                  <th style={{ padding: '14px 18px' }}>Lesson Topic</th>
+                  <th style={{ padding: '14px 18px' }}>Course</th>
+                  <th style={{ padding: '14px 18px' }}>Batch</th>
+                  <th style={{ padding: '14px 18px' }}>Assessment Title</th>
                   <th style={{ padding: '14px 18px' }}>Questions</th>
                   <th style={{ padding: '14px 18px' }}>Passing Criteria</th>
                   <th style={{ padding: '14px 18px' }}>Time Limit</th>
@@ -373,7 +492,7 @@ export default function AdminAssessmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredLessons.map((item, idx) => {
+                {filteredList.map((item, idx) => {
                   const hasAss = item.assessment != null;
                   const isEnabled = hasAss && item.assessment.enabled;
                   const qCount = hasAss ? (item.assessment.questions?.length || 0) : 0;
@@ -394,14 +513,25 @@ export default function AdminAssessmentsPage() {
                     >
                       <td style={{ padding: '14px 18px' }}>
                         <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>{item.courseName}</div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>
-                          <i className="fa-regular fa-folder" style={{ marginRight: '4px' }}></i>
-                          {item.sectionTitle}
-                        </div>
+                      </td>
+                      <td style={{ padding: '14px 18px' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: '#ede9fe',
+                          color: '#6d28d9',
+                          fontWeight: 700,
+                          fontSize: '0.76rem'
+                        }}>
+                          <i className="fa-solid fa-users-rectangle"></i>
+                          {item.batchName}
+                        </span>
                       </td>
                       <td style={{ padding: '14px 18px' }}>
                         <div style={{ fontWeight: 700, color: '#1e293b' }}>{item.title}</div>
-                        <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>ID: #{item.contentId}</div>
                       </td>
                       <td style={{ padding: '14px 18px' }}>
                         {hasAss ? (
@@ -517,7 +647,7 @@ export default function AdminAssessmentsPage() {
                               onClick={() => setActiveEditorContent({ id: item.contentId, title: item.title })}
                               className="btn btn-primary btn-sm"
                               style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#5A70D3', borderColor: '#5A70D3', fontSize: '0.8rem' }}
-                              title="Add new 1-mark assessment for this lesson"
+                              title="Add new 1-mark assessment for this batch"
                             >
                               <i className="fa-solid fa-plus"></i>
                               Add Assessment
@@ -534,7 +664,7 @@ export default function AdminAssessmentsPage() {
         )}
       </div>
 
-      {/* Picker Modal for "+ Create Assessment" */}
+      {/* Picker Modal for "+ Create Assessment": ONLY Choose Course & Choose Batch */}
       {showPickerModal && (
         <div style={{
           position: 'fixed',
@@ -551,7 +681,7 @@ export default function AdminAssessmentsPage() {
             background: '#ffffff',
             borderRadius: '16px',
             width: '100%',
-            maxWidth: '520px',
+            maxWidth: '500px',
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
             overflow: 'hidden'
           }}>
@@ -564,7 +694,7 @@ export default function AdminAssessmentsPage() {
             }}>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fa-solid fa-list-check" style={{ color: '#5A70D3' }}></i>
-                Select Lesson for Assessment
+                Select Course &amp; Batch for Assessment
               </h3>
               <button
                 type="button"
@@ -575,24 +705,23 @@ export default function AdminAssessmentsPage() {
               </button>
             </div>
 
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* Option 1: Choose Course */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Step 1: Choose Course
+                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                  Choose Course
                 </label>
                 <select
                   value={pickerCourseId}
-                  onChange={e => {
-                    setPickerCourseId(e.target.value);
-                    setPickerSectionId('');
-                    setPickerContentId('');
-                  }}
+                  onChange={e => setPickerCourseId(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
+                    padding: '11px 14px',
                     borderRadius: '8px',
                     border: '1px solid #cbd5e1',
-                    fontSize: '0.9rem'
+                    fontSize: '0.92rem',
+                    background: '#ffffff',
+                    color: '#0f172a'
                   }}
                 >
                   <option value="">-- Choose a Course --</option>
@@ -602,55 +731,43 @@ export default function AdminAssessmentsPage() {
                 </select>
               </div>
 
+              {/* Option 2: Choose Batch (only batches for selected course) */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Step 2: Choose Section
+                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                  Choose Batch {pickerLoadingBatches && <span style={{ fontSize: '0.76rem', color: '#5A70D3' }}>(Loading batches...)</span>}
                 </label>
                 <select
-                  value={pickerSectionId}
-                  onChange={e => {
-                    setPickerSectionId(e.target.value);
-                    setPickerContentId('');
-                  }}
-                  disabled={!pickerCourseId || pickerSections.length === 0}
+                  value={pickerBatchId}
+                  onChange={e => setPickerBatchId(e.target.value)}
+                  disabled={!pickerCourseId || pickerLoadingBatches}
                   style={{
                     width: '100%',
-                    padding: '10px 14px',
+                    padding: '11px 14px',
                     borderRadius: '8px',
                     border: '1px solid #cbd5e1',
-                    fontSize: '0.9rem'
+                    fontSize: '0.92rem',
+                    background: !pickerCourseId ? '#f8fafc' : '#ffffff',
+                    color: '#0f172a'
                   }}
                 >
-                  <option value="">-- Choose a Section --</option>
-                  {pickerSections.map(s => (
-                    <option key={s.id} value={s.id}>{s.title}</option>
-                  ))}
+                  {!pickerCourseId ? (
+                    <option value="">-- First select a course above --</option>
+                  ) : pickerBatches.length === 0 ? (
+                    <option value="ALL">All Batches (General Batch)</option>
+                  ) : (
+                    <>
+                      <option value="ALL">All Batches (General Batch)</option>
+                      {pickerBatches.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.code})
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Step 3: Choose Lesson Topic
-                </label>
-                <select
-                  value={pickerContentId}
-                  onChange={e => setPickerContentId(e.target.value)}
-                  disabled={!pickerSectionId || pickerLessons.length === 0}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.9rem'
-                  }}
-                >
-                  <option value="">-- Choose a Lesson --</option>
-                  {pickerLessons.map(l => (
-                    <option key={l.contentId} value={l.contentId}>
-                      {l.title} {l.assessment ? '(Has Assessment)' : '(No Assessment)'}
-                    </option>
-                  ))}
-                </select>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '6px', display: 'block' }}>
+                  Showing batches assigned exclusively to the chosen course.
+                </span>
               </div>
             </div>
 
@@ -666,17 +783,25 @@ export default function AdminAssessmentsPage() {
                 type="button"
                 onClick={() => setShowPickerModal(false)}
                 className="btn btn-secondary btn-sm"
+                disabled={pickerSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleLaunchFromPicker}
-                disabled={!pickerContentId}
+                disabled={!pickerCourseId || pickerSubmitting}
                 className="btn btn-primary btn-sm"
-                style={{ background: '#5A70D3', borderColor: '#5A70D3' }}
+                style={{ background: '#5A70D3', borderColor: '#5A70D3', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                Proceed to Editor &rarr;
+                {pickerSubmitting ? (
+                  <>
+                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                    Preparing...
+                  </>
+                ) : (
+                  <>Proceed to Editor &rarr;</>
+                )}
               </button>
             </div>
           </div>
