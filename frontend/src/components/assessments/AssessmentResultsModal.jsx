@@ -5,9 +5,35 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
   const [loading, setLoading] = useState(true);
   const [attempts, setAttempts] = useState([]);
   const [error, setError] = useState(null);
+
+  // View Mode: 'STUDENTS' (Unique Students) | 'ATTEMPTS' (All Attempt Records)
+  const [viewMode, setViewMode] = useState('STUDENTS');
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'PASSED' | 'FAILED' | 'IN_PROGRESS' | 'TERMINATED'
   const [sortBy, setSortBy] = useState('DATE_DESC'); // 'DATE_DESC' | 'DATE_ASC' | 'SCORE_DESC' | 'SCORE_ASC' | 'NAME_ASC'
+
+  // Batch Filter: Default to assessment's batch if specified
+  const initialBatchFilter = (assessment?.batchName && assessment.batchName !== 'All Batches')
+    ? assessment.batchName
+    : 'ALL';
+  const [batchFilter, setBatchFilter] = useState(initialBatchFilter);
+
+  // Expanded student IDs for accordion details
+  const [expandedStudents, setExpandedStudents] = useState(new Set());
+
+  const toggleStudentExpand = (studentId) => {
+    setExpandedStudents(prev => {
+      const next = new Set(prev);
+      if (next.has(studentId)) {
+        next.delete(studentId);
+      } else {
+        next.add(studentId);
+      }
+      return next;
+    });
+  };
 
   const fetchAttempts = async () => {
     if (!assessment?.contentId) return;
@@ -28,53 +54,135 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
     fetchAttempts();
   }, [assessment?.contentId]);
 
-  // Derived Analytics & Metrics
-  const metrics = useMemo(() => {
-    if (!attempts.length) {
-      return {
-        totalAttempts: 0,
-        uniqueStudents: 0,
-        passedCount: 0,
-        failedCount: 0,
-        inProgressCount: 0,
-        terminatedCount: 0,
-        passRate: 0,
-        avgPercentage: 0,
-        highestScore: 0,
-        totalQuestions: assessment?.questionsCount || 0
-      };
+  // List of unique batches present in the loaded attempts + assessment's batch
+  const availableBatches = useMemo(() => {
+    const set = new Set();
+    if (assessment?.batchName && assessment.batchName !== 'All Batches') {
+      set.add(assessment.batchName);
     }
-
-    const uniqueStudentIds = new Set(attempts.map(a => a.studentId));
-    const completedAttempts = attempts.filter(a => a.status === 'COMPLETED' || a.status === 'FAILED');
-    const passedAttempts = attempts.filter(a => a.passed);
-    const failedAttempts = attempts.filter(a => !a.passed && (a.status === 'COMPLETED' || a.status === 'FAILED'));
-    const inProgress = attempts.filter(a => a.status === 'IN_PROGRESS');
-    const terminated = attempts.filter(a => a.status === 'TERMINATED');
-
-    const sumPercentage = completedAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0);
-    const avgPercentage = completedAttempts.length ? Math.round(sumPercentage / completedAttempts.length) : 0;
-    const highestScore = attempts.reduce((max, a) => Math.max(max, a.percentage || 0), 0);
-    const passRate = completedAttempts.length ? Math.round((passedAttempts.length / completedAttempts.length) * 100) : 0;
-    const maxQuestions = attempts.reduce((max, a) => Math.max(max, a.totalQuestions || 0), 0);
-
-    return {
-      totalAttempts: attempts.length,
-      uniqueStudents: uniqueStudentIds.size,
-      passedCount: passedAttempts.length,
-      failedCount: failedAttempts.length,
-      inProgressCount: inProgress.length,
-      terminatedCount: terminated.length,
-      passRate,
-      avgPercentage,
-      highestScore,
-      totalQuestions: maxQuestions || assessment?.questionsCount || 0
-    };
+    attempts.forEach(a => {
+      if (a.batchName) set.add(a.batchName);
+    });
+    return Array.from(set);
   }, [attempts, assessment]);
 
-  // Filtered & Sorted list
+  // Base batch-filtered attempts
+  const batchFilteredAttempts = useMemo(() => {
+    if (batchFilter === 'ALL') return attempts;
+    return attempts.filter(a => {
+      const studentBatch = a.batchName || '';
+      return studentBatch.toLowerCase() === batchFilter.toLowerCase() ||
+             (studentBatch === '' && assessment?.batchName?.toLowerCase() === batchFilter.toLowerCase());
+    });
+  }, [attempts, batchFilter, assessment]);
+
+  // Aggregate Unique Students from batchFilteredAttempts
+  const uniqueStudentsList = useMemo(() => {
+    const studentMap = new Map();
+
+    batchFilteredAttempts.forEach(attempt => {
+      const sId = attempt.studentId || attempt.studentEmail || attempt.attemptId;
+      if (!studentMap.has(sId)) {
+        studentMap.set(sId, {
+          studentId: sId,
+          studentName: attempt.studentName || 'Student',
+          studentEmail: attempt.studentEmail || '',
+          studentProfileImage: attempt.studentProfileImage,
+          batchName: attempt.batchName || assessment?.batchName || 'Default Batch',
+          totalAttempts: 0,
+          attempts: [],
+          bestScore: 0,
+          bestMarks: 0,
+          hasPassed: false,
+          latestAttempt: null
+        });
+      }
+
+      const entry = studentMap.get(sId);
+      entry.totalAttempts += 1;
+      entry.attempts.push(attempt);
+
+      if (attempt.percentage > entry.bestScore) {
+        entry.bestScore = attempt.percentage;
+        entry.bestMarks = attempt.obtainedMarks;
+      }
+      if (attempt.passed) {
+        entry.hasPassed = true;
+      }
+    });
+
+    // Sort individual attempts by startedAt desc and set latestAttempt
+    studentMap.forEach(entry => {
+      entry.attempts.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0));
+      entry.latestAttempt = entry.attempts[0] || null;
+    });
+
+    return Array.from(studentMap.values());
+  }, [batchFilteredAttempts, assessment]);
+
+  // Metrics computed over batchFilteredAttempts
+  const metrics = useMemo(() => {
+    const totalAttempts = batchFilteredAttempts.length;
+    const uniqueStudents = uniqueStudentsList.length;
+    const passedStudentsCount = uniqueStudentsList.filter(s => s.hasPassed).length;
+    const passRate = uniqueStudents > 0 ? Math.round((passedStudentsCount / uniqueStudents) * 100) : 0;
+
+    const completedAttempts = batchFilteredAttempts.filter(a => a.status === 'COMPLETED' || a.status === 'FAILED');
+    const sumPercentage = completedAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0);
+    const avgPercentage = completedAttempts.length ? Math.round(sumPercentage / completedAttempts.length) : 0;
+    const highestScore = uniqueStudentsList.reduce((max, s) => Math.max(max, s.bestScore || 0), 0);
+
+    return {
+      totalAttempts,
+      uniqueStudents,
+      passedStudentsCount,
+      passRate,
+      avgPercentage,
+      highestScore
+    };
+  }, [batchFilteredAttempts, uniqueStudentsList]);
+
+  // Filtered Unique Students List (for 'STUDENTS' view)
+  const filteredStudents = useMemo(() => {
+    return uniqueStudentsList
+      .filter(s => {
+        if (statusFilter === 'PASSED') return s.hasPassed;
+        if (statusFilter === 'FAILED') return !s.hasPassed && s.latestAttempt?.status !== 'IN_PROGRESS';
+        if (statusFilter === 'IN_PROGRESS') return s.latestAttempt?.status === 'IN_PROGRESS';
+        if (statusFilter === 'TERMINATED') return s.latestAttempt?.status === 'TERMINATED';
+        return true;
+      })
+      .filter(s => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          (s.studentName && s.studentName.toLowerCase().includes(q)) ||
+          (s.studentEmail && s.studentEmail.toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => {
+        if (sortBy === 'DATE_DESC') {
+          return new Date(b.latestAttempt?.startedAt || 0) - new Date(a.latestAttempt?.startedAt || 0);
+        }
+        if (sortBy === 'DATE_ASC') {
+          return new Date(a.latestAttempt?.startedAt || 0) - new Date(b.latestAttempt?.startedAt || 0);
+        }
+        if (sortBy === 'SCORE_DESC') {
+          return (b.bestScore || 0) - (a.bestScore || 0);
+        }
+        if (sortBy === 'SCORE_ASC') {
+          return (a.bestScore || 0) - (b.bestScore || 0);
+        }
+        if (sortBy === 'NAME_ASC') {
+          return (a.studentName || '').localeCompare(b.studentName || '');
+        }
+        return 0;
+      });
+  }, [uniqueStudentsList, statusFilter, searchQuery, sortBy]);
+
+  // Filtered All Attempts List (for 'ATTEMPTS' view)
   const filteredAttempts = useMemo(() => {
-    return attempts
+    return batchFilteredAttempts
       .filter(a => {
         if (statusFilter === 'PASSED') return a.passed;
         if (statusFilter === 'FAILED') return !a.passed && (a.status === 'COMPLETED' || a.status === 'FAILED');
@@ -108,9 +216,9 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
         }
         return 0;
       });
-  }, [attempts, statusFilter, searchQuery, sortBy]);
+  }, [batchFilteredAttempts, statusFilter, searchQuery, sortBy]);
 
-  // Format Helper: Duration
+  // Format Helpers
   const formatDuration = (seconds) => {
     if (!seconds && seconds !== 0) return '—';
     if (seconds < 60) return `${seconds}s`;
@@ -119,7 +227,6 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
     return `${mins}m ${secs}s`;
   };
 
-  // Format Helper: Timestamp
   const formatTimestamp = (isoStr) => {
     if (!isoStr) return '—';
     try {
@@ -136,14 +243,33 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
     }
   };
 
+  const getInitial = (name) => {
+    if (!name) return 'S';
+    return name.trim().charAt(0).toUpperCase();
+  };
+
   // CSV Export
   const handleExportCsv = () => {
-    if (!filteredAttempts.length) return;
-    const headers = ['Attempt ID', 'Student Name', 'Student Email', 'Attempt #', 'Status', 'Passed', 'Marks Obtained', 'Total Questions', 'Percentage (%)', 'Started At', 'Submitted At', 'Duration (seconds)', 'Terminated Reason'];
-    const rows = filteredAttempts.map(a => [
-      a.attemptId,
+    if (!batchFilteredAttempts.length) return;
+    const headers = [
+      'Student Name',
+      'Student Email',
+      'Batch',
+      'Attempt #',
+      'Status',
+      'Passed',
+      'Marks Obtained',
+      'Total Questions',
+      'Percentage (%)',
+      'Started At',
+      'Submitted At',
+      'Duration (seconds)',
+      'Terminated Reason'
+    ];
+    const rows = batchFilteredAttempts.map(a => [
       `"${(a.studentName || '').replace(/"/g, '""')}"`,
       `"${(a.studentEmail || '').replace(/"/g, '""')}"`,
+      `"${(a.batchName || assessment?.batchName || '').replace(/"/g, '""')}"`,
       a.attemptNumber,
       a.status,
       a.passed ? 'YES' : 'NO',
@@ -161,16 +287,10 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     const safeTitle = (assessment?.title || 'assessment').replace(/[^a-z0-9_-]/gi, '_');
-    link.setAttribute('download', `${safeTitle}_student_results.csv`);
+    link.setAttribute('download', `${safeTitle}_results.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  // Helper avatar initial
-  const getInitial = (name) => {
-    if (!name) return 'S';
-    return name.trim().charAt(0).toUpperCase();
   };
 
   return (
@@ -178,37 +298,58 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
       position: 'fixed',
       top: 0,
       left: 0,
-      width: '100%',
-      height: '100%',
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(4px)',
+      width: '100vw',
+      height: '100vh',
+      background: 'rgba(15, 23, 42, 0.7)',
+      backdropFilter: 'blur(5px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 9999,
-      padding: '20px',
+      zIndex: 99999,
+      padding: '16px',
       boxSizing: 'border-box'
     }}>
+      <style>{`
+        /* Smooth, visible scrollbar */
+        .results-modal-scrollable::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .results-modal-scrollable::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        .results-modal-scrollable::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        .results-modal-scrollable::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
+
       <div style={{
         background: '#ffffff',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '1100px',
+        maxWidth: '1150px',
+        height: '92vh',
         maxHeight: '92vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
         overflow: 'hidden'
       }}>
         {/* Header Bar */}
         <div style={{
-          padding: '20px 24px',
+          padding: '18px 24px',
           background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
           color: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '16px',
+          flexShrink: 0,
           borderBottom: '1px solid #334155'
         }}>
           <div>
@@ -225,13 +366,15 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
               </span>
               {assessment.batchName && (
                 <span style={{
-                  background: 'rgba(168, 85, 247, 0.2)',
-                  color: '#c084fc',
+                  background: 'rgba(168, 85, 247, 0.25)',
+                  color: '#d8b4fe',
                   fontSize: '0.75rem',
                   fontWeight: 800,
                   padding: '2px 8px',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  border: '1px solid rgba(168, 85, 247, 0.4)'
                 }}>
+                  <i className="fa-solid fa-users-rectangle" style={{ marginRight: '4px' }}></i>
                   {assessment.batchName}
                 </span>
               )}
@@ -277,7 +420,7 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
               <span className="mobile-hide">Refresh</span>
             </button>
 
-            {attempts.length > 0 && (
+            {batchFilteredAttempts.length > 0 && (
               <button
                 type="button"
                 onClick={handleExportCsv}
@@ -328,28 +471,38 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
           </div>
         </div>
 
-        {/* Content Body */}
-        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
+        {/* Content Body: MUST have minHeight: 0 and overflowY: 'auto' so flexbox scrolls cleanly */}
+        <div
+          className="results-modal-scrollable"
+          style={{
+            padding: '20px 24px',
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px'
+          }}
+        >
           {/* Quick Metrics Cards */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '14px'
+            gap: '12px'
           }}>
             {/* Card 1: Unique Students */}
             <div style={{
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
               borderRadius: '12px',
-              padding: '14px 18px',
+              padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '14px'
+              gap: '12px'
             }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '10px',
                 background: '#e0f2fe',
                 color: '#0284c7',
@@ -362,10 +515,10 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 <i className="fa-solid fa-users"></i>
               </div>
               <div>
-                <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
                   Students Attended
                 </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>
                   {metrics.uniqueStudents}
                 </div>
               </div>
@@ -376,14 +529,14 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
               borderRadius: '12px',
-              padding: '14px 18px',
+              padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '14px'
+              gap: '12px'
             }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '10px',
                 background: '#ede9fe',
                 color: '#7c3aed',
@@ -396,10 +549,10 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 <i className="fa-solid fa-list-check"></i>
               </div>
               <div>
-                <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
                   Total Attempts
                 </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>
                   {metrics.totalAttempts}
                 </div>
               </div>
@@ -410,14 +563,14 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
               background: '#f0fdf4',
               border: '1px solid #bbf7d0',
               borderRadius: '12px',
-              padding: '14px 18px',
+              padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '14px'
+              gap: '12px'
             }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '10px',
                 background: '#dcfce7',
                 color: '#16a34a',
@@ -430,11 +583,11 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 <i className="fa-solid fa-circle-check"></i>
               </div>
               <div>
-                <div style={{ fontSize: '0.76rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Passed ({metrics.passRate}%)
+                <div style={{ fontSize: '0.74rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Passed Students
                 </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#15803d' }}>
-                  {metrics.passedCount} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#166534' }}>/ {metrics.totalAttempts}</span>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#15803d' }}>
+                  {metrics.passedStudentsCount} <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#166534' }}>({metrics.passRate}%)</span>
                 </div>
               </div>
             </div>
@@ -444,14 +597,14 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
               borderRadius: '12px',
-              padding: '14px 18px',
+              padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '14px'
+              gap: '12px'
             }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '10px',
                 background: '#fef3c7',
                 color: '#d97706',
@@ -464,17 +617,17 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 <i className="fa-solid fa-chart-pie"></i>
               </div>
               <div>
-                <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
                   Average Score
                 </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>
                   {metrics.avgPercentage}%
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Filters & Search Row */}
+          {/* Controls Bar: View Toggle, Batch Filter, Search & Status */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -482,11 +635,86 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
             flexWrap: 'wrap',
             gap: '12px',
             background: '#ffffff',
-            padding: '4px 0'
+            padding: '2px 0'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
-              <div style={{ position: 'relative', width: '100%', maxWidth: '340px' }}>
-                <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}></i>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
+              {/* View Toggle: Group by Student vs All Attempts */}
+              <div style={{
+                display: 'inline-flex',
+                background: '#f1f5f9',
+                borderRadius: '8px',
+                padding: '3px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('STUDENTS')}
+                  style={{
+                    border: 'none',
+                    background: viewMode === 'STUDENTS' ? '#ffffff' : 'transparent',
+                    color: viewMode === 'STUDENTS' ? '#0f172a' : '#64748b',
+                    fontWeight: viewMode === 'STUDENTS' ? 800 : 600,
+                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    boxShadow: viewMode === 'STUDENTS' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <i className="fa-solid fa-user-check"></i>
+                  By Student ({metrics.uniqueStudents})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('ATTEMPTS')}
+                  style={{
+                    border: 'none',
+                    background: viewMode === 'ATTEMPTS' ? '#ffffff' : 'transparent',
+                    color: viewMode === 'ATTEMPTS' ? '#0f172a' : '#64748b',
+                    fontWeight: viewMode === 'ATTEMPTS' ? 800 : 600,
+                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    boxShadow: viewMode === 'ATTEMPTS' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <i className="fa-solid fa-list-ol"></i>
+                  All Attempts ({metrics.totalAttempts})
+                </button>
+              </div>
+
+              {/* Batch Filter Dropdown */}
+              <select
+                value={batchFilter}
+                onChange={e => setBatchFilter(e.target.value)}
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.82rem',
+                  background: '#ffffff',
+                  color: '#334155',
+                  fontWeight: 700
+                }}
+                title="Filter by enrolled batch"
+              >
+                <option value="ALL">All Batches</option>
+                {availableBatches.map(b => (
+                  <option key={b} value={b}>Only {b} Students</option>
+                ))}
+              </select>
+
+              {/* Search Query */}
+              <div style={{ position: 'relative', minWidth: '220px', flex: 1, maxWidth: '320px' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}></i>
                 <input
                   type="text"
                   value={searchQuery}
@@ -494,10 +722,10 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                   placeholder="Search student name or email..."
                   style={{
                     width: '100%',
-                    padding: '8px 12px 8px 36px',
+                    padding: '7px 12px 7px 32px',
                     borderRadius: '8px',
                     border: '1px solid #cbd5e1',
-                    fontSize: '0.88rem',
+                    fontSize: '0.84rem',
                     outline: 'none',
                     boxSizing: 'border-box'
                   }}
@@ -509,97 +737,440 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
                 style={{
-                  padding: '8px 12px',
+                  padding: '7px 12px',
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
-                  fontSize: '0.85rem',
+                  fontSize: '0.82rem',
                   background: '#ffffff',
                   color: '#334155',
                   fontWeight: 600
                 }}
               >
-                <option value="ALL">All Status ({attempts.length})</option>
-                <option value="PASSED">Passed ({metrics.passedCount})</option>
-                <option value="FAILED">Failed ({metrics.failedCount})</option>
-                {metrics.inProgressCount > 0 && <option value="IN_PROGRESS">In Progress ({metrics.inProgressCount})</option>}
-                {metrics.terminatedCount > 0 && <option value="TERMINATED">Terminated ({metrics.terminatedCount})</option>}
+                <option value="ALL">All Status</option>
+                <option value="PASSED">Passed</option>
+                <option value="FAILED">Failed</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="TERMINATED">Terminated</option>
               </select>
             </div>
 
             {/* Sort Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Sort by:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Sort:</span>
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
                 style={{
-                  padding: '8px 12px',
+                  padding: '7px 10px',
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
-                  fontSize: '0.85rem',
+                  fontSize: '0.82rem',
                   background: '#ffffff',
                   color: '#334155',
                   fontWeight: 600
                 }}
               >
-                <option value="DATE_DESC">Latest Attempt First</option>
-                <option value="DATE_ASC">Oldest Attempt First</option>
-                <option value="SCORE_DESC">Highest Score First</option>
-                <option value="SCORE_ASC">Lowest Score First</option>
-                <option value="NAME_ASC">Student Name (A-Z)</option>
+                <option value="DATE_DESC">Latest Attempt</option>
+                <option value="DATE_ASC">Oldest Attempt</option>
+                <option value="SCORE_DESC">Highest Score</option>
+                <option value="SCORE_ASC">Lowest Score</option>
+                <option value="NAME_ASC">Name (A-Z)</option>
               </select>
             </div>
           </div>
 
-          {/* Table Container */}
+          {/* Main Table Container: Scrollable with sticky header */}
           <div style={{
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
-            overflow: 'hidden',
             background: '#ffffff',
-            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.02)'
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
           }}>
-            {loading ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#0284c7' }}>
-                <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block' }}></i>
-                <span>Loading student attempts...</span>
-              </div>
-            ) : error ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#ef4444' }}>
-                <i className="fa-solid fa-circle-exclamation" style={{ fontSize: '2rem', marginBottom: '8px', display: 'block' }}></i>
-                <p style={{ margin: 0, fontWeight: 700 }}>{error}</p>
-                <button
-                  type="button"
-                  onClick={fetchAttempts}
-                  className="btn btn-secondary btn-sm"
-                  style={{ marginTop: '12px' }}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : filteredAttempts.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
-                <i className="fa-regular fa-clipboard" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '10px', display: 'block' }}></i>
-                <h4 style={{ margin: '0 0 4px', fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>
-                  {attempts.length === 0 ? 'No Student Attempts Yet' : 'No Matching Attempts Found'}
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.85rem' }}>
-                  {attempts.length === 0
-                    ? 'When students enrolled in this course batch attend this assessment, their scores and marks will be recorded here.'
-                    : 'Try clearing your search query or status filter to see all attempts.'}
-                </p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
+            <div
+              className="results-modal-scrollable"
+              style={{
+                overflowX: 'auto',
+                overflowY: 'auto',
+                maxHeight: '440px'
+              }}
+            >
+              {loading ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#0284c7' }}>
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block' }}></i>
+                  <span>Loading assessment results...</span>
+                </div>
+              ) : error ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#ef4444' }}>
+                  <i className="fa-solid fa-circle-exclamation" style={{ fontSize: '2rem', marginBottom: '8px', display: 'block' }}></i>
+                  <p style={{ margin: 0, fontWeight: 700 }}>{error}</p>
+                  <button
+                    type="button"
+                    onClick={fetchAttempts}
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: '12px' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (viewMode === 'STUDENTS' ? filteredStudents.length === 0 : filteredAttempts.length === 0) ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
+                  <i className="fa-regular fa-clipboard" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '10px', display: 'block' }}></i>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>
+                    {attempts.length === 0
+                      ? 'No Student Attempts Yet'
+                      : `No Students Found for ${batchFilter !== 'ALL' ? batchFilter : 'selected filters'}`}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>
+                    {attempts.length === 0
+                      ? 'When students enrolled in this course batch attend this assessment, their scores and marks will be recorded here.'
+                      : 'Try changing the batch filter or search term to see other student results.'}
+                  </p>
+                </div>
+              ) : viewMode === 'STUDENTS' ? (
+                /* ========================================================
+                   VIEW 1: UNIQUE STUDENTS VIEW (1 Row Per Student)
+                   ======================================================== */
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      <th style={{ padding: '12px 16px' }}>Student</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Attempt</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Marks Obtained</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Score (%)</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Status</th>
-                      <th style={{ padding: '12px 16px' }}>Time & Duration</th>
+                    <tr style={{
+                      background: '#f8fafc',
+                      borderBottom: '2px solid #e2e8f0',
+                      color: '#475569',
+                      fontSize: '0.78rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10
+                    }}>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Student</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Batch</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Attempts</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Latest Marks</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Best Score</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Overall Status</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Last Attended</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', background: '#f8fafc' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStudents.map((item) => {
+                      const isExpanded = expandedStudents.has(item.studentId);
+                      const latest = item.latestAttempt || {};
+                      const isPassed = item.hasPassed;
+                      const isInProgress = latest.status === 'IN_PROGRESS';
+                      const isTerminated = latest.status === 'TERMINATED';
+
+                      return (
+                        <div key={item.studentId} style={{ display: 'contents' }}>
+                          <tr
+                            style={{
+                              borderBottom: isExpanded ? 'none' : '1px solid #f1f5f9',
+                              background: isExpanded ? '#f8fafc' : 'transparent',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = '#fafafa'; }}
+                            onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            {/* Student Info */}
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                {item.studentProfileImage ? (
+                                  <img
+                                    src={item.studentProfileImage}
+                                    alt={item.studentName}
+                                    style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <div style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '50%',
+                                    background: '#e0f2fe',
+                                    color: '#0284c7',
+                                    fontWeight: 800,
+                                    fontSize: '0.9rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                  }}>
+                                    {getInitial(item.studentName)}
+                                  </div>
+                                )}
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
+                                    {item.studentName}
+                                  </div>
+                                  <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                                    {item.studentEmail}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Batch Pill */}
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                background: '#ede9fe',
+                                color: '#6d28d9',
+                                fontWeight: 700,
+                                fontSize: '0.76rem'
+                              }}>
+                                <i className="fa-solid fa-users-rectangle"></i>
+                                {item.batchName}
+                              </span>
+                            </td>
+
+                            {/* Attempts Count Badge */}
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '3px 10px',
+                                borderRadius: '20px',
+                                background: '#f1f5f9',
+                                color: '#334155',
+                                fontWeight: 800,
+                                fontSize: '0.8rem'
+                              }}>
+                                {item.totalAttempts} {item.totalAttempts === 1 ? 'attempt' : 'attempts'}
+                              </span>
+                            </td>
+
+                            {/* Latest Marks */}
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <span style={{
+                                  fontWeight: 900,
+                                  fontSize: '0.98rem',
+                                  color: isPassed ? '#16a34a' : (isTerminated ? '#d97706' : '#dc2626')
+                                }}>
+                                  {latest.obtainedMarks ?? 0}
+                                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#94a3b8' }}>
+                                    {' '}/ {latest.totalQuestions || 0}
+                                  </span>
+                                </span>
+                                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                                  ({latest.percentage ?? 0}%)
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Best Score */}
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <span style={{
+                                fontWeight: 800,
+                                fontSize: '0.92rem',
+                                color: item.bestScore >= (assessment.passPercentage || 60) ? '#16a34a' : '#d97706'
+                              }}>
+                                {item.bestScore}%
+                              </span>
+                            </td>
+
+                            {/* Status */}
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              {isPassed ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '3px 9px',
+                                  borderRadius: '9999px',
+                                  background: '#dcfce7',
+                                  color: '#16a34a',
+                                  fontWeight: 800,
+                                  fontSize: '0.74rem'
+                                }}>
+                                  <i className="fa-solid fa-check"></i> Passed
+                                </span>
+                              ) : isInProgress ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '3px 9px',
+                                  borderRadius: '9999px',
+                                  background: '#e0f2fe',
+                                  color: '#0284c7',
+                                  fontWeight: 800,
+                                  fontSize: '0.74rem'
+                                }}>
+                                  <i className="fa-solid fa-clock"></i> In Progress
+                                </span>
+                              ) : isTerminated ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '3px 9px',
+                                  borderRadius: '9999px',
+                                  background: '#fef3c7',
+                                  color: '#b45309',
+                                  fontWeight: 800,
+                                  fontSize: '0.74rem'
+                                }} title={`Terminated: ${latest.terminatedReason || 'Policy Violation'}`}>
+                                  <i className="fa-solid fa-triangle-exclamation"></i> Terminated
+                                </span>
+                              ) : (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '3px 9px',
+                                  borderRadius: '9999px',
+                                  background: '#fee2e2',
+                                  color: '#dc2626',
+                                  fontWeight: 800,
+                                  fontSize: '0.74rem'
+                                }}>
+                                  <i className="fa-solid fa-xmark"></i> Failed
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Last Attended */}
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>
+                                {formatTimestamp(latest.startedAt)}
+                              </div>
+                            </td>
+
+                            {/* Expand History Action */}
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                onClick={() => toggleStudentExpand(item.studentId)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: isExpanded ? '#0284c7' : '#ffffff',
+                                  color: isExpanded ? '#ffffff' : '#0284c7',
+                                  border: '1px solid #bae6fd',
+                                  fontWeight: 700,
+                                  fontSize: '0.76rem',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px'
+                                }}
+                                title="View individual attempt breakdown"
+                              >
+                                <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                                <span>{isExpanded ? 'Hide' : `${item.totalAttempts} ${item.totalAttempts === 1 ? 'Attempt' : 'Attempts'}`}</span>
+                              </button>
+                            </td>
+                          </tr>
+
+                          {/* Accordion: Nested Attempt Rows */}
+                          {isExpanded && (
+                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                              <td colSpan="8" style={{ padding: '12px 20px 16px 40px' }}>
+                                <div style={{
+                                  background: '#ffffff',
+                                  borderRadius: '10px',
+                                  border: '1px solid #e2e8f0',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{
+                                    padding: '8px 14px',
+                                    background: '#f1f5f9',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 800,
+                                    color: '#475569',
+                                    borderBottom: '1px solid #e2e8f0'
+                                  }}>
+                                    Attempt History for {item.studentName}
+                                  </div>
+                                  <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                      <tr style={{ background: '#ffffff', borderBottom: '1px solid #f1f5f9', color: '#64748b' }}>
+                                        <th style={{ padding: '8px 12px' }}>Attempt #</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Marks</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Score</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
+                                        <th style={{ padding: '8px 12px' }}>Started At</th>
+                                        <th style={{ padding: '8px 12px' }}>Duration</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {item.attempts.map((att) => (
+                                        <tr key={att.attemptId} style={{ borderBottom: '1px solid #f8fafc' }}>
+                                          <td style={{ padding: '8px 12px', fontWeight: 700 }}>
+                                            #{att.attemptNumber}
+                                          </td>
+                                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800 }}>
+                                            {att.obtainedMarks} / {att.totalQuestions}
+                                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 'normal', marginLeft: '4px' }}>
+                                              ({att.correctAnswers} correct)
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, color: att.passed ? '#16a34a' : '#ef4444' }}>
+                                            {att.percentage}%
+                                          </td>
+                                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                            <span style={{
+                                              padding: '2px 6px',
+                                              borderRadius: '4px',
+                                              fontSize: '0.72rem',
+                                              fontWeight: 700,
+                                              background: att.passed ? '#dcfce7' : (att.status === 'TERMINATED' ? '#fef3c7' : '#fee2e2'),
+                                              color: att.passed ? '#15803d' : (att.status === 'TERMINATED' ? '#b45309' : '#dc2626')
+                                            }}>
+                                              {att.status} {att.terminatedReason ? `(${att.terminatedReason})` : ''}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '8px 12px', color: '#475569' }}>
+                                            {formatTimestamp(att.startedAt)}
+                                          </td>
+                                          <td style={{ padding: '8px 12px', color: '#475569' }}>
+                                            {formatDuration(att.durationSeconds)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                /* ========================================================
+                   VIEW 2: ALL ATTEMPTS LOG (Every Attempt Record)
+                   ======================================================== */
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <thead>
+                    <tr style={{
+                      background: '#f8fafc',
+                      borderBottom: '2px solid #e2e8f0',
+                      color: '#475569',
+                      fontSize: '0.78rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10
+                    }}>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Student</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Batch</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Attempt</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Marks Obtained</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Score (%)</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', background: '#f8fafc' }}>Status</th>
+                      <th style={{ padding: '12px 16px', background: '#f8fafc' }}>Time & Duration</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -648,11 +1219,29 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                                 <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
                                   {attempt.studentName || 'Student'}
                                 </div>
-                                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
                                   {attempt.studentEmail}
                                 </div>
                               </div>
                             </div>
+                          </td>
+
+                          {/* Batch Pill */}
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              background: '#ede9fe',
+                              color: '#6d28d9',
+                              fontWeight: 700,
+                              fontSize: '0.76rem'
+                            }}>
+                              <i className="fa-solid fa-users-rectangle"></i>
+                              {attempt.batchName || assessment?.batchName || 'Default Batch'}
+                            </span>
                           </td>
 
                           {/* Attempt Number */}
@@ -790,23 +1379,27 @@ export default function AssessmentResultsModal({ assessment, onClose }) {
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-
         </div>
 
         {/* Footer */}
         <div style={{
-          padding: '14px 24px',
+          padding: '12px 24px',
           background: '#f8fafc',
           borderTop: '1px solid #e2e8f0',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexShrink: 0
         }}>
           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-            Showing <strong>{filteredAttempts.length}</strong> of <strong>{attempts.length}</strong> attempts
+            {viewMode === 'STUDENTS' ? (
+              <>Showing <strong>{filteredStudents.length}</strong> unique students ({metrics.totalAttempts} total attempts recorded)</>
+            ) : (
+              <>Showing <strong>{filteredAttempts.length}</strong> of <strong>{metrics.totalAttempts}</strong> attempts</>
+            )}
           </div>
           <button
             type="button"

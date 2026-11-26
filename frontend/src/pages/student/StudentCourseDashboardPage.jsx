@@ -222,7 +222,21 @@ export default function StudentCourseDashboardPage() {
         })
       );
 
-      const validAssessments = results.filter(Boolean);
+      const validAssessments = results.filter(Boolean).filter(ass => {
+        // Batch scoping: If assessment title specifies a batch (e.g. "Batch-A Assessment")
+        // and student has an enrolled batch, only show if student belongs to that batch
+        const titleLower = (ass.lessonTitle || '').toLowerCase();
+        const studentBatch = (enrollment?.batchName || '').toLowerCase().trim();
+        const batchMatch = titleLower.match(/batch-?[a-z0-9]+/i);
+        if (batchMatch && studentBatch) {
+          const targetBatchClean = batchMatch[0].replace(/[\s-_]/g, '').toLowerCase();
+          const studentBatchClean = studentBatch.replace(/[\s-_]/g, '').toLowerCase();
+          if (!studentBatchClean.includes(targetBatchClean) && !targetBatchClean.includes(studentBatchClean)) {
+            return false;
+          }
+        }
+        return true;
+      });
       setCourseAssessments(validAssessments);
     } catch (e) {
       console.warn('Failed to fetch course assessments:', e);

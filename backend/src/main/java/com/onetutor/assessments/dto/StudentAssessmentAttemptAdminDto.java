@@ -8,6 +8,8 @@ public record StudentAssessmentAttemptAdminDto(
         String studentName,
         String studentEmail,
         String studentProfileImage,
+        Long batchId,
+        String batchName,
         Long assessmentId,
         Long contentId,
         String status,

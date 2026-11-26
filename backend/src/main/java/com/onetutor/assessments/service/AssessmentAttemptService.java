@@ -8,6 +8,8 @@ import com.onetutor.common.exceptions.ForbiddenException;
 import com.onetutor.common.exceptions.NotFoundException;
 import com.onetutor.contents.entity.Content;
 import com.onetutor.contents.repository.ContentRepository;
+import com.onetutor.enrollment.entity.Enrollment;
+import com.onetutor.enrollment.repository.EnrollmentRepository;
 import com.onetutor.enrollment.service.EnrollmentService;
 import com.onetutor.progress.entity.Progress;
 import com.onetutor.progress.repository.ProgressRepository;
@@ -32,6 +34,7 @@ public class AssessmentAttemptService {
     private final ContentRepository contentRepository;
     private final ProgressRepository progressRepository;
     private final EnrollmentService enrollmentService;
+    private final EnrollmentRepository enrollmentRepository;
 
     public AssessmentAttemptService(AssessmentRepository assessmentRepository,
                                     AssessmentQuestionRepository questionRepository,
@@ -40,7 +43,8 @@ public class AssessmentAttemptService {
                                     AssessmentAuditLogRepository auditLogRepository,
                                     ContentRepository contentRepository,
                                     ProgressRepository progressRepository,
-                                    EnrollmentService enrollmentService) {
+                                    EnrollmentService enrollmentService,
+                                    EnrollmentRepository enrollmentRepository) {
         this.assessmentRepository = assessmentRepository;
         this.questionRepository = questionRepository;
         this.attemptRepository = attemptRepository;
@@ -49,6 +53,7 @@ public class AssessmentAttemptService {
         this.contentRepository = contentRepository;
         this.progressRepository = progressRepository;
         this.enrollmentService = enrollmentService;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -454,6 +459,9 @@ public class AssessmentAttemptService {
         double passPct = assessment.getPassPercentage();
         CompletionMode completionMode = assessment.getCompletionMode();
         int fallbackTotalQuestions = questionRepository.countByAssessmentId(assessment.getId());
+        Long courseId = (content.getSection() != null && content.getSection().getCourse() != null)
+                ? content.getSection().getCourse().getId()
+                : null;
 
         return attempts.stream().map(a -> {
             User s = a.getStudent();
@@ -466,12 +474,24 @@ public class AssessmentAttemptService {
                 durationSec = Duration.between(a.getStartedAt(), a.getSubmittedAt()).getSeconds();
             }
 
+            Long batchId = null;
+            String batchName = null;
+            if (s != null && courseId != null) {
+                Optional<Enrollment> enr = enrollmentRepository.findByStudentIdAndCourseId(s.getId(), courseId);
+                if (enr.isPresent() && enr.get().getBatch() != null) {
+                    batchId = enr.get().getBatch().getId();
+                    batchName = enr.get().getBatch().getName();
+                }
+            }
+
             return new StudentAssessmentAttemptAdminDto(
                     a.getId(),
                     s != null ? s.getId() : null,
                     s != null ? s.getName() : "Unknown Student",
                     s != null ? s.getEmail() : "",
                     s != null ? s.getProfileImage() : null,
+                    batchId,
+                    batchName,
                     assessment.getId(),
                     content.getId(),
                     a.getStatus().name(),
