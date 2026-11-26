@@ -247,13 +247,18 @@ export default function AdminAssessmentsPage() {
       const sections = await listSections(pickerCourseId);
       let targetSection = (sections || []).find(s => s.title && s.title.toLowerCase().includes('assessment'));
       if (!targetSection) {
-        if (sections && sections.length > 0) {
-          targetSection = sections[0];
-        } else {
+        try {
           targetSection = await createSection(pickerCourseId, {
             title: 'Course Assessments & Tests',
             description: 'Evaluations and knowledge quizzes'
           });
+        } catch (secErr) {
+          // If section creation fails or already exists, fallback to first available section
+          if (sections && sections.length > 0) {
+            targetSection = sections[0];
+          } else {
+            throw secErr;
+          }
         }
       }
 
@@ -268,8 +273,8 @@ export default function AdminAssessmentsPage() {
         targetContent = await createContent(targetSection.id, {
           title: assessmentTitle,
           description: `Knowledge assessment for ${courseTitle} (${batchName})`,
-          contentType: 'RESOURCE',
-          mediaReference: '',
+          contentType: 'PDF',
+          mediaReference: 'https://placeholder.onetutor.com/assessment.pdf',
           completionRule: 'ASSESSMENT'
         });
       }
