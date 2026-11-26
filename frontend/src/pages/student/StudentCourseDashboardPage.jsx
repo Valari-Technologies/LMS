@@ -2407,23 +2407,49 @@ export default function StudentCourseDashboardPage() {
 
               {/* Course Live Session Attendance Log & Video Replays Workspace */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <style>{`
+                  @media (max-width: 640px) {
+                    .ot-course-attendance-card {
+                      padding: 14px 14px !important;
+                      border-radius: 12px !important;
+                    }
+                    .ot-att-card-header {
+                      margin-bottom: 12px !important;
+                    }
+                  }
+                  @media (max-width: 440px) {
+                    .ot-course-attendance-card {
+                      padding: 12px 10px !important;
+                    }
+                    .ot-att-item-row {
+                      padding: 8px 10px !important;
+                      gap: 8px !important;
+                    }
+                    .ot-att-item-left {
+                      gap: 8px !important;
+                    }
+                    .ot-att-item-right {
+                      gap: 6px !important;
+                    }
+                  }
+                `}</style>
 
                 {/* Course Live Session Attendance Log (Strictly for THIS COURSE) */}
-                <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className="fa-solid fa-calendar-check" style={{ color: '#10b981' }}></i>
+                <div className="ot-course-attendance-card" style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                    <div className="ot-att-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '10px' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h3 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0', display: 'flex', alignItems: 'center', gap: '8px', lineHeight: 1.25 }}>
+                          <i className="fa-solid fa-calendar-check" style={{ color: '#10b981', flexShrink: 0 }}></i>
                           <span>Live Class Attendance Records</span>
                         </h3>
-                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.76rem', color: '#64748b', display: 'block', lineHeight: 1.3 }}>
                           Attendance telemetry for this separate course only
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setActiveTab('attendance')}
-                        style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, padding: '2px 0' }}
                       >
                         Full Details →
                       </button>
@@ -2439,8 +2465,15 @@ export default function StudentCourseDashboardPage() {
                         {attendance.sessions.slice(0, 5).map((s, idx) => {
                           const isPresent = s.attendanceStatus === 'PRESENT';
                           const isUpcoming = s.attendanceStatus === 'UPCOMING';
+                          const formattedDate = s.scheduledAt ? (
+                            (() => {
+                              const d = new Date(s.scheduledAt);
+                              return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                            })()
+                          ) : '—';
+
                           return (
-                            <div key={s.sessionId || idx} style={{
+                            <div key={s.sessionId || idx} className="ot-att-item-row" style={{
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
@@ -2448,10 +2481,9 @@ export default function StudentCourseDashboardPage() {
                               borderRadius: '10px',
                               background: '#f8fafc',
                               border: '1px solid #edf2f7',
-                              gap: '10px',
-                              flexWrap: 'wrap'
+                              gap: '10px'
                             }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div className="ot-att-item-left" style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                                 <span style={{
                                   width: '28px',
                                   height: '28px',
@@ -2466,22 +2498,40 @@ export default function StudentCourseDashboardPage() {
                                 }}>
                                   <i className={`fa-solid ${isPresent ? 'fa-check' : (isUpcoming ? 'fa-clock' : 'fa-xmark')}`}></i>
                                 </span>
-                                <div>
-                                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>{s.sessionTitle}</div>
-                                  <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                                    {s.scheduledAt ? new Date(s.scheduledAt).toLocaleString() : '—'}
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{
+                                    fontSize: '0.86rem',
+                                    fontWeight: 800,
+                                    color: '#0f172a',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    lineHeight: 1.3
+                                  }} title={s.sessionTitle}>
+                                    {s.sessionTitle}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.74rem',
+                                    color: '#64748b',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    marginTop: '1px'
+                                  }}>
+                                    {formattedDate}
                                   </div>
                                 </div>
                               </div>
 
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div className="ot-att-item-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                                 <span style={{
                                   fontSize: '0.72rem',
                                   fontWeight: 800,
                                   padding: '3px 8px',
                                   borderRadius: '9999px',
                                   background: isPresent ? 'rgba(16, 185, 129, 0.12)' : (isUpcoming ? '#e0f2fe' : '#fee2e2'),
-                                  color: isPresent ? '#10b981' : (isUpcoming ? '#0284c7' : '#ef4444')
+                                  color: isPresent ? '#10b981' : (isUpcoming ? '#0284c7' : '#ef4444'),
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   {isPresent ? 'Present' : (isUpcoming ? 'Upcoming' : 'Absent')}
                                 </span>
@@ -2489,7 +2539,7 @@ export default function StudentCourseDashboardPage() {
                                   <Link
                                     to={`/student/live-classroom/${s.sessionId}`}
                                     onClick={() => recordStudentAttendance(s.sessionId, user, { courseId: course?.id, sessionTitle: s.sessionTitle })}
-                                    style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, textDecoration: 'none' }}
+                                    style={{ fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
                                   >
                                     Join →
                                   </Link>
@@ -2509,7 +2559,7 @@ export default function StudentCourseDashboardPage() {
                                       };
                                       setSelectedRecording(matchingRec);
                                     }}
-                                    style={{ background: 'none', border: 'none', fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, cursor: 'pointer' }}
+                                    style={{ background: 'none', border: 'none', fontSize: '0.78rem', color: '#5A70D3', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', padding: '2px 0' }}
                                   >
                                     Replay →
                                   </button>
@@ -2523,8 +2573,8 @@ export default function StudentCourseDashboardPage() {
                   </div>
 
                   {/* Recorded Replays Teaser */}
-                  <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div className="ot-course-attendance-card" style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 22px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '0.94rem', color: '#0f172a' }}>
                         <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
                         <span>Course Video Replays</span>
@@ -2532,7 +2582,7 @@ export default function StudentCourseDashboardPage() {
                       <button
                         type="button"
                         onClick={() => setActiveTab('recordings')}
-                        style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', color: '#5A70D3', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                       >
                         Watch &amp; Rate ({recordingSessions.length}) →
                       </button>
