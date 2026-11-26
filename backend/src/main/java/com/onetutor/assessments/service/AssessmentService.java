@@ -8,6 +8,8 @@ import com.onetutor.common.exceptions.BadRequestException;
 import com.onetutor.common.exceptions.NotFoundException;
 import com.onetutor.contents.entity.Content;
 import com.onetutor.contents.repository.ContentRepository;
+import com.onetutor.courses.entity.Course;
+import com.onetutor.sections.entity.Section;
 import com.onetutor.users.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -158,8 +160,8 @@ public class AssessmentService {
                 )).toList();
 
         Content content = a.getContent();
-        com.onetutor.curriculum.entity.Section section = content != null ? content.getSection() : null;
-        com.onetutor.courses.entity.Course course = section != null ? section.getCourse() : null;
+        Section section = content != null ? content.getSection() : null;
+        Course course = section != null ? section.getCourse() : null;
 
         Long courseId = course != null ? course.getId() : null;
         String courseName = course != null ? (course.getName() != null ? course.getName() : course.getShortDesc()) : "Course";
