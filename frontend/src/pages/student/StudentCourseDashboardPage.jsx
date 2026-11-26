@@ -643,41 +643,16 @@ export default function StudentCourseDashboardPage() {
     return (
       <div className="ot-learn-page ot-dashboard-learn-page">
         <div className="ot-learn-container" style={{ paddingTop: '16px' }}>
-          {/* Top Bar: Return to Course Space button & Course Title */}
+          {/* Top Bar: Course Title & Lecture Classroom Indicator */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '16px',
+            marginBottom: '14px',
             gap: '12px',
             flexWrap: 'wrap'
           }}>
-            <button
-              type="button"
-              onClick={handleClosePlayer}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontSize: '0.86rem',
-                fontWeight: 700,
-                color: '#334155',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#5A70D3'; e.currentTarget.style.color = '#5A70D3'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
-            >
-              <i className="fa-solid fa-arrow-left"></i>
-              <span>Back to Course Space</span>
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#64748b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#64748b' }}>
               <span style={{ fontWeight: 800, color: '#0f172a' }}>{course?.name || course?.title}</span>
               <span>•</span>
               <span style={{ color: '#5A70D3', fontWeight: 700 }}>Lecture Classroom</span>
@@ -837,31 +812,6 @@ export default function StudentCourseDashboardPage() {
                   <i className="fa-solid fa-paperclip"></i>
                   <span>Resources</span>
                   {recResources.length > 0 && <span className="ot-tab-badge">{recResources.length}</span>}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleClosePlayer}
-                  style={{
-                    marginLeft: 'auto',
-                    border: 'none',
-                    background: 'rgba(90, 112, 211, 0.08)',
-                    color: '#5A70D3',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Exit recording player and return to dashboard"
-                >
-                  <i className="fa-solid fa-arrow-left"></i>
-                  <span>Back to Course</span>
                 </button>
               </div>
 
