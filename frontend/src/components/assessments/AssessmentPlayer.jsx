@@ -397,10 +397,11 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
   // 1. Initial Start / Instructions Screen
   if (!activeAttempt || activeAttempt.status === 'TERMINATED') {
     return (
-      <div style={{ background: 'var(--bg-card, #ffffff)', border: '1px solid var(--border-subtle, #e2e8f0)', borderRadius: '16px', padding: '32px 20px', maxWidth: '680px', margin: '20px auto', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' }}>
+      <div style={{ background: 'var(--bg-card, #ffffff)', border: 'none', borderRadius: '16px', padding: '24px 16px', maxWidth: '680px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' }}>
         <div style={{ textAlign: 'center' }}>
-          <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.75rem', fontWeight: '800', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase' }}>
-            {assessmentInfo.required ? 'Mandatory Assessment' : 'Optional Assessment'}
+          <span style={{ background: 'rgba(90, 112, 211, 0.12)', color: '#4f46e5', border: '1px solid rgba(90, 112, 211, 0.25)', fontSize: '0.76rem', fontWeight: '800', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <i className="fa-solid fa-graduation-cap"></i>
+            Course Assessment
           </span>
           <h2 style={{ fontSize: '1.5rem', fontWeight: '900', margin: '12px 0 4px', color: 'var(--text-primary)' }}>{assessmentInfo.lessonTitle}</h2>
           <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Online Assessment Test</p>
@@ -444,7 +445,7 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
               className="btn btn-secondary"
               style={{ width: '100%', fontWeight: '700', padding: '10px' }}
             >
-              Return to Lesson
+              Back to Assessments
             </button>
           )}
         </div>
@@ -484,11 +485,11 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
 
         {passed ? (
           <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '0.9rem' }}>
-            ✓ Assessment Passed — Next Lesson Unlocked!
+            ✓ Assessment Passed Successfully!
           </div>
         ) : (
           <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '0.9rem' }}>
-            You need to retry this assessment before continuing.
+            You need to retry this assessment to achieve the passing score.
           </div>
         )}
 
@@ -501,16 +502,6 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
           >
             Retake Assessment
           </button>
-          {passed && onLessonUnlocked && (
-            <button
-              type="button"
-              onClick={onLessonUnlocked}
-              className="btn btn-primary"
-              style={{ background: '#16a34a', borderColor: '#16a34a', color: '#ffffff', fontWeight: '800', padding: '10px 24px', borderRadius: '10px' }}
-            >
-              Continue to Next Lesson →
-            </button>
-          )}
           {onClose && (
             <button
               type="button"
@@ -518,7 +509,7 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
               className="btn btn-secondary"
               style={{ fontWeight: '700', padding: '10px 20px', borderRadius: '10px' }}
             >
-              Return to Lesson
+              Back to Assessments
             </button>
           )}
         </div>
