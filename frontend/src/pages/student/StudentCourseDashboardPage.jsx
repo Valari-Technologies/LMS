@@ -490,6 +490,9 @@ export default function StudentCourseDashboardPage() {
       return;
     }
 
+    // If data is still loading, wait for it before showing fallback
+    if (loading) return;
+
     // 2. If the course has syllabus video lessons (nextLesson or course.sections)
     const syllabusVideo = nextLesson || course?.sections?.[0]?.contents?.[0];
     if (syllabusVideo && (syllabusVideo.mediaReference || syllabusVideo.videoUrl || syllabusVideo.url)) {
@@ -514,16 +517,23 @@ export default function StudentCourseDashboardPage() {
 
   const handleClosePlayer = () => {
     setSelectedRecording(null);
-    if (searchParams.get('tab') === 'lecture' || searchParams.get('tab') === 'classroom') {
+    if (searchParams.get('tab') === 'lecture' || searchParams.get('tab') === 'classroom' || searchParams.get('play')) {
       setActiveTab('dashboard');
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('tab');
+        next.delete('play');
+        return next;
+      }, { replace: true });
     }
   };
 
   useEffect(() => {
-    if ((rawTab === 'lecture' || rawTab === 'classroom') && !selectedRecording) {
+    if (loading) return;
+    if ((rawTab === 'lecture' || rawTab === 'classroom' || searchParams.get('play') === '1' || searchParams.get('play') === 'true') && !selectedRecording) {
       handleOpenLectureClassroom();
     }
-  }, [rawTab, allRecordings.length]);
+  }, [rawTab, allRecordings.length, loading, course]);
 
   // Open rating modal
   const handleOpenRatingModal = (recording, sessionTitle) => {

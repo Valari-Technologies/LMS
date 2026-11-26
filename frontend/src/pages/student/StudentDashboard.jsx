@@ -459,7 +459,12 @@ export default function StudentDashboard() {
 
             <div className="ot-continue-body-row">
               <div className="ot-continue-course-info">
-                <div className="ot-continue-thumb-box">
+                <Link
+                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
+                  className="ot-continue-thumb-box"
+                  style={{ textDecoration: 'none', cursor: 'pointer', display: 'flex' }}
+                  title="Go to Course"
+                >
                   {activeContinueCourse?.courseThumbnail || activeContinueCourse?.thumbnail ? (
                     <img
                       src={resolveMediaUrl(activeContinueCourse.courseThumbnail || activeContinueCourse.thumbnail)}
@@ -475,12 +480,18 @@ export default function StudentDashboard() {
                       <span className="ot-continue-thumb-title">MERN STACK</span>
                     </>
                   )}
-                </div>
+                </Link>
 
                 <div className="ot-continue-details">
                   <span className="ot-badge-in-progress">In Progress</span>
                   <h4 className="ot-continue-course-title">
-                    {activeContinueCourse?.courseName || activeContinueCourse?.name || activeContinueCourse?.title || 'Course'}
+                    <Link
+                      to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                      title="Go to Course"
+                    >
+                      {activeContinueCourse?.courseName || activeContinueCourse?.name || activeContinueCourse?.title || 'Course'}
+                    </Link>
                   </h4>
                   <div className="ot-continue-lesson-info">
                     <span className="ot-continue-section-name">Section: <strong>{continueLearning?.sectionTitle || activeContinueCourse?.sectionTitle || 'Course Curriculum'}</strong></span>
@@ -511,14 +522,14 @@ export default function StudentDashboard() {
 
               <div className="ot-continue-actions">
                 <Link
-                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard`}
+                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
                   className="ot-continue-resume-btn"
                 >
-                  <span>Course Space &amp; Dashboard</span>
+                  <span>Go to Course</span>
                   <i className="fa-solid fa-arrow-right"></i>
                 </Link>
                 <Link
-                  to={`/student/learn/${activeContinueCourse?.courseId || activeContinueCourse?.id}`}
+                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
                   className="ot-continue-mylearning-link"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >

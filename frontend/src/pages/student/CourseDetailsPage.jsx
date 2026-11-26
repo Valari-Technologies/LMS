@@ -2565,7 +2565,7 @@ export default function CourseDetailsPage() {
                   className="ot-cd-play-btn"
                   onClick={() => {
                     if (isEnrolled) {
-                      navigate(`/student/courses/${course.id}/dashboard`);
+                      navigate(`/student/courses/${course.id}/dashboard?tab=lecture`);
                     } else if (!isBatchFull) {
                       if (isPaidCourse) {
                         if (!user) {
@@ -2925,10 +2925,10 @@ export default function CourseDetailsPage() {
                   <button
                     type="button"
                     className="ot-cd-btn-primary"
-                    onClick={() => navigate(`/student/courses/${course.id}/dashboard`)}
+                    onClick={() => navigate(`/student/courses/${course.id}/dashboard?tab=lecture`)}
                   >
-                    <i className="fa-solid fa-chart-pie"></i>
-                    <span>Open Course Space</span>
+                    <i className="fa-solid fa-play" style={{ fontSize: '0.85rem' }}></i>
+                    <span>Go to Course</span>
                   </button>
                 ) : !isPublished ? (
                   <button

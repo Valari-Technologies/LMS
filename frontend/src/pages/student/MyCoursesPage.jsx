@@ -503,9 +503,9 @@ export default function MyCoursesPage() {
                   {/* Thumbnail / Media Container */}
                   <div
                     className="ot-card-thumb-wrap"
-                    onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
+                    onClick={() => navigate(`/student/courses/${c.courseId}/dashboard?tab=lecture`)}
                     style={{ cursor: 'pointer' }}
-                    title="Open Course Space"
+                    title="Go to Course"
                   >
                     {c.courseThumbnail ? (
                       <>
@@ -769,7 +769,7 @@ export default function MyCoursesPage() {
                         <h3
                           className="ot-card-title"
                           title={c.courseName}
-                          onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
+                          onClick={() => navigate(`/student/courses/${c.courseId}/dashboard?tab=lecture`)}
                           style={{ cursor: 'pointer' }}
                         >
                           {c.courseName}
@@ -857,7 +857,7 @@ export default function MyCoursesPage() {
                     <div className="ot-card-actions-row">
                       {/* Primary Button: Opens Course Dashboard */}
                       <button
-                        onClick={() => navigate(`/student/courses/${c.courseId}/dashboard`)}
+                        onClick={() => navigate(`/student/courses/${c.courseId}/dashboard?tab=lecture`)}
                         className="ot-card-primary-btn"
                         style={{
                           flex: 1,
