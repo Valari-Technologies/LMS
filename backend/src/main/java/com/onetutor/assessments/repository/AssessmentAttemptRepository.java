@@ -9,6 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AssessmentAttemptRepository extends JpaRepository<AssessmentAttempt, Long> {
+    List<AssessmentAttempt> findByContentIdOrderByStartedAtDesc(Long contentId);
+
+    List<AssessmentAttempt> findByAssessmentIdOrderByStartedAtDesc(Long assessmentId);
+
     List<AssessmentAttempt> findByStudentIdAndContentIdOrderByStartedAtDesc(Long studentId, Long contentId);
     
     Optional<AssessmentAttempt> findFirstByStudentIdAndContentIdAndStatus(Long studentId, Long contentId, AssessmentStatus status);

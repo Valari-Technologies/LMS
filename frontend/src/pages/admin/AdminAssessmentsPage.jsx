@@ -5,6 +5,7 @@ import { listSections, createSection } from '../../api/sections';
 import { listContents, createContent } from '../../api/contents';
 import { getAdminAssessment, getAdminAssessments, deleteAssessment } from '../../api/assessments';
 import AssessmentAdminEditor from '../../components/assessments/AssessmentAdminEditor';
+import AssessmentResultsModal from '../../components/assessments/AssessmentResultsModal';
 import { useNotification, confirmDialog } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
 
@@ -25,6 +26,9 @@ export default function AdminAssessmentsPage() {
 
   // Active Editor Modal
   const [activeEditorContent, setActiveEditorContent] = useState(null); // { id, title }
+
+  // Active Results / Submissions Modal
+  const [activeResultsAssessment, setActiveResultsAssessment] = useState(null); // { contentId, title, courseName, batchName, passPercentage, questionsCount }
 
   // New Assessment Picker Modal: Course & Batch only
   const [showPickerModal, setShowPickerModal] = useState(false);
@@ -692,6 +696,34 @@ export default function AdminAssessmentsPage() {
                             <>
                               <button
                                 type="button"
+                                onClick={() => setActiveResultsAssessment({
+                                  contentId: item.contentId,
+                                  title: item.title,
+                                  courseName: item.courseName,
+                                  batchName: item.batchName,
+                                  passPercentage: passPct,
+                                  questionsCount: qCount
+                                })}
+                                className="btn btn-sm"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  fontSize: '0.8rem',
+                                  background: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  fontWeight: 700,
+                                  padding: '4px 10px',
+                                  borderRadius: '6px'
+                                }}
+                                title="View student results, marks and attendance"
+                              >
+                                <i className="fa-solid fa-chart-simple"></i>
+                                Results
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setActiveEditorContent({ id: item.contentId, title: item.title })}
                                 className="btn btn-secondary btn-sm"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}
@@ -889,6 +921,14 @@ export default function AdminAssessmentsPage() {
             setActiveEditorContent(null);
             loadAllData();
           }}
+        />
+      )}
+
+      {/* Assessment Results & Student Marks Modal */}
+      {activeResultsAssessment && (
+        <AssessmentResultsModal
+          assessment={activeResultsAssessment}
+          onClose={() => setActiveResultsAssessment(null)}
         />
       )}
     </div>

@@ -442,4 +442,52 @@ public class AssessmentAttemptService {
                 selectedMap
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<StudentAssessmentAttemptAdminDto> getAssessmentAttemptsForAdmin(Long contentId) {
+        Content content = findContentOrThrow(contentId);
+        Assessment assessment = assessmentRepository.findByContentId(contentId)
+                .orElseThrow(() -> new NotFoundException("ASSESSMENT_NOT_FOUND", "Assessment not found for this content"));
+
+        List<AssessmentAttempt> attempts = attemptRepository.findByContentIdOrderByStartedAtDesc(contentId);
+
+        double passPct = assessment.getPassPercentage();
+        CompletionMode completionMode = assessment.getCompletionMode();
+        int fallbackTotalQuestions = questionRepository.countByAssessmentId(assessment.getId());
+
+        return attempts.stream().map(a -> {
+            User s = a.getStudent();
+            boolean passed = a.getStatus() == AssessmentStatus.COMPLETED &&
+                    (a.getPercentage() >= passPct || completionMode == CompletionMode.SUBMIT_ASSESSMENT);
+            int totalQ = a.getTotalQuestions() > 0 ? a.getTotalQuestions() : fallbackTotalQuestions;
+            int wrong = Math.max(0, totalQ - a.getCorrectAnswers());
+            Long durationSec = null;
+            if (a.getStartedAt() != null && a.getSubmittedAt() != null) {
+                durationSec = Duration.between(a.getStartedAt(), a.getSubmittedAt()).getSeconds();
+            }
+
+            return new StudentAssessmentAttemptAdminDto(
+                    a.getId(),
+                    s != null ? s.getId() : null,
+                    s != null ? s.getName() : "Unknown Student",
+                    s != null ? s.getEmail() : "",
+                    s != null ? s.getProfileImage() : null,
+                    assessment.getId(),
+                    content.getId(),
+                    a.getStatus().name(),
+                    a.getTerminatedReason(),
+                    a.getAttemptNumber(),
+                    a.getStartedAt(),
+                    a.getSubmittedAt(),
+                    totalQ,
+                    a.getCorrectAnswers(),
+                    wrong,
+                    a.getObtainedMarks(),
+                    a.getPercentage(),
+                    passed,
+                    passPct,
+                    durationSec
+            );
+        }).toList();
+    }
 }

@@ -22,6 +22,11 @@ export async function deleteAssessment(contentId) {
   return res.data;
 }
 
+export async function getAdminAssessmentAttempts(contentId) {
+  const res = await api.get(`/contents/${contentId}/assessment/attempts`);
+  return res.data.data;
+}
+
 // Student API
 export async function getCourseAssessments(courseId) {
   try {

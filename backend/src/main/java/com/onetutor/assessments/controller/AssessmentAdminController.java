@@ -2,6 +2,8 @@ package com.onetutor.assessments.controller;
 
 import com.onetutor.assessments.dto.AssessmentAdminResponse;
 import com.onetutor.assessments.dto.AssessmentSaveRequest;
+import com.onetutor.assessments.dto.StudentAssessmentAttemptAdminDto;
+import com.onetutor.assessments.service.AssessmentAttemptService;
 import com.onetutor.assessments.service.AssessmentService;
 import com.onetutor.common.ApiResponse;
 import com.onetutor.users.entity.User;
@@ -16,9 +18,12 @@ import java.util.List;
 public class AssessmentAdminController {
 
     private final AssessmentService assessmentService;
+    private final AssessmentAttemptService assessmentAttemptService;
 
-    public AssessmentAdminController(AssessmentService assessmentService) {
+    public AssessmentAdminController(AssessmentService assessmentService,
+                                     AssessmentAttemptService assessmentAttemptService) {
         this.assessmentService = assessmentService;
+        this.assessmentAttemptService = assessmentAttemptService;
     }
 
     @GetMapping("/contents/{contentId}/assessment")
@@ -52,5 +57,11 @@ public class AssessmentAdminController {
             return ApiResponse.ok(assessmentService.getAdminCourseAssessments(courseId));
         }
         return ApiResponse.ok(assessmentService.getAllAdminAssessments());
+    }
+
+    @GetMapping("/contents/{contentId}/assessment/attempts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'CONTENT_CREATOR')")
+    public ApiResponse<List<StudentAssessmentAttemptAdminDto>> getAttempts(@PathVariable Long contentId) {
+        return ApiResponse.ok(assessmentAttemptService.getAssessmentAttemptsForAdmin(contentId));
     }
 }

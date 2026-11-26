@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface AssessmentQuestionRepository extends JpaRepository<AssessmentQuestion, Long> {
     List<AssessmentQuestion> findByAssessmentIdOrderByDisplayOrderAsc(Long assessmentId);
+    int countByAssessmentId(Long assessmentId);
     void deleteByAssessmentId(Long assessmentId);
 }
