@@ -157,9 +157,24 @@ public class AssessmentService {
                         q.getDisplayOrder()
                 )).toList();
 
+        Content content = a.getContent();
+        com.onetutor.curriculum.entity.Section section = content != null ? content.getSection() : null;
+        com.onetutor.courses.entity.Course course = section != null ? section.getCourse() : null;
+
+        Long courseId = course != null ? course.getId() : null;
+        String courseName = course != null ? (course.getName() != null ? course.getName() : course.getShortDesc()) : "Course";
+        Long sectionId = section != null ? section.getId() : null;
+        String sectionTitle = section != null ? section.getTitle() : "Section";
+        String contentTitle = content != null ? content.getTitle() : "Assessment";
+
         return new AssessmentAdminResponse(
                 a.getId(),
-                a.getContent().getId(),
+                content != null ? content.getId() : null,
+                contentTitle,
+                sectionId,
+                sectionTitle,
+                courseId,
+                courseName,
                 a.isEnabled(),
                 a.isRequired(),
                 a.getPassPercentage(),

@@ -6,6 +6,11 @@ import java.util.List;
 public record AssessmentAdminResponse(
         Long id,
         Long contentId,
+        String contentTitle,
+        Long sectionId,
+        String sectionTitle,
+        Long courseId,
+        String courseName,
         boolean enabled,
         boolean required,
         int passPercentage,

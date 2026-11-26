@@ -3,7 +3,7 @@ import { listAdminCourses, getCourse } from '../../api/courses';
 import { getCourseBatches } from '../../api/batches';
 import { listSections, createSection } from '../../api/sections';
 import { listContents, createContent } from '../../api/contents';
-import { getAdminAssessment, deleteAssessment } from '../../api/assessments';
+import { getAdminAssessment, getAdminAssessments, deleteAssessment } from '../../api/assessments';
 import AssessmentAdminEditor from '../../components/assessments/AssessmentAdminEditor';
 import { useNotification, confirmDialog } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -41,62 +41,128 @@ export default function AdminAssessmentsPage() {
       const courseList = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.content || []);
       setCourses(courseList);
 
-      // Load all assessments across all courses
-      const allItems = [];
-      for (const c of courseList) {
-        try {
-          const detail = await getCourse(c.id);
-          const batches = await getCourseBatches(c.id).catch(() => []);
-          const batchList = Array.isArray(batches) ? batches : [];
-
-          if (detail?.sections && Array.isArray(detail.sections)) {
-            for (const sec of detail.sections) {
-              if (sec.contents && Array.isArray(sec.contents)) {
-                for (const lesson of sec.contents) {
-                  // Infer or match batch name from title
-                  let matchedBatch = 'All Batches';
-                  for (const b of batchList) {
-                    if (lesson.title?.toLowerCase().includes(b.name.toLowerCase())) {
-                      matchedBatch = b.name;
-                      break;
-                    }
-                  }
-
-                  allItems.push({
-                    courseId: c.id,
-                    courseName: c.title || c.name || 'Untitled Course',
-                    batchName: matchedBatch,
-                    sectionId: sec.id,
-                    sectionTitle: sec.title || 'Course Section',
-                    contentId: lesson.id,
-                    title: lesson.title,
-                    assessment: null
-                  });
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`Failed to load details for course ${c.id}:`, e);
-        }
-      }
-
-      // Query assessment configuration for each lesson
-      const enriched = await Promise.all(
-        allItems.map(async (item) => {
+      // Pre-load batches for all courses
+      const courseBatchesMap = {};
+      await Promise.all(
+        courseList.map(async (c) => {
           try {
-            const ass = await getAdminAssessment(item.contentId);
-            return { ...item, assessment: ass || null };
+            const b = await getCourseBatches(c.id);
+            courseBatchesMap[c.id] = Array.isArray(b) ? b : [];
           } catch (e) {
-            return { ...item, assessment: null };
+            courseBatchesMap[c.id] = [];
           }
         })
       );
 
-      setAssessmentsData(enriched);
+      const allItemsMap = new Map(); // key: contentId -> item
+
+      // 1. Direct fetch from backend /admin/assessments endpoint
+      try {
+        const directAssessments = await getAdminAssessments();
+        if (Array.isArray(directAssessments)) {
+          directAssessments.forEach(ass => {
+            if (!ass.contentId) return;
+            const cBatches = courseBatchesMap[ass.courseId] || [];
+            let matchedBatch = 'All Batches';
+            for (const b of cBatches) {
+              if (ass.contentTitle?.toLowerCase().includes(b.name.toLowerCase())) {
+                matchedBatch = b.name;
+                break;
+              }
+            }
+
+            allItemsMap.set(ass.contentId, {
+              courseId: ass.courseId,
+              courseName: ass.courseName || 'Course',
+              batchName: matchedBatch,
+              sectionId: ass.sectionId,
+              sectionTitle: ass.sectionTitle || 'Course Assessments',
+              contentId: ass.contentId,
+              title: ass.contentTitle || 'Assessment',
+              assessment: ass
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to load from /admin/assessments:', err);
+      }
+
+      // 2. Also inspect sections & contents from curriculum across courses
+      // (This discovers newly prepared assessment contents even before questions are saved)
+      await Promise.all(
+        courseList.map(async (c) => {
+          try {
+            const sections = await listSections(c.id, true);
+            const batchList = courseBatchesMap[c.id] || [];
+
+            if (Array.isArray(sections)) {
+              await Promise.all(
+                sections.map(async (sec) => {
+                  try {
+                    const contents = await listContents(sec.id, true);
+                    if (Array.isArray(contents)) {
+                      for (const lesson of contents) {
+                        const isAssessmentType =
+                          lesson.completionRule === 'ASSESSMENT' ||
+                          sec.title?.toLowerCase().includes('assessment') ||
+                          lesson.title?.toLowerCase().includes('assessment');
+
+                        if (isAssessmentType) {
+                          let matchedBatch = 'All Batches';
+                          for (const b of batchList) {
+                            if (lesson.title?.toLowerCase().includes(b.name.toLowerCase())) {
+                              matchedBatch = b.name;
+                              break;
+                            }
+                          }
+
+                          // If already present from /admin/assessments, preserve it
+                          if (allItemsMap.has(lesson.id)) {
+                            const existing = allItemsMap.get(lesson.id);
+                            existing.title = lesson.title || existing.title;
+                            existing.courseName = c.title || c.name || existing.courseName;
+                            existing.sectionTitle = sec.title || existing.sectionTitle;
+                            existing.courseId = c.id;
+                            existing.batchName = matchedBatch;
+                          } else {
+                            // Fetch assessment config for this content
+                            let ass = null;
+                            try {
+                              ass = await getAdminAssessment(lesson.id);
+                            } catch (e) {
+                              ass = null;
+                            }
+
+                            allItemsMap.set(lesson.id, {
+                              courseId: c.id,
+                              courseName: c.title || c.name || 'Course',
+                              batchName: matchedBatch,
+                              sectionId: sec.id,
+                              sectionTitle: sec.title || 'Course Section',
+                              contentId: lesson.id,
+                              title: lesson.title,
+                              assessment: ass
+                            });
+                          }
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.warn(`Failed to list contents for section ${sec.id}:`, e);
+                  }
+                })
+              );
+            }
+          } catch (e) {
+            console.warn(`Failed to list sections for course ${c.id}:`, e);
+          }
+        })
+      );
+
+      setAssessmentsData(Array.from(allItemsMap.values()));
     } catch (err) {
       console.error('Failed to load assessments overview:', err);
-      toast.error('Failed to load courses syllabus data');
+      toast.error('Failed to load assessments data');
     } finally {
       setLoading(false);
     }

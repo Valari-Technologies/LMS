@@ -35,6 +35,8 @@ import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNoti
 import CoursePaymentModal from '../../components/CoursePaymentModal';
 import { getStudentEnrolledPlan, PLAN_TYPES, PLAN_DEFINITIONS } from '../../utils/courseSellingPlans';
 import { getCourseAssessments, getAssessmentInfo } from '../../api/assessments';
+import { listSections } from '../../api/sections';
+import { listContents } from '../../api/contents';
 import AssessmentPlayer from '../../components/assessments/AssessmentPlayer';
 
 function getLiveEffectiveStatus(session) {
@@ -166,32 +168,35 @@ export default function StudentCourseDashboardPage() {
         console.warn('Course assessment endpoint direct query:', directErr);
       }
 
-      // 2. Fallback: inspect syllabus contents from courseData or fetch fresh details
-      let currentCourse = courseData;
-      if (!currentCourse?.sections || currentCourse.sections.length === 0) {
-        try {
-          const detail = await getCourse(courseId);
-          if (detail?.sections) {
-            currentCourse = detail;
-          }
-        } catch (detailErr) {
-          console.warn('Could not fetch course detail for assessments fallback:', detailErr);
-        }
+      // 2. Fallback: inspect syllabus contents via listSections and listContents
+      let sections = [];
+      try {
+        sections = await listSections(courseId, true);
+      } catch (secErr) {
+        console.warn('Could not list sections for course assessments fallback:', secErr);
       }
 
-      const sections = currentCourse?.sections || [];
       const allLessons = [];
-      sections.forEach(sec => {
-        if (sec.contents && Array.isArray(sec.contents)) {
-          sec.contents.forEach(lesson => {
-            allLessons.push({
-              contentId: lesson.id,
-              title: lesson.title,
-              sectionTitle: sec.title
-            });
-          });
-        }
-      });
+      if (Array.isArray(sections)) {
+        await Promise.all(
+          sections.map(async (sec) => {
+            try {
+              const contents = await listContents(sec.id, true);
+              if (Array.isArray(contents)) {
+                contents.forEach(lesson => {
+                  allLessons.push({
+                    contentId: lesson.id,
+                    title: lesson.title,
+                    sectionTitle: sec.title
+                  });
+                });
+              }
+            } catch (cErr) {
+              // ignore
+            }
+          })
+        );
+      }
 
       if (allLessons.length === 0) {
         setCourseAssessments([]);

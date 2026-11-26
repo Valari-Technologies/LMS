@@ -161,11 +161,6 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
   };
 
   const handleSaveAssessment = async () => {
-    if (enabled && questions.length === 0) {
-      toast.error('Please add at least one question when assessment is enabled');
-      return;
-    }
-
     setSaving(true);
     try {
       const payload = {
