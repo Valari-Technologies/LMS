@@ -2114,6 +2114,117 @@ export default function StudentCourseDashboardPage() {
           </div>
 
         </div>
+
+        {/* Sidebar Footer: User profile and Sign Out button */}
+        <div style={{
+          borderTop: '1px solid #e2e8f0',
+          padding: sidebarCollapsed ? '12px 8px' : '12px 14px',
+          background: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          flexShrink: 0
+        }}>
+          {user && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: sidebarCollapsed ? '4px 0' : '8px 10px',
+              borderRadius: '10px',
+              background: '#f8fafc',
+              border: '1px solid #f1f5f9',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
+            }}>
+              <div style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                background: '#5A70D3',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                flexShrink: 0,
+                overflow: 'hidden'
+              }}>
+                {user?.profileImage && !avatarImgError ? (
+                  <img
+                    src={user.profileImage}
+                    alt={user.name || 'User'}
+                    referrerPolicy="no-referrer"
+                    onError={() => setAvatarImgError(true)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  userInitials
+                )}
+              </div>
+              {!sidebarCollapsed && (
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{
+                    fontWeight: 800,
+                    fontSize: '0.86rem',
+                    color: '#0f172a',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {user.name || 'Student'}
+                  </div>
+                  <div style={{
+                    fontSize: '0.74rem',
+                    color: '#64748b',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {user.email}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sign Out Button */}
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              navigate('/');
+            }}
+            title="Sign Out"
+            style={{
+              width: '100%',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              gap: '8px',
+              padding: sidebarCollapsed ? '10px' : '9px 12px',
+              borderRadius: '8px',
+              border: '1px solid #fee2e2',
+              background: '#fff5f5',
+              color: '#dc2626',
+              fontWeight: 700,
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#fee2e2';
+              e.currentTarget.style.borderColor = '#fca5a5';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = '#fff5f5';
+              e.currentTarget.style.borderColor = '#fee2e2';
+            }}
+          >
+            <i className="fa-solid fa-arrow-right-from-bracket" style={{ fontSize: '0.9rem' }}></i>
+            {!sidebarCollapsed && <span>Sign Out</span>}
+          </button>
+        </div>
       </aside>
 
       {/* Right Main Area */}
