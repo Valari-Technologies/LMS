@@ -3592,32 +3592,16 @@ export default function StudentCourseDashboardPage() {
                             }}
                           >
                             <div style={{ flex: 1, minWidth: '260px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                <span style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: 800,
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  background: '#ede9fe',
-                                  color: '#6d28d9'
-                                }}>
-                                  {ass.sectionTitle || 'Lesson Assessment'}
-                                </span>
-                                {ass.timerEnabled && (
-                                  <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <i className="fa-regular fa-clock" />
-                                    {ass.timerDurationMinutes} mins
-                                  </span>
-                                )}
-                              </div>
-
-                              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                              <h3 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
                                 {ass.lessonTitle}
                               </h3>
 
                               <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px' }}>
                                 <span><i className="fa-solid fa-list-check" style={{ marginRight: '5px', color: '#5A70D3' }} />{ass.totalQuestions} Questions</span>
                                 <span><i className="fa-solid fa-bullseye" style={{ marginRight: '5px', color: '#10b981' }} />Pass Target: {ass.passPercentage}%</span>
+                                {ass.timerEnabled && (
+                                  <span><i className="fa-regular fa-clock" style={{ marginRight: '5px', color: '#64748b' }} />{ass.timerDurationMinutes} mins</span>
+                                )}
                                 {isCompleted && (
                                   <span style={{ fontWeight: 800, color: isPassed ? '#10b981' : '#ef4444' }}>
                                     Best Score: {status.bestScore}/{ass.totalQuestions} ({status.bestPercentage}%)

@@ -2506,7 +2506,7 @@ export default function LearningPage() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <i className="fa-solid fa-lock" style={{ fontSize: '1rem' }}></i>
-                  <span><strong>Assessment Required:</strong> You must successfully complete the lesson assessment to unlock the next lesson.</span>
+                  <span><strong>Assessment Required:</strong> You must successfully complete the assessment to unlock the next lesson.</span>
                 </div>
                 <button
                   onClick={handleStartFullWindowAssessment}
@@ -2609,12 +2609,12 @@ export default function LearningPage() {
                     <i className={`fa-solid ${currentAssessmentInfo?.userStatus?.passed ? 'fa-award' : 'fa-list-check'}`} />
                   </div>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0b1f3a', margin: '0 0 8px 0' }}>
-                    {activeContent.title} — Lesson Assessment
+                    {activeContent.title}
                   </h3>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
                     {currentAssessmentInfo?.userStatus?.passed
                       ? 'You have successfully passed this assessment! You can retake it anytime.'
-                      : 'Test your knowledge on this lesson to mark progress.'}
+                      : 'Test your knowledge to mark progress.'}
                   </p>
                   <button
                     type="button"
