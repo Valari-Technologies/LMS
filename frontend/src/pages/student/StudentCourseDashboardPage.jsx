@@ -1968,7 +1968,7 @@ export default function StudentCourseDashboardPage() {
               onClick={() => { setActiveTab('doubts'); setMobileSidebarOpen(false); }}
               title="Doubt Clearance • Private 1-on-1 with Instructors"
             >
-              <span className="ot-course-nav-icon"><i className="fa-solid fa-circle-question" style={{ color: activeTab === 'doubts' ? '#ffffff' : '#6d28d9' }}></i></span>
+              <span className="ot-course-nav-icon"><i className="fa-solid fa-circle-question"></i></span>
               <span className="ot-course-nav-text">Doubt Clearance</span>
               {unreadDoubtCount > 0 ? (
                 <span className="ot-course-badge live-pulse" style={{ background: '#ef4444', color: '#ffffff', fontWeight: 800 }}>
