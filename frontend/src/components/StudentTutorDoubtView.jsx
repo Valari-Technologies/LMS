@@ -767,20 +767,6 @@ export default function StudentTutorDoubtView({
                   Private 1-on-1 with Course Instructors
                 </span>
               </div>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                background: 'rgba(90, 112, 211, 0.08)',
-                color: '#5A70D3',
-                borderRadius: '8px',
-                fontSize: '0.72rem',
-                fontWeight: 700
-              }}>
-                <i className="fa-solid fa-lock" /> Private Doubt Desk
-              </div>
             </div>
 
             {/* Messages Screen */}
