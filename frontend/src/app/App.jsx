@@ -44,6 +44,7 @@ import AdminStudentsPage from '../pages/admin/AdminStudentsPage';
 import AdminAdminsPage from '../pages/admin/AdminAdminsPage';
 import AdminMediaPage from '../pages/admin/AdminMediaPage';
 import AdminLiveSessionsPage from '../pages/admin/AdminLiveSessionsPage';
+import AdminAssessmentsPage from '../pages/admin/AdminAssessmentsPage';
 import AdminEnrollmentsPage from '../pages/admin/AdminEnrollmentsPage';
 import AdminProgressPage from '../pages/admin/AdminProgressPage';
 import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
@@ -157,6 +158,7 @@ export default function App() {
                 <Route path="/admin/admins" element={<AdminAdminsPage />} />
                 <Route path="/admin/media" element={<AdminMediaPage />} />
                 <Route path="/admin/live-sessions" element={<AdminLiveSessionsPage />} />
+                <Route path="/admin/assessments" element={<AdminAssessmentsPage />} />
                 <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
                 <Route path="/admin/progress" element={<AdminProgressPage />} />
                 <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />

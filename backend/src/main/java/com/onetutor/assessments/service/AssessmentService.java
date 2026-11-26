@@ -42,6 +42,22 @@ public class AssessmentService {
                 .map(this::toAdminResponse);
     }
 
+    @Transactional(readOnly = true)
+    public List<AssessmentAdminResponse> getAdminCourseAssessments(Long courseId) {
+        List<Assessment> assessments = assessmentRepository.findAllByCourseId(courseId);
+        return assessments.stream()
+                .map(this::toAdminResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssessmentAdminResponse> getAllAdminAssessments() {
+        List<Assessment> assessments = assessmentRepository.findAll();
+        return assessments.stream()
+                .map(this::toAdminResponse)
+                .toList();
+    }
+
     @Transactional
     public AssessmentAdminResponse saveAssessment(Long contentId, AssessmentSaveRequest req, User actor) {
         Content content = contentRepository.findById(contentId)

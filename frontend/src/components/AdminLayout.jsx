@@ -193,6 +193,7 @@ export default function AdminLayout() {
         { to: '/admin/promo-banner', label: 'Promo Banner', icon: <i className="fa-solid fa-rectangle-ad"></i> },
         { to: '/admin/media', label: 'Cloudinary Media', icon: <i className="fa-solid fa-cloud-arrow-up"></i> },
         { to: '/admin/live-sessions', label: 'Live Sessions', icon: <i className="fa-solid fa-video"></i>, badge: liveClassCount > 0 ? (liveClassCount > 99 ? '99+' : liveClassCount) : null },
+        { to: '/admin/assessments', label: 'Assessments', icon: <i className="fa-solid fa-list-check"></i> },
       ]
     },
     {
@@ -240,6 +241,7 @@ export default function AdminLayout() {
             { to: '/admin/courses', label: 'Courses', icon: <i className="fa-solid fa-book-open"></i> },
             { to: '/admin/categories', label: 'Categories', icon: <i className="fa-solid fa-tags"></i> },
             { to: '/admin/media', label: 'Cloudinary Media', icon: <i className="fa-solid fa-cloud-arrow-up"></i> },
+            { to: '/admin/assessments', label: 'Assessments', icon: <i className="fa-solid fa-list-check"></i> },
           ]
         }
       ]

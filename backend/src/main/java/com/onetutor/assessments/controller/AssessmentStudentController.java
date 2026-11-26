@@ -25,6 +25,12 @@ public class AssessmentStudentController {
         return ApiResponse.ok(attemptService.getStudentAssessmentInfo(contentId, caller));
     }
 
+    @GetMapping("/courses/{courseId}/assessments")
+    public ApiResponse<List<AssessmentStudentResponse>> getCourseAssessments(@PathVariable Long courseId,
+                                                                             @AuthenticationPrincipal User caller) {
+        return ApiResponse.ok(attemptService.getCourseAssessments(courseId, caller));
+    }
+
     @PostMapping("/assessments/{assessmentId}/attempts")
     public ApiResponse<AttemptDetailResponse> startAttempt(@PathVariable Long assessmentId,
                                                            @AuthenticationPrincipal User caller) {

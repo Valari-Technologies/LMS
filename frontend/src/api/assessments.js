@@ -1,6 +1,12 @@
 import { api } from './client';
 
 // Admin API
+export async function getAdminAssessments(courseId = null) {
+  const params = courseId ? { courseId } : {};
+  const res = await api.get('/admin/assessments', { params });
+  return res.data.data;
+}
+
 export async function getAdminAssessment(contentId) {
   const res = await api.get(`/contents/${contentId}/assessment`);
   return res.data.data;
@@ -17,6 +23,16 @@ export async function deleteAssessment(contentId) {
 }
 
 // Student API
+export async function getCourseAssessments(courseId) {
+  try {
+    const res = await api.get(`/courses/${courseId}/assessments`);
+    return res.data.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+}
+
 export async function getAssessmentInfo(contentId) {
   try {
     const res = await api.get(`/contents/${contentId}/assessment-info`);

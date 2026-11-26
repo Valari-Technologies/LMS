@@ -34,6 +34,8 @@ import { ChatPanel } from '../admin/AdminCommunityPage';
 import { isChatMuted, toggleMuteChat } from '../../components/CommunityToastNotifier';
 import CoursePaymentModal from '../../components/CoursePaymentModal';
 import { getStudentEnrolledPlan, PLAN_TYPES, PLAN_DEFINITIONS } from '../../utils/courseSellingPlans';
+import { getCourseAssessments, getAssessmentInfo } from '../../api/assessments';
+import AssessmentPlayer from '../../components/assessments/AssessmentPlayer';
 
 function getLiveEffectiveStatus(session) {
   if (!session) return 'upcoming';
@@ -144,6 +146,70 @@ export default function StudentCourseDashboardPage() {
   // Doubt Clearance unread badge count
   const [unreadDoubtCount, setUnreadDoubtCount] = useState(0);
 
+  // Assessments tab & player state
+  const [courseAssessments, setCourseAssessments] = useState([]);
+  const [loadingAssessments, setLoadingAssessments] = useState(false);
+  const [playingAssessment, setPlayingAssessment] = useState(null);
+
+  const fetchCourseAssessments = async (courseData = course) => {
+    if (!courseId) return;
+    setLoadingAssessments(true);
+    try {
+      // 1. Try course-level endpoint first
+      const direct = await getCourseAssessments(courseId);
+      if (Array.isArray(direct) && direct.length > 0) {
+        setCourseAssessments(direct);
+        return;
+      }
+
+      // 2. Fallback: inspect syllabus contents from courseData
+      const sections = courseData?.sections || [];
+      const allLessons = [];
+      sections.forEach(sec => {
+        if (sec.contents && Array.isArray(sec.contents)) {
+          sec.contents.forEach(lesson => {
+            allLessons.push({
+              contentId: lesson.id,
+              title: lesson.title,
+              sectionTitle: sec.title
+            });
+          });
+        }
+      });
+
+      if (allLessons.length === 0) {
+        setCourseAssessments([]);
+        return;
+      }
+
+      const results = await Promise.all(
+        allLessons.map(async (lesson) => {
+          try {
+            const info = await getAssessmentInfo(lesson.contentId);
+            if (info && info.enabled && info.totalQuestions > 0) {
+              return {
+                ...info,
+                contentId: lesson.contentId,
+                lessonTitle: info.lessonTitle || lesson.title,
+                sectionTitle: lesson.sectionTitle
+              };
+            }
+          } catch (e) {
+            return null;
+          }
+          return null;
+        })
+      );
+
+      const validAssessments = results.filter(Boolean);
+      setCourseAssessments(validAssessments);
+    } catch (e) {
+      console.warn('Failed to fetch course assessments:', e);
+    } finally {
+      setLoadingAssessments(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     async function fetchUnreadDoubts() {
@@ -250,6 +316,7 @@ export default function StudentCourseDashboardPage() {
 
       if (courseRes.status === 'fulfilled') {
         setCourse(courseRes.value);
+        fetchCourseAssessments(courseRes.value);
       }
 
       if (myCoursesRes.status === 'fulfilled' && Array.isArray(myCoursesRes.value)) {
@@ -1944,6 +2011,22 @@ export default function StudentCourseDashboardPage() {
               ) : null}
             </button>
 
+            {/* Assessments Link (Dynamically displayed if course has assessments configured) */}
+            {courseAssessments.length > 0 && (
+              <button
+                type="button"
+                className={`ot-course-nav-link ${activeTab === 'assessments' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('assessments'); setMobileSidebarOpen(false); }}
+                title="Course Assessments & Practice Tests"
+              >
+                <span className="ot-course-nav-icon"><i className="fa-solid fa-file-pen"></i></span>
+                <span className="ot-course-nav-text">Assessments</span>
+                <span className={`ot-course-badge ${activeTab === 'assessments' ? 'active' : ''}`}>
+                  {courseAssessments.length}
+                </span>
+              </button>
+            )}
+
           </div>
 
           {/* Nav Section 2: Collaboration & Learning */}
@@ -2025,7 +2108,8 @@ export default function StudentCourseDashboardPage() {
                activeTab === 'live' ? 'Live Classes' :
                activeTab === 'attendance' ? 'Attendance' :
                activeTab === 'community' ? 'Community Chat' :
-               activeTab === 'doubts' ? 'Doubt Clearance' : 'Dashboard'}
+               activeTab === 'doubts' ? 'Doubt Clearance' :
+               activeTab === 'assessments' ? 'Assessments' : 'Dashboard'}
             </h1>
           </div>
 
@@ -3359,6 +3443,256 @@ export default function StudentCourseDashboardPage() {
                 currentCourse={course}
                 currentUser={user}
               />
+            </div>
+          )}
+
+          {/* ===================================================================
+            TAB: ASSESSMENTS (Chapter Quizzes & Practice Tests)
+            =================================================================== */}
+          {activeTab === 'assessments' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              {playingAssessment ? (
+                <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', minHeight: '600px' }}>
+                  <div style={{
+                    padding: '12px 20px',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#f8fafc'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlayingAssessment(null);
+                        fetchCourseAssessments();
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+                    >
+                      <i className="fa-solid fa-arrow-left"></i>
+                      Back to Assessments
+                    </button>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#475569' }}>
+                      Assessment Mode: {playingAssessment.lessonTitle}
+                    </span>
+                  </div>
+                  <AssessmentPlayer
+                    contentId={playingAssessment.contentId}
+                    onClose={() => {
+                      setPlayingAssessment(null);
+                      fetchCourseAssessments();
+                    }}
+                    onLessonUnlocked={() => {
+                      fetchCourseAssessments();
+                    }}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Top Assessment Overview Card */}
+                  <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px 28px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                      <div>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <i className="fa-solid fa-file-pen" style={{ color: '#5A70D3' }}></i>
+                          <span>Course Assessments &amp; Tests</span>
+                        </h2>
+                        <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b' }}>
+                          Test your skills and verify course mastery with chapter quizzes designed for {course?.name || course?.title || 'this course'}.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => fetchCourseAssessments()}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <i className={`fa-solid fa-arrows-rotate ${loadingAssessments ? 'fa-spin' : ''}`}></i>
+                        Refresh Status
+                      </button>
+                    </div>
+
+                    {/* Progress Stats Summary */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginTop: '20px' }}>
+                      <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Available Tests</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>{courseAssessments.length}</div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Tests Cleared</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#10b981', marginTop: '2px' }}>
+                          {courseAssessments.filter(a => a.userStatus?.passed).length}
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Pending / Incomplete</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#6366f1', marginTop: '2px' }}>
+                          {courseAssessments.filter(a => !a.userStatus?.passed).length}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Assessments Cards Grid */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {loadingAssessments ? (
+                      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '40px', textAlign: 'center', color: '#5A70D3' }}>
+                        <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block' }}></i>
+                        <span>Loading assessments...</span>
+                      </div>
+                    ) : courseAssessments.length === 0 ? (
+                      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '48px 20px', textAlign: 'center', color: '#64748b', border: '1px solid #cbd5e1' }}>
+                        <i className="fa-regular fa-clipboard" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
+                        <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>No assessments available yet</h4>
+                        <p style={{ margin: 0, fontSize: '0.88rem' }}>Check back soon as instructors add quizzes and practice tests.</p>
+                      </div>
+                    ) : (
+                      courseAssessments.map((ass, idx) => {
+                        const status = ass.userStatus || {};
+                        const isPassed = status.passed;
+                        const isCompleted = status.completed;
+                        const isInProgress = status.activeAttemptId != null;
+
+                        return (
+                          <div
+                            key={ass.id || ass.contentId || idx}
+                            style={{
+                              background: '#ffffff',
+                              borderRadius: '14px',
+                              padding: '20px 24px',
+                              border: isPassed ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '16px',
+                              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: '260px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  background: '#ede9fe',
+                                  color: '#6d28d9'
+                                }}>
+                                  {ass.sectionTitle || 'Lesson Assessment'}
+                                </span>
+                                {ass.timerEnabled && (
+                                  <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <i className="fa-regular fa-clock" />
+                                    {ass.timerDurationMinutes} mins
+                                  </span>
+                                )}
+                              </div>
+
+                              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                                {ass.lessonTitle}
+                              </h3>
+
+                              <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px' }}>
+                                <span><i className="fa-solid fa-list-check" style={{ marginRight: '5px', color: '#5A70D3' }} />{ass.totalQuestions} Questions</span>
+                                <span><i className="fa-solid fa-bullseye" style={{ marginRight: '5px', color: '#10b981' }} />Pass Target: {ass.passPercentage}%</span>
+                                {isCompleted && (
+                                  <span style={{ fontWeight: 800, color: isPassed ? '#10b981' : '#ef4444' }}>
+                                    Best Score: {status.bestScore}/{ass.totalQuestions} ({status.bestPercentage}%)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                              {isPassed ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '5px 12px',
+                                  borderRadius: '9999px',
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  color: '#10b981',
+                                  fontWeight: 800,
+                                  fontSize: '0.8rem'
+                                }}>
+                                  <i className="fa-solid fa-circle-check" /> Passed
+                                </span>
+                              ) : isCompleted ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '5px 12px',
+                                  borderRadius: '9999px',
+                                  background: '#fee2e2',
+                                  color: '#ef4444',
+                                  fontWeight: 800,
+                                  fontSize: '0.8rem'
+                                }}>
+                                  <i className="fa-solid fa-circle-xmark" /> Needs Retake
+                                </span>
+                              ) : isInProgress ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '5px 12px',
+                                  borderRadius: '9999px',
+                                  background: '#e0f2fe',
+                                  color: '#0284c7',
+                                  fontWeight: 800,
+                                  fontSize: '0.8rem'
+                                }}>
+                                  <i className="fa-solid fa-hourglass-half" /> In Progress
+                                </span>
+                              ) : (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '5px 12px',
+                                  borderRadius: '9999px',
+                                  background: '#f1f5f9',
+                                  color: '#64748b',
+                                  fontWeight: 700,
+                                  fontSize: '0.8rem'
+                                }}>
+                                  Not Attempted
+                                </span>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setPlayingAssessment(ass)}
+                                className="btn btn-primary btn-sm"
+                                style={{
+                                  background: isPassed ? '#10b981' : '#5A70D3',
+                                  borderColor: isPassed ? '#10b981' : '#5A70D3',
+                                  padding: '8px 18px',
+                                  fontWeight: 700,
+                                  fontSize: '0.85rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                {isInProgress ? 'Resume Test →' : isPassed ? 'Review / Retake →' : isCompleted ? 'Retake Test →' : 'Attend Test →'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </main>

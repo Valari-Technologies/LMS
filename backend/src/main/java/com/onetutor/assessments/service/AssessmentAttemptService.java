@@ -95,6 +95,21 @@ public class AssessmentAttemptService {
     }
 
     @Transactional(readOnly = true)
+    public List<AssessmentStudentResponse> getCourseAssessments(Long courseId, User student) {
+        List<Assessment> assessments = assessmentRepository.findAllByCourseIdAndEnabledTrue(courseId);
+        return assessments.stream()
+                .map(a -> {
+                    try {
+                        return getStudentAssessmentInfo(a.getContent().getId(), student);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(r -> r != null && r.totalQuestions() > 0)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public AssessmentSummaryDto getSummaryForStudent(Long contentId, User student) {
         Optional<Assessment> assessmentOpt = assessmentRepository.findByContentId(contentId);
         if (assessmentOpt.isEmpty() || !assessmentOpt.get().isEnabled()) {
