@@ -2114,117 +2114,6 @@ export default function StudentCourseDashboardPage() {
           </div>
 
         </div>
-
-        {/* Sidebar Footer: User profile and Sign Out button */}
-        <div style={{
-          borderTop: '1px solid #e2e8f0',
-          padding: sidebarCollapsed ? '12px 8px' : '12px 14px',
-          background: '#ffffff',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          flexShrink: 0
-        }}>
-          {user && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: sidebarCollapsed ? '4px 0' : '8px 10px',
-              borderRadius: '10px',
-              background: '#f8fafc',
-              border: '1px solid #f1f5f9',
-              justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
-            }}>
-              <div style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '50%',
-                background: '#5A70D3',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                flexShrink: 0,
-                overflow: 'hidden'
-              }}>
-                {user?.profileImage && !avatarImgError ? (
-                  <img
-                    src={user.profileImage}
-                    alt={user.name || 'User'}
-                    referrerPolicy="no-referrer"
-                    onError={() => setAvatarImgError(true)}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  userInitials
-                )}
-              </div>
-              {!sidebarCollapsed && (
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{
-                    fontWeight: 800,
-                    fontSize: '0.86rem',
-                    color: '#0f172a',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {user.name || 'Student'}
-                  </div>
-                  <div style={{
-                    fontSize: '0.74rem',
-                    color: '#64748b',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {user.email}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Sign Out Button */}
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-              navigate('/');
-            }}
-            title="Sign Out"
-            style={{
-              width: '100%',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-              gap: '8px',
-              padding: sidebarCollapsed ? '10px' : '9px 12px',
-              borderRadius: '8px',
-              border: '1px solid #fee2e2',
-              background: '#fff5f5',
-              color: '#dc2626',
-              fontWeight: 700,
-              fontSize: '0.84rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = '#fee2e2';
-              e.currentTarget.style.borderColor = '#fca5a5';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = '#fff5f5';
-              e.currentTarget.style.borderColor = '#fee2e2';
-            }}
-          >
-            <i className="fa-solid fa-arrow-right-from-bracket" style={{ fontSize: '0.9rem' }}></i>
-            {!sidebarCollapsed && <span>Sign Out</span>}
-          </button>
-        </div>
       </aside>
 
       {/* Right Main Area */}
@@ -2240,9 +2129,9 @@ export default function StudentCourseDashboardPage() {
         }}
       >
 
-        {/* Mobile Topbar Navigation Bar (Sticky on screens <= 1024px) */}
-        <header className="ot-course-mobile-header">
-          <div className="ot-course-mobile-header-left">
+        {/* Sticky Topbar Navigation Bar (Desktop and Mobile) */}
+        <header className="ot-course-topbar">
+          <div className="ot-course-topbar-left">
             <button
               type="button"
               className="ot-course-mobile-menu-btn"
@@ -2252,58 +2141,136 @@ export default function StudentCourseDashboardPage() {
             >
               <i className="fa-solid fa-bars"></i>
             </button>
-            <h1 className="ot-course-mobile-page-title" style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {playingAssessment ? playingAssessment.lessonTitle : (
-                activeTab === 'dashboard' ? 'Dashboard' :
-                activeTab === 'recordings' ? 'Recordings' :
-                activeTab === 'live' ? 'Live Classes' :
-                activeTab === 'attendance' ? 'Attendance' :
-                activeTab === 'community' ? 'Community Chat' :
-                activeTab === 'doubts' ? 'Doubt Clearance' :
-                activeTab === 'assessments' ? 'Assessments' : 'Dashboard'
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: '1.2rem',
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  letterSpacing: '-0.015em',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {playingAssessment ? (playingAssessment.title || playingAssessment.lessonTitle || 'Assessment Test') : (
+                  activeTab === 'dashboard' ? 'Course Learning Dashboard' :
+                  activeTab === 'recordings' ? 'Recordings & Video Replays' :
+                  activeTab === 'live' ? 'Live Classes' :
+                  activeTab === 'attendance' ? 'Attendance Records' :
+                  activeTab === 'community' ? 'Community Chat' :
+                  activeTab === 'doubts' ? 'Doubt Clearance' :
+                  activeTab === 'assessments' ? 'Assessments & Tests' : 'Course Dashboard'
+                )}
+              </h1>
+              {course?.title && (
+                <span
+                  className="desktop-only"
+                  style={{
+                    fontSize: '0.82rem',
+                    color: '#64748b',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginLeft: '4px'
+                  }}
+                >
+                  <span style={{ color: '#cbd5e1' }}>•</span>
+                  <span style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {course.title}
+                  </span>
+                </span>
               )}
-            </h1>
+            </div>
           </div>
 
           {/* Account Profile at Right Side Corner */}
-          <div className="ot-course-mobile-header-right" ref={profileMenuRef} style={{ position: 'relative' }}>
+          <div className="ot-course-topbar-right" ref={profileMenuRef} style={{ position: 'relative' }}>
             <button
               type="button"
               onClick={() => setShowProfileMenu(prev => !prev)}
               aria-label="Account Profile Menu"
               title={user ? `${user.name || 'Account'} - Profile` : 'Account Profile'}
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                border: '2px solid rgba(90, 112, 211, 0.35)',
-                background: '#5A70D3',
-                color: '#ffffff',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: '8px',
+                padding: '4px 12px 4px 5px',
+                borderRadius: '9999px',
+                border: '1px solid #e2e8f0',
+                background: showProfileMenu ? '#f1f5f9' : '#ffffff',
                 cursor: 'pointer',
-                padding: 0,
-                overflow: 'hidden',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                boxShadow: '0 2px 6px rgba(90, 112, 211, 0.2)',
+                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
                 transition: 'all 0.15s ease'
               }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.background = '#f8fafc';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = '#e2e8f0';
+                e.currentTarget.style.background = showProfileMenu ? '#f1f5f9' : '#ffffff';
+              }}
             >
-              {user?.profileImage && !avatarImgError ? (
-                <img
-                  src={user.profileImage}
-                  alt={user.name || 'User'}
-                  referrerPolicy="no-referrer"
-                  onError={() => setAvatarImgError(true)}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : user ? (
-                userInitials
-              ) : (
-                <i className="fa-solid fa-user" style={{ fontSize: '0.9rem' }}></i>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: '#5A70D3',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  fontWeight: 800,
+                  fontSize: '0.8rem',
+                  flexShrink: 0
+                }}
+              >
+                {user?.profileImage && !avatarImgError ? (
+                  <img
+                    src={user.profileImage}
+                    alt={user.name || 'User'}
+                    referrerPolicy="no-referrer"
+                    onError={() => setAvatarImgError(true)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : user ? (
+                  userInitials
+                ) : (
+                  <i className="fa-solid fa-user" style={{ fontSize: '0.85rem' }}></i>
+                )}
+              </div>
+
+              {user && (
+                <span
+                  className="desktop-only"
+                  style={{
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    maxWidth: '130px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {user.name || 'Student'}
+                </span>
               )}
+
+              <i
+                className="fa-solid fa-chevron-down"
+                style={{
+                  fontSize: '0.68rem',
+                  color: '#64748b',
+                  transition: 'transform 0.2s ease',
+                  transform: showProfileMenu ? 'rotate(180deg)' : 'rotate(0deg)'
+                }}
+              ></i>
             </button>
 
             {/* Account Profile Dropdown */}
@@ -2407,7 +2374,7 @@ export default function StudentCourseDashboardPage() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <i className="fa-solid fa-arrow-right-from-bracket" style={{ color: '#ef4444', width: '16px' }}></i>
-                      <span>Log Out</span>
+                      <span>Sign Out</span>
                     </button>
                   </>
                 ) : (
