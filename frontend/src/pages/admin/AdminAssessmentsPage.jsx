@@ -553,17 +553,17 @@ export default function AdminAssessmentsPage() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+            <table style={{ width: '100%', minWidth: '1050px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  <th style={{ padding: '14px 18px' }}>Course</th>
-                  <th style={{ padding: '14px 18px' }}>Batch</th>
-                  <th style={{ padding: '14px 18px' }}>Assessment Title</th>
-                  <th style={{ padding: '14px 18px' }}>Questions</th>
-                  <th style={{ padding: '14px 18px' }}>Passing Criteria</th>
-                  <th style={{ padding: '14px 18px' }}>Time Limit</th>
-                  <th style={{ padding: '14px 18px' }}>Status</th>
-                  <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '14px 18px', minWidth: '200px', width: '20%', verticalAlign: 'middle' }}>Course</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'center', minWidth: '120px', width: '11%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Batch</th>
+                  <th style={{ padding: '14px 18px', minWidth: '180px', width: '18%', verticalAlign: 'middle' }}>Assessment Title</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'center', minWidth: '110px', width: '10%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Questions</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'center', minWidth: '130px', width: '12%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Passing Criteria</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'center', minWidth: '110px', width: '10%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Time Limit</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'center', minWidth: '110px', width: '10%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Status</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'right', minWidth: '180px', width: '16%', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -586,46 +586,49 @@ export default function AdminAssessmentsPage() {
                       onMouseEnter={e => { e.currentTarget.style.background = '#fafafa'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
                         <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>{item.courseName}</div>
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         <span style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          padding: '3px 8px',
+                          gap: '5px',
+                          padding: '4px 10px',
                           borderRadius: '6px',
                           background: '#ede9fe',
                           color: '#6d28d9',
                           fontWeight: 700,
-                          fontSize: '0.76rem'
+                          fontSize: '0.78rem',
+                          whiteSpace: 'nowrap'
                         }}>
                           <i className="fa-solid fa-users-rectangle"></i>
                           {item.batchName}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
                         <div style={{ fontWeight: 700, color: '#1e293b' }}>{item.title}</div>
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {hasAss ? (
-                          <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                          <span style={{ fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>
                             {qCount} {qCount === 1 ? 'question' : 'questions'}
                           </span>
                         ) : (
                           <span style={{ color: '#94a3b8' }}>None</span>
                         )}
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {hasAss ? (
                           <span style={{
-                            padding: '3px 8px',
+                            padding: '4px 10px',
                             borderRadius: '6px',
                             background: '#f1f5f9',
                             fontWeight: 700,
                             color: '#475569',
-                            fontSize: '0.78rem'
+                            fontSize: '0.78rem',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block'
                           }}>
                             {passPct}% Pass Target
                           </span>
@@ -633,9 +636,9 @@ export default function AdminAssessmentsPage() {
                           <span style={{ color: '#94a3b8' }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {hasAss ? (
-                          <span style={{ color: '#475569', fontWeight: 600 }}>
+                          <span style={{ color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>
                             <i className="fa-regular fa-clock" style={{ marginRight: '5px', color: '#64748b' }}></i>
                             {timerStr}
                           </span>
@@ -643,19 +646,20 @@ export default function AdminAssessmentsPage() {
                           <span style={{ color: '#94a3b8' }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '14px 18px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {hasAss ? (
                           isEnabled ? (
                             <span style={{
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '5px',
-                              padding: '3px 8px',
+                              padding: '4px 10px',
                               borderRadius: '9999px',
                               background: 'rgba(16, 185, 129, 0.12)',
                               color: '#10b981',
                               fontWeight: 800,
-                              fontSize: '0.74rem'
+                              fontSize: '0.74rem',
+                              whiteSpace: 'nowrap'
                             }}>
                               <i className="fa-solid fa-circle-check"></i> Enabled
                             </span>
@@ -664,12 +668,13 @@ export default function AdminAssessmentsPage() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '5px',
-                              padding: '3px 8px',
+                              padding: '4px 10px',
                               borderRadius: '9999px',
                               background: '#fef3c7',
                               color: '#d97706',
                               fontWeight: 700,
-                              fontSize: '0.74rem'
+                              fontSize: '0.74rem',
+                              whiteSpace: 'nowrap'
                             }}>
                               <i className="fa-solid fa-pause"></i> Disabled
                             </span>
@@ -679,19 +684,20 @@ export default function AdminAssessmentsPage() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '5px',
-                            padding: '3px 8px',
+                            padding: '4px 10px',
                             borderRadius: '9999px',
                             background: '#f1f5f9',
                             color: '#94a3b8',
                             fontWeight: 600,
-                            fontSize: '0.74rem'
+                            fontSize: '0.74rem',
+                            whiteSpace: 'nowrap'
                           }}>
                             Not Added
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                      <td style={{ padding: '14px 18px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', whiteSpace: 'nowrap' }}>
                           {hasAss ? (
                             <>
                               <button
@@ -715,7 +721,8 @@ export default function AdminAssessmentsPage() {
                                   border: '1px solid #bfdbfe',
                                   fontWeight: 700,
                                   padding: '4px 10px',
-                                  borderRadius: '6px'
+                                  borderRadius: '6px',
+                                  whiteSpace: 'nowrap'
                                 }}
                                 title="View student results, marks and attendance"
                               >
@@ -726,7 +733,7 @@ export default function AdminAssessmentsPage() {
                                 type="button"
                                 onClick={() => setActiveEditorContent({ id: item.contentId, title: item.title })}
                                 className="btn btn-secondary btn-sm"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                 title="Edit assessment questions and configuration"
                               >
                                 <i className="fa-solid fa-pen-to-square" style={{ color: '#5A70D3' }}></i>
@@ -737,7 +744,7 @@ export default function AdminAssessmentsPage() {
                                   type="button"
                                   onClick={() => handleDeleteAssessment(item.contentId, item.title)}
                                   className="btn btn-outline-danger btn-sm"
-                                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                                  style={{ padding: '4px 8px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                   title="Delete this assessment"
                                 >
                                   <i className="fa-regular fa-trash-can"></i>
@@ -749,7 +756,7 @@ export default function AdminAssessmentsPage() {
                               type="button"
                               onClick={() => setActiveEditorContent({ id: item.contentId, title: item.title })}
                               className="btn btn-primary btn-sm"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#5A70D3', borderColor: '#5A70D3', fontSize: '0.8rem' }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#5A70D3', borderColor: '#5A70D3', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                               title="Add new 1-mark assessment for this batch"
                             >
                               <i className="fa-solid fa-plus"></i>
