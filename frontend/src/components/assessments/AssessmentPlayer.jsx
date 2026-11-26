@@ -523,7 +523,8 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
       <style>{`
         .exam-portal-wrapper {
           width: 100%;
-          min-height: 100vh;
+          min-height: 550px;
+          height: 100%;
           display: flex;
           flex-direction: column;
           background: #f1f5f9;
@@ -531,26 +532,6 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
           font-family: inherit;
           box-sizing: border-box;
           overflow-x: hidden;
-        }
-        .exam-header-bar {
-          background: #0f172a;
-          color: #ffffff;
-          padding: 12px 20px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          flex-shrink: 0;
-          border-bottom: 1px solid #1e293b;
-        }
-        .exam-header-title {
-          font-size: 1rem;
-          font-weight: 800;
-          color: #ffffff;
-          margin: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
         .exam-grid-container {
           display: grid;
@@ -576,11 +557,11 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
 
         /* Mobile & Tablet Styles */
         @media (max-width: 991px) {
-          .exam-header-bar {
-            padding: 10px 14px;
+          .mobile-palette-toggle {
+            display: inline-flex !important;
           }
-          .exam-header-title {
-            font-size: 0.88rem;
+          .mobile-timer-badge {
+            display: inline-flex !important;
           }
           .exam-grid-container {
             grid-template-columns: 1fr;
@@ -593,6 +574,14 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
           }
           .palette-grid {
             grid-template-columns: repeat(5, 1fr);
+          }
+        }
+        @media (min-width: 992px) {
+          .mobile-palette-toggle {
+            display: none !important;
+          }
+          .mobile-timer-badge {
+            display: none !important;
           }
         }
         @media (max-width: 640px) {
@@ -608,66 +597,46 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
         }
       `}</style>
 
-      {/* Unified Screen Header Bar */}
-      <div className="exam-header-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <h3 className="exam-header-title">
-            Online Test - {assessmentInfo.lessonTitle}
-          </h3>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          {/* Mobile Palette Button */}
-          <button
-            type="button"
-            onClick={() => setShowMobilePalette(true)}
-            style={{
-              background: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              padding: '6px 12px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'none'
-            }}
-            className="mobile-palette-toggle"
-          >
-            📊 Palette ({currentIndex + 1}/{questions.length})
-          </button>
-          <style>{`
-            @media (max-width: 991px) {
-              .mobile-palette-toggle { display: inline-flex !important; }
-              .mobile-hide { display: none !important; }
-            }
-          `}</style>
-
-          {assessmentInfo.timerEnabled && timeRemaining !== null && (
-            <span style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 800, color: timeRemaining < 120 ? '#f87171' : '#38bdf8', background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)' }}>
-              ⏱ {timerObj.str}
-            </span>
-          )}
-
-          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontSize: '0.75rem', fontWeight: '800', padding: '4px 10px', borderRadius: '20px' }}>
-            🛡 Exam Mode
-          </span>
-        </div>
-      </div>
-
       {/* Main Split Grid */}
       <div className="exam-grid-container">
 
         {/* Left Column: Main Question Area */}
         <div className="exam-left-panel">
           {/* Question Title Header */}
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#1e293b' }}>
               Question {currentIndex + 1} of {questions.length}
             </h4>
-            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0284c7', background: '#e0f2fe', padding: '3px 10px', borderRadius: '6px' }}>
-              1 Mark
-            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {assessmentInfo.timerEnabled && timeRemaining !== null && (
+                <span className="mobile-timer-badge" style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 800, color: timeRemaining < 120 ? '#dc2626' : '#0284c7', background: timeRemaining < 120 ? '#fee2e2' : '#f0f9ff', padding: '4px 10px', borderRadius: '6px', border: '1px solid', borderColor: timeRemaining < 120 ? '#fca5a5' : '#bae6fd' }}>
+                  ⏱ {timerObj.str}
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowMobilePalette(true)}
+                className="mobile-palette-toggle"
+                style={{
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                📊 Palette ({currentIndex + 1}/{questions.length})
+              </button>
+
+              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0284c7', background: '#e0f2fe', padding: '3px 10px', borderRadius: '6px' }}>
+                1 Mark
+              </span>
+            </div>
           </div>
 
           {/* Question Text Body */}
