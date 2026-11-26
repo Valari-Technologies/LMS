@@ -317,13 +317,6 @@ export default function StudentTutorDoubtView({
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const QUICK_PROMPTS = [
-    '💡 Concept explanation doubt',
-    '💻 Code debugging help',
-    '📝 Assignment doubt',
-    '❓ Question from lecture'
-  ];
-
   // Load enrolled courses list
   useEffect(() => {
     let mounted = true;
@@ -1020,41 +1013,6 @@ export default function StudentTutorDoubtView({
                 })
               )}
               <div ref={messagesEndRef} />
-            </div>
-
-            {/* Quick Suggestions Bar */}
-            <div style={{
-              padding: '6px 16px',
-              background: '#f8fafc',
-              borderTop: '1px solid #f1f5f9',
-              display: 'flex',
-              gap: '6px',
-              overflowX: 'auto',
-              flexShrink: 0
-            }}>
-              {QUICK_PROMPTS.map((q, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setText(q)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '9999px',
-                    border: '1px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#475569',
-                    fontSize: '0.74rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#5A70D3'; e.currentTarget.style.color = '#5A70D3'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}
-                >
-                  {q}
-                </button>
-              ))}
             </div>
 
             {/* File Upload Preview Banner */}
