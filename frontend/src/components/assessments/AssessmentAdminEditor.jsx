@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { getAdminAssessment, saveAssessment, deleteAssessment } from '../../api/assessments';
+import { updateContent } from '../../api/contents';
 import { useNotification } from '../../context/NotificationContext';
 
 export default function AssessmentAdminEditor({ contentId, contentTitle, onClose, backLabel = 'Back to Assessments' }) {
   const { toast } = useNotification();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Assessment Title
+  const [currentTitle, setCurrentTitle] = useState(
+    contentTitle?.includes('•') ? contentTitle.split('•').slice(1).join('•').trim() : (contentTitle || 'Assessment')
+  );
 
   // Sub-tab: 'questions' | 'settings'
   const [editorTab, setEditorTab] = useState('questions');
@@ -185,6 +191,19 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
       };
 
       await saveAssessment(contentId, payload);
+
+      if (currentTitle && currentTitle.trim()) {
+        try {
+          await updateContent(contentId, {
+            title: currentTitle.trim(),
+            contentType: 'PDF',
+            completionRule: 'ASSESSMENT'
+          });
+        } catch (titleErr) {
+          console.warn('Could not update content title:', titleErr);
+        }
+      }
+
       toast.success('Assessment saved successfully!');
       if (onClose) onClose();
     } catch (err) {
@@ -254,7 +273,9 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
               <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>Common Batch Test</span>
             </div>
             <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#ffffff' }}>
-              {contentTitle || 'Course Assessment'}
+              {contentTitle?.includes('•')
+                ? `${contentTitle.split('•')[0].trim()} • ${currentTitle || 'Assessment'}`
+                : (currentTitle || contentTitle || 'Course Assessment')}
             </h2>
           </div>
         </div>
@@ -603,6 +624,22 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              {/* Assessment Title */}
+              <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px', gridColumn: '1 / -1' }}>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.88rem' }}>Assessment Title</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={currentTitle}
+                  onChange={(e) => setCurrentTitle(e.target.value)}
+                  placeholder="e.g., Batch-A Assessment, Midterm Quiz, Unit 1 Evaluation"
+                  style={{ fontSize: '0.9rem' }}
+                />
+                <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Update the title displayed to students across course cards and assessment portals.
+                </span>
+              </div>
+
               {/* Pass Percentage */}
               <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px' }}>
                 <label className="form-label" style={{ fontWeight: 700, fontSize: '0.88rem' }}>Pass Percentage (%)</label>

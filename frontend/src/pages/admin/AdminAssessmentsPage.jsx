@@ -30,10 +30,11 @@ export default function AdminAssessmentsPage() {
   // Active Results / Submissions Modal
   const [activeResultsAssessment, setActiveResultsAssessment] = useState(null); // { contentId, title, courseName, batchName, passPercentage, questionsCount }
 
-  // New Assessment Picker Modal: Course & Batch only
+  // New Assessment Picker Modal: Course, Batch & Title
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [pickerCourseId, setPickerCourseId] = useState('');
   const [pickerBatchId, setPickerBatchId] = useState('');
+  const [pickerAssessmentTitle, setPickerAssessmentTitle] = useState('');
   const [pickerBatches, setPickerBatches] = useState([]);
   const [pickerLoadingBatches, setPickerLoadingBatches] = useState(false);
   const [pickerSubmitting, setPickerSubmitting] = useState(false);
@@ -200,6 +201,7 @@ export default function AdminAssessmentsPage() {
     if (!pickerCourseId) {
       setPickerBatches([]);
       setPickerBatchId('');
+      setPickerAssessmentTitle('');
       return;
     }
     setPickerLoadingBatches(true);
@@ -209,13 +211,16 @@ export default function AdminAssessmentsPage() {
         setPickerBatches(list);
         if (list.length > 0) {
           setPickerBatchId(list[0].id);
+          setPickerAssessmentTitle(`${list[0].name} Assessment`);
         } else {
           setPickerBatchId('ALL');
+          setPickerAssessmentTitle('Course Assessment');
         }
       })
       .catch(() => {
         setPickerBatches([]);
         setPickerBatchId('ALL');
+        setPickerAssessmentTitle('Course Assessment');
       })
       .finally(() => {
         setPickerLoadingBatches(false);
@@ -297,10 +302,16 @@ export default function AdminAssessmentsPage() {
     }
   };
 
-  // Launch Editor from Course & Batch selection
+  // Launch Editor from Course, Batch & Title selection
   const handleLaunchFromPicker = async () => {
     if (!pickerCourseId) {
       toast.error('Please choose a course');
+      return;
+    }
+
+    const assessmentTitle = pickerAssessmentTitle.trim();
+    if (!assessmentTitle) {
+      toast.error('Please enter an assessment title');
       return;
     }
 
@@ -310,8 +321,6 @@ export default function AdminAssessmentsPage() {
       const courseTitle = selectedCourse?.title || selectedCourse?.name || 'Course';
       const selectedBatch = pickerBatches.find(b => String(b.id) === String(pickerBatchId));
       const batchName = selectedBatch ? selectedBatch.name : 'All Batches';
-
-      const assessmentTitle = `${batchName} Assessment`;
 
       // 1. Get sections for course; find or create an "Assessments" section
       const sections = await listSections(pickerCourseId);
@@ -332,11 +341,10 @@ export default function AdminAssessmentsPage() {
         }
       }
 
-      // 2. Find or create content for this batch assessment
+      // 2. Find or create content for this assessment
       const contents = await listContents(targetSection.id);
       let targetContent = (contents || []).find(c =>
-        c.title === assessmentTitle ||
-        (selectedBatch && c.title?.toLowerCase().includes(selectedBatch.name.toLowerCase()))
+        c.title?.toLowerCase() === assessmentTitle.toLowerCase()
       );
 
       if (!targetContent) {
@@ -402,8 +410,10 @@ export default function AdminAssessmentsPage() {
             <button
               type="button"
               onClick={() => {
-                setPickerCourseId(courses[0]?.id || '');
+                const initCourse = courses[0]?.id || '';
+                setPickerCourseId(initCourse);
                 setPickerBatchId('');
+                setPickerAssessmentTitle('');
                 setShowPickerModal(true);
               }}
               className="btn btn-primary btn-sm"
@@ -823,7 +833,12 @@ export default function AdminAssessmentsPage() {
                 </label>
                 <select
                   value={pickerCourseId}
-                  onChange={e => setPickerCourseId(e.target.value)}
+                  onChange={e => {
+                    const cId = e.target.value;
+                    setPickerCourseId(cId);
+                    setPickerBatchId('');
+                    setPickerAssessmentTitle('');
+                  }}
                   style={{
                     width: '100%',
                     padding: '11px 14px',
@@ -848,7 +863,13 @@ export default function AdminAssessmentsPage() {
                 </label>
                 <select
                   value={pickerBatchId}
-                  onChange={e => setPickerBatchId(e.target.value)}
+                  onChange={e => {
+                    const bId = e.target.value;
+                    setPickerBatchId(bId);
+                    const selBatch = pickerBatches.find(b => String(b.id) === String(bId));
+                    const bName = selBatch ? selBatch.name : 'All Batches';
+                    setPickerAssessmentTitle(`${bName} Assessment`);
+                  }}
                   disabled={!pickerCourseId || pickerLoadingBatches}
                   style={{
                     width: '100%',
@@ -879,6 +900,32 @@ export default function AdminAssessmentsPage() {
                   Showing batches assigned exclusively to the chosen course.
                 </span>
               </div>
+
+              {/* Option 3: Assessment Title */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                  Assessment Title <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Batch-A Assessment, Midterm Quiz, Unit 1 Test"
+                  value={pickerAssessmentTitle}
+                  onChange={e => setPickerAssessmentTitle(e.target.value)}
+                  disabled={!pickerCourseId}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.92rem',
+                    background: !pickerCourseId ? '#f8fafc' : '#ffffff',
+                    color: '#0f172a'
+                  }}
+                />
+                <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '6px', display: 'block' }}>
+                  Set the title that will be displayed to students for this assessment.
+                </span>
+              </div>
             </div>
 
             <div style={{
@@ -900,7 +947,7 @@ export default function AdminAssessmentsPage() {
               <button
                 type="button"
                 onClick={handleLaunchFromPicker}
-                disabled={!pickerCourseId || pickerSubmitting}
+                disabled={!pickerCourseId || !pickerAssessmentTitle.trim() || pickerSubmitting}
                 className="btn btn-primary btn-sm"
                 style={{ background: '#5A70D3', borderColor: '#5A70D3', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
