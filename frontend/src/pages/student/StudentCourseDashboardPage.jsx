@@ -3509,26 +3509,14 @@ export default function StudentCourseDashboardPage() {
                 <>
                   {/* Top Assessment Overview Card */}
                   <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px 28px', border: '1px solid #cbd5e1', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                      <div>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <i className="fa-solid fa-file-pen" style={{ color: '#5A70D3' }}></i>
-                          <span>Course Assessments &amp; Tests</span>
-                        </h2>
-                        <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b' }}>
-                          Test your skills and verify course mastery with chapter quizzes designed for {course?.name || course?.title || 'this course'}.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => fetchCourseAssessments()}
-                        className="btn btn-secondary btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <i className={`fa-solid fa-arrows-rotate ${loadingAssessments ? 'fa-spin' : ''}`}></i>
-                        Refresh Status
-                      </button>
+                    <div>
+                      <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <i className="fa-solid fa-file-pen" style={{ color: '#5A70D3' }}></i>
+                        <span>Course Assessments &amp; Tests</span>
+                      </h2>
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b' }}>
+                        Test your skills and verify course mastery with chapter quizzes designed for {course?.name || course?.title || 'this course'}.
+                      </p>
                     </div>
 
                     {/* Progress Stats Summary */}
