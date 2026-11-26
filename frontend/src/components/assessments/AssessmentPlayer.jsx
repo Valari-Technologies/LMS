@@ -599,6 +599,7 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
           .exam-action-toolbar {
             padding: 10px 12px !important;
             gap: 8px !important;
+            flex-wrap: wrap;
           }
           .exam-action-btn {
             padding: 8px 12px !important;
@@ -610,28 +611,6 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
       {/* Unified Screen Header Bar */}
       <div className="exam-header-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#ffffff',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                flexShrink: 0
-              }}
-            >
-              <i className="fa-solid fa-arrow-left"></i> <span className="mobile-hide">Return</span>
-            </button>
-          )}
           <h3 className="exam-header-title">
             Online Test - {assessmentInfo.lessonTitle}
           </h3>
@@ -752,7 +731,32 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
 
           {/* Action Buttons Toolbar (Bottom of Left Panel) */}
           <div className="exam-action-toolbar" style={{ background: '#f8fafc', borderTop: '1px solid #cbd5e1', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {onClose && (
+                <button
+                  type="button"
+                  className="exam-action-btn"
+                  onClick={onClose}
+                  style={{
+                    background: '#ffffff',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    padding: '9px 18px',
+                    borderRadius: '20px',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  title="Back to Assessments"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 className="exam-action-btn"
