@@ -642,23 +642,7 @@ export default function StudentCourseDashboardPage() {
 
     return (
       <div className="ot-learn-page ot-dashboard-learn-page">
-        <div className="ot-learn-container" style={{ paddingTop: '16px' }}>
-          {/* Top Bar: Course Title & Lecture Classroom Indicator */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '14px',
-            gap: '12px',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#64748b' }}>
-              <span style={{ fontWeight: 800, color: '#0f172a' }}>{course?.name || course?.title}</span>
-              <span>•</span>
-              <span style={{ color: '#5A70D3', fontWeight: 700 }}>Lecture Classroom</span>
-            </div>
-          </div>
-
+        <div className="ot-learn-container" style={{ paddingTop: '20px' }}>
           {/* 2-Column Responsive Grid Layout matching LearningPage */}
           <div className="ot-learn-layout">
 
