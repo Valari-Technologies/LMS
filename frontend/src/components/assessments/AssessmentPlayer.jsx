@@ -18,15 +18,15 @@ function shuffleArray(arr) {
   return a;
 }
 
-// Build shuffled questions with shuffled options.
+// Build questions with optional question alteration and option alteration.
 // optionMap[questionId] = ['C','A','D','B'] means display slot 0→C, slot 1→A, etc.
 // When student picks display index i, we submit optionMap[qId][i].
-function buildShuffledQuestions(rawQuestions) {
+function buildShuffledQuestions(rawQuestions, randomizeQuestions = false, randomizeOptions = false) {
   const ordered = rawQuestions.slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-  const shuffledQs = shuffleArray(ordered);
+  const shuffledQs = randomizeQuestions ? shuffleArray(ordered) : ordered;
   const optionMap = {};
   shuffledQs.forEach(q => {
-    optionMap[q.id] = shuffleArray(['A', 'B', 'C', 'D']);
+    optionMap[q.id] = randomizeOptions ? shuffleArray(['A', 'B', 'C', 'D']) : ['A', 'B', 'C', 'D'];
   });
   return { shuffledQs, optionMap };
 }
@@ -107,7 +107,11 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
             }
             // Pre-build option shuffle map for resumed in-progress attempt
             if (attempt.status === 'IN_PROGRESS' && data.questions?.length) {
-              const { shuffledQs, optionMap: oMap } = buildShuffledQuestions(data.questions);
+              const { shuffledQs, optionMap: oMap } = buildShuffledQuestions(
+                data.questions,
+                Boolean(data.randomizeQuestions),
+                Boolean(data.randomizeOptions)
+              );
               setShuffledQuestions(shuffledQs);
               optionMapRef.current = oMap;
             }
@@ -235,7 +239,11 @@ export default function AssessmentPlayer({ contentId, onLessonUnlocked, onRetry,
       // Clear old option map so each question gets a new random order
       optionMapRef.current = {};
       if (assessmentInfo.questions?.length) {
-        const { shuffledQs, optionMap: oMap } = buildShuffledQuestions(assessmentInfo.questions);
+        const { shuffledQs, optionMap: oMap } = buildShuffledQuestions(
+          assessmentInfo.questions,
+          Boolean(assessmentInfo.randomizeQuestions),
+          Boolean(assessmentInfo.randomizeOptions)
+        );
         setShuffledQuestions(shuffledQs);
         optionMapRef.current = oMap;
       }

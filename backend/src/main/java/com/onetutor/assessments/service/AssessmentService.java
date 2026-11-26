@@ -82,8 +82,8 @@ public class AssessmentService {
         }
         assessment.setTimerEnabled(req.timerEnabled());
         assessment.setTimerDurationMinutes(req.timerDurationMinutes() > 0 ? req.timerDurationMinutes() : 10);
-        assessment.setRandomizeQuestions(false);
-        assessment.setRandomizeOptions(false);
+        assessment.setRandomizeQuestions(req.randomizeQuestions());
+        assessment.setRandomizeOptions(req.randomizeOptions());
 
         assessmentRepository.save(assessment);
 

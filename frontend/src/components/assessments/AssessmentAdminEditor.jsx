@@ -49,8 +49,8 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
           setCompletionMode(data.completionMode || 'PASS_ASSESSMENT');
           setTimerEnabled(data.timerEnabled ?? false);
           setTimerDurationMinutes(data.timerDurationMinutes ?? 10);
-          setRandomizeQuestions(false);
-          setRandomizeOptions(false);
+          setRandomizeQuestions(Boolean(data.randomizeQuestions));
+          setRandomizeOptions(Boolean(data.randomizeOptions));
           const sortedQuestions = (data.questions || []).slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
           setQuestions(sortedQuestions);
         }
@@ -175,8 +175,8 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
         completionMode,
         timerEnabled,
         timerDurationMinutes: Number(timerDurationMinutes),
-        randomizeQuestions: false,
-        randomizeOptions: false,
+        randomizeQuestions: Boolean(randomizeQuestions),
+        randomizeOptions: Boolean(randomizeOptions),
         questions: questions.map((q, idx) => ({
           id: q.id,
           questionText: q.questionText,
@@ -663,15 +663,56 @@ export default function AssessmentAdminEditor({ contentId, contentTitle, onClose
                 </div>
               </div>
 
-              {/* Fixed Order Guarantee */}
+              {/* Question Alteration */}
               <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--text-primary)' }}>Sequential Order (Preserved)</strong>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #64748b)' }}>Questions and options (A, B, C, D) are presented in the exact order you added them (no randomization).</span>
+                <div style={{ paddingRight: '12px' }}>
+                  <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--text-primary)' }}>Question Alteration</strong>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #64748b)' }}>Randomize question sequence for each student to prevent answer sharing</span>
                 </div>
-                <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#16a34a', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '5px 14px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: '700' }}>
-                  ✓ Fixed Order
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{
+                    background: randomizeQuestions ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
+                    color: randomizeQuestions ? '#10b981' : '#64748b',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '6px'
+                  }}>
+                    {randomizeQuestions ? 'Altered' : 'Sequential'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={randomizeQuestions}
+                    onChange={(e) => setRandomizeQuestions(e.target.checked)}
+                    style={{ width: '20px', height: '20px', accentColor: '#10b981', cursor: 'pointer' }}
+                  />
+                </div>
+              </div>
+
+              {/* Option Alteration */}
+              <div style={{ background: 'var(--bg-surface, #f8fafc)', border: '1px solid var(--border-default, #e2e8f0)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ paddingRight: '12px' }}>
+                  <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--text-primary)' }}>Option Alteration</strong>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #64748b)' }}>Randomize options (A, B, C, D) positions for each student</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{
+                    background: randomizeOptions ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
+                    color: randomizeOptions ? '#10b981' : '#64748b',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '6px'
+                  }}>
+                    {randomizeOptions ? 'Altered' : 'Fixed A-B-C-D'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={randomizeOptions}
+                    onChange={(e) => setRandomizeOptions(e.target.checked)}
+                    style={{ width: '20px', height: '20px', accentColor: '#10b981', cursor: 'pointer' }}
+                  />
+                </div>
               </div>
             </div>
           </div>

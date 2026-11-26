@@ -88,6 +88,8 @@ public class AssessmentAttemptService {
                 assessment.getCompletionMode().name(),
                 assessment.isTimerEnabled(),
                 assessment.getTimerDurationMinutes(),
+                assessment.isRandomizeQuestions(),
+                assessment.isRandomizeOptions(),
                 questions.size(),
                 questionDtos,
                 summary

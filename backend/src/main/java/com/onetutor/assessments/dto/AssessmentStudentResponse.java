@@ -12,6 +12,8 @@ public record AssessmentStudentResponse(
         String completionMode,
         boolean timerEnabled,
         int timerDurationMinutes,
+        boolean randomizeQuestions,
+        boolean randomizeOptions,
         int totalQuestions,
         List<QuestionStudentDto> questions,
         AssessmentSummaryDto userStatus
