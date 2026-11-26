@@ -613,7 +613,7 @@ export default function CoursePaymentModal({ course, batchId, isOpen, onClose, o
                 className="btn btn-primary"
                 onClick={() => {
                   onClose();
-                  navigate(`/student/learn/${course.id}`);
+                  navigate(`/student/courses/${course.id}/dashboard`);
                 }}
                 style={{
                   flex: 1.6,

@@ -460,7 +460,7 @@ export default function StudentDashboard() {
             <div className="ot-continue-body-row">
               <div className="ot-continue-course-info">
                 <Link
-                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
+                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard`}
                   className="ot-continue-thumb-box"
                   style={{ textDecoration: 'none', cursor: 'pointer', display: 'flex' }}
                   title="Go to Course"
@@ -486,7 +486,7 @@ export default function StudentDashboard() {
                   <span className="ot-badge-in-progress">In Progress</span>
                   <h4 className="ot-continue-course-title">
                     <Link
-                      to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
+                      to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard`}
                       style={{ color: 'inherit', textDecoration: 'none' }}
                       title="Go to Course"
                     >
@@ -522,7 +522,7 @@ export default function StudentDashboard() {
 
               <div className="ot-continue-actions">
                 <Link
-                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard?tab=lecture`}
+                  to={`/student/courses/${activeContinueCourse?.courseId || activeContinueCourse?.id}/dashboard`}
                   className="ot-continue-resume-btn"
                 >
                   <span>Go to Course</span>

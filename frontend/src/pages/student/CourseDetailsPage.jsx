@@ -2565,7 +2565,7 @@ export default function CourseDetailsPage() {
                   className="ot-cd-play-btn"
                   onClick={() => {
                     if (isEnrolled) {
-                      navigate(`/student/courses/${course.id}/dashboard?tab=lecture`);
+                      navigate(`/student/courses/${course.id}/dashboard`);
                     } else if (!isBatchFull) {
                       if (isPaidCourse) {
                         if (!user) {
@@ -2925,7 +2925,7 @@ export default function CourseDetailsPage() {
                   <button
                     type="button"
                     className="ot-cd-btn-primary"
-                    onClick={() => navigate(`/student/courses/${course.id}/dashboard?tab=lecture`)}
+                    onClick={() => navigate(`/student/courses/${course.id}/dashboard`)}
                   >
                     <i className="fa-solid fa-play" style={{ fontSize: '0.85rem' }}></i>
                     <span>Go to Course</span>

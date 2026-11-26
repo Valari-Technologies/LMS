@@ -176,7 +176,7 @@ export default function EnrolledCoursesRowSection({ courses = [], fallbackCourse
   const handleCardAction = (course, isDone) => {
     const id = course.courseId || course.id;
     recordCourseAccess(id);
-    navigate(`/student/courses/${id}/dashboard?tab=lecture`);
+    navigate(`/student/courses/${id}/dashboard`);
   };
 
   // Helper to prevent repeating "Batch Batch A"
