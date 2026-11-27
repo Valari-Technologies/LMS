@@ -580,56 +580,27 @@ export default function StudentCourseDashboardPage() {
     }
   }
 
-  // Open Lecture Classroom in-page player (matching Recording class player)
+  // Open Lecture Classroom: Opens the course curriculum video lectures (uploaded in Course Videos)
   const handleOpenLectureClassroom = () => {
     setMobileSidebarOpen(false);
 
-    // 1. If any recording classes exist in this course, open the current or first recording class
-    if (allRecordings && allRecordings.length > 0) {
-      const targetRec = selectedRecording || allRecordings[0];
-      setSelectedRecording({
-        ...targetRec,
-        sessionId: targetRec.sessionId,
-        url: targetRec.url || targetRec.recordingUrl,
-        sessionTitle: targetRec.sessionTitle || targetRec.title,
-        courseName: course?.name || course?.title,
-        description: targetRec.sessionDescription || targetRec.description,
-        subtitleUrl: targetRec.subtitleUrl || null,
-        scheduledAt: targetRec.scheduledAt,
-        batchName: targetRec.batchName || batchLabel
-      });
-      return;
-    }
-
-    // If data is still loading, wait for it before showing fallback
     if (loading) return;
 
-    // 2. If the course has syllabus video lessons (nextLesson or course.sections)
-    const syllabusVideo = nextLesson || course?.sections?.[0]?.contents?.[0];
-    if (syllabusVideo && (syllabusVideo.mediaReference || syllabusVideo.videoUrl || syllabusVideo.url)) {
-      setSelectedRecording({
-        id: syllabusVideo.id,
-        sessionId: 'syllabus-' + syllabusVideo.id,
-        url: syllabusVideo.mediaReference || syllabusVideo.videoUrl || syllabusVideo.url,
-        sessionTitle: syllabusVideo.title || syllabusVideo.name || 'Lecture Classroom',
-        courseName: course?.name || course?.title,
-        description: syllabusVideo.description || nextSectionTitle || '',
-        subtitleUrl: syllabusVideo.subtitleUrl || null,
-        scheduledAt: null,
-        batchName: batchLabel
-      });
+    // Check if this course has curriculum video lessons uploaded in course video
+    const hasCurriculumLessons = totalLessons > 0 || (course?.sections && course.sections.some(s => s.contents && s.contents.length > 0));
+
+    if (hasCurriculumLessons) {
+      navigate(`/student/learn/${courseId}`);
       return;
     }
 
-    // 3. Fallback: switch to recordings tab and notify student
-    setActiveTab('recordings');
-    toast.info('No recorded lectures or class videos available yet for this course.');
+    // If no curriculum video lectures uploaded for this course
+    toast.info('No course video lectures have been uploaded for this course yet.');
   };
 
   const handleClosePlayer = () => {
     setSelectedRecording(null);
-    if (searchParams.get('tab') === 'lecture' || searchParams.get('tab') === 'classroom' || searchParams.get('play')) {
-      setActiveTab('dashboard');
+    if (searchParams.get('tab') === 'recording' || searchParams.get('play')) {
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
         next.delete('tab');
@@ -641,10 +612,10 @@ export default function StudentCourseDashboardPage() {
 
   useEffect(() => {
     if (loading) return;
-    if ((rawTab === 'lecture' || rawTab === 'classroom' || searchParams.get('play') === '1' || searchParams.get('play') === 'true') && !selectedRecording) {
+    if (rawTab === 'lecture' || rawTab === 'classroom') {
       handleOpenLectureClassroom();
     }
-  }, [rawTab, allRecordings.length, loading, course]);
+  }, [rawTab, loading, course]);
 
   // Open rating modal
   const handleOpenRatingModal = (recording, sessionTitle) => {
@@ -800,14 +771,14 @@ export default function StudentCourseDashboardPage() {
                     </span>
                     <span className="ot-now-playing-pill">
                       <i className="fa-solid fa-play" style={{ fontSize: '0.62rem', marginRight: '4px' }}></i>
-                      Recording Replay
+                      Session Recording
                     </span>
                   </div>
                   <h2 className="ot-learn-lecture-title" title={recCustomTitle || selectedRecording.sessionTitle}>
                     {recCustomTitle || selectedRecording.sessionTitle}
                   </h2>
                   <div className="ot-learn-section-subtitle">
-                    Lecture {currentRecordingIndex + 1} of {allRecordings.length}
+                    Session Recording {currentRecordingIndex + 1} of {allRecordings.length}
                     {selectedRecording.scheduledAt && (
                       <span style={{ marginLeft: '10px' }}>
                         • {new Date(selectedRecording.scheduledAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -851,7 +822,7 @@ export default function StudentCourseDashboardPage() {
                         borderRadius: '8px',
                         cursor: 'pointer'
                       }}
-                      title={recResources.length === 1 ? `Download ${recResources[0].name}` : `View and download all ${recResources.length} lecture resources`}
+                      title={recResources.length === 1 ? `Download ${recResources[0].name}` : `View and download all ${recResources.length} recording resources`}
                     >
                       <i className="fa-solid fa-paperclip"></i>
                       <span>Resources ({recResources.length})</span>
@@ -1242,7 +1213,7 @@ export default function StudentCourseDashboardPage() {
                     </p>
                     <textarea
                       rows={6}
-                      placeholder="Type your lecture notes, important timestamps, or key formulas here..."
+                      placeholder="Type your session notes, important timestamps, or key formulas here..."
                       defaultValue={localStorage.getItem(`onetutor_notes_${selectedRecording.id}`) || ''}
                       onChange={(e) => {
                         localStorage.setItem(`onetutor_notes_${selectedRecording.id}`, e.target.value);
@@ -1298,7 +1269,7 @@ export default function StudentCourseDashboardPage() {
                           <span>Downloadable Class Resources & Materials</span>
                         </h3>
                         <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-                          Lecture slides, source code archives, PDF guides, and reference materials for this recording
+                          Recording slides, source code archives, PDF guides, and reference materials for this live session replay
                         </p>
                       </div>
 
@@ -1511,9 +1482,9 @@ export default function StudentCourseDashboardPage() {
                 ================================================================ */}
             <aside className="ot-course-content-sidebar">
               <div className="ot-sidebar-header">
-                <h3 className="ot-sidebar-title">Course content</h3>
+                <h3 className="ot-sidebar-title">Session Recordings</h3>
                 <span className="ot-sidebar-meta">
-                  {recordingSessions.length} sections • {allRecordings.length} lectures
+                  {recordingSessions.length} {recordingSessions.length === 1 ? 'session' : 'sessions'} • {allRecordings.length} {allRecordings.length === 1 ? 'recording' : 'recordings'}
                 </span>
               </div>
 
@@ -1538,7 +1509,7 @@ export default function StudentCourseDashboardPage() {
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div className="ot-sidebar-sec-title">{session.title}</div>
                             <div className="ot-sidebar-sec-subtitle">
-                              {sessionRecs.length} / {sessionRecs.length} lectures
+                              {sessionRecs.length} {sessionRecs.length === 1 ? 'recording' : 'recordings'}
                               {session.scheduledAt ? ` • ${new Date(session.scheduledAt).toLocaleDateString()}` : ''}
                             </div>
                           </div>
@@ -1580,7 +1551,7 @@ export default function StudentCourseDashboardPage() {
                                     </div>
                                     <div className="ot-sidebar-lecture-meta">
                                       <i className="fa-solid fa-play" style={{ fontSize: '9px', color: isCurrent ? '#5A70D3' : '#94a3b8' }}></i>
-                                      <span>VIDEO</span>
+                                      <span>RECORDING</span>
                                       {(() => {
                                         const dur = getAccurateDuration(rec);
                                         if (!dur) return null;
@@ -2045,8 +2016,12 @@ export default function StudentCourseDashboardPage() {
             {/* Recordings Link */}
             <button
               type="button"
-              className={`ot-course-nav-link ${activeTab === 'recordings' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('recordings'); setMobileSidebarOpen(false); }}
+              className={`ot-course-nav-link ${activeTab === 'recordings' || selectedRecording ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('recordings');
+                setSelectedRecording(null);
+                setMobileSidebarOpen(false);
+              }}
               title={!enrolledPlan?.allowsRecordings ? "Recordings (Upgrade required)" : "Recorded Sessions"}
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-video"></i></span>
@@ -2056,7 +2031,7 @@ export default function StudentCourseDashboardPage() {
                   <i className="fa-solid fa-lock"></i>
                 </span>
               ) : recordingSessions.length > 0 ? (
-                <span className={`ot-course-badge ${activeTab === 'recordings' ? 'active' : ''}`}>
+                <span className={`ot-course-badge ${activeTab === 'recordings' || selectedRecording ? 'active' : ''}`}>
                   {recordingSessions.length}
                 </span>
               ) : null}
@@ -2120,9 +2095,9 @@ export default function StudentCourseDashboardPage() {
             {/* Full Video Learning Classroom */}
             <button
               type="button"
-              className={`ot-course-nav-link ${selectedRecording ? 'active' : ''}`}
+              className="ot-course-nav-link"
               onClick={handleOpenLectureClassroom}
-              title="Lecture Classroom"
+              title="Course Video Lectures Classroom"
             >
               <span className="ot-course-nav-icon"><i className="fa-solid fa-play"></i></span>
               <span className="ot-course-nav-text">Lecture Classroom</span>
@@ -2796,7 +2771,7 @@ export default function StudentCourseDashboardPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '0.94rem', color: '#0f172a' }}>
                         <i className="fa-solid fa-video" style={{ color: '#5A70D3' }}></i>
-                        <span>Course Video Replays</span>
+                        <span>Live Session Recordings</span>
                       </div>
                       <button
                         type="button"
@@ -2807,7 +2782,7 @@ export default function StudentCourseDashboardPage() {
                       </button>
                     </div>
                     <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-                      Stream full replays of live classes for this course in the video classes classroom player.
+                      Stream full replays of live classes for this course in the session recordings player.
                     </p>
                   </div>
 
@@ -3094,7 +3069,7 @@ export default function StudentCourseDashboardPage() {
                     <span>Live &amp; Upcoming Classes</span>
                   </h2>
                   <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>
-                    Interactive live lectures scheduled for your batch. Enter classroom to participate with the tutor.
+                    Interactive live sessions scheduled for your batch. Enter classroom to participate with the tutor.
                   </p>
                 </div>
               </div>
@@ -3243,7 +3218,7 @@ export default function StudentCourseDashboardPage() {
                   Plan Restriction · {enrolledPlan?.name || 'Live Sessions Only'}
                 </span>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: '0 0 10px 0' }}>
-                  Lecture Video Recordings are Locked
+                  Session Recordings are Locked
                 </h2>
                 <p style={{ fontSize: '0.92rem', color: '#64748b', lineHeight: 1.6, margin: '0 0 24px 0' }}>
                   Your current enrollment is on the <strong>{enrolledPlan?.name || 'Live Sessions Only'}</strong> plan. To access all on-demand Full HD video replays, lesson notes, and study recordings at your own pace, upgrade your enrollment to a plan with recording access.
