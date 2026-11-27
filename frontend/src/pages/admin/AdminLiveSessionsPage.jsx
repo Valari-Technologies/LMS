@@ -2614,18 +2614,32 @@ export default function AdminLiveSessionsPage() {
           <div
             className="modal-dialog"
             style={{
-              maxWidth: '740px',
+              maxWidth: '750px',
               width: '95%',
-              maxHeight: '90vh',
+              maxHeight: '88vh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              padding: '22px 26px',
-              overflow: 'hidden'
+              padding: '20px 24px',
+              position: 'relative'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexShrink: 0 }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '14px',
+              borderBottom: '1px solid var(--border-subtle)',
+              paddingBottom: '12px',
+              flexShrink: 0,
+              position: 'sticky',
+              top: '-20px',
+              background: 'var(--bg-surface, #ffffff)',
+              zIndex: 25,
+              paddingTop: '6px'
+            }}>
               <div>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <i className="fa-solid fa-box-archive" style={{ color: 'var(--primary)' }}></i>
@@ -2641,15 +2655,9 @@ export default function AdminLiveSessionsPage() {
             {/* Scrollable Recordings Container */}
             <div
               style={{
-                flex: 1,
-                overflowY: 'auto',
-                paddingRight: '6px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '14px',
-                minHeight: 0,
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e1 transparent'
+                gap: '16px'
               }}
             >
               {(manageRecordingsModal.recordings || []).map((r, idx) => {
@@ -3350,7 +3358,21 @@ export default function AdminLiveSessionsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '14px', flexShrink: 0 }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+              marginTop: '16px',
+              borderTop: '1px solid var(--border-subtle)',
+              paddingTop: '14px',
+              flexShrink: 0,
+              position: 'sticky',
+              bottom: '-20px',
+              background: 'var(--bg-surface, #ffffff)',
+              zIndex: 25,
+              paddingBottom: '6px'
+            }}>
               <button
                 type="button"
                 className="btn btn-primary"
