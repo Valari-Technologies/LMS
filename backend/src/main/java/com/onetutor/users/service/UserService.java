@@ -209,7 +209,7 @@ public class UserService {
         for (var a : attempts) {
             var assessment = a.getAssessment();
             var content = a.getContent();
-            double passingPct = assessment != null ? assessment.getPassingPercentage() : 70.0;
+            double passingPct = assessment != null ? assessment.getPassPercentage() : 60.0;
             boolean passed = a.getPercentage() >= passingPct && a.getStatus() == AssessmentStatus.COMPLETED;
             if (passed) quizzesPassed++;
             totalScorePercent += a.getPercentage();
@@ -218,13 +218,15 @@ public class UserService {
                     ? content.getSection().getCourse().getName()
                     : "Course Assessment";
 
+            String testTitle = content != null ? content.getTitle() : "Module Assessment";
+
             assessmentSummaries.add(new StudentDetailResponse.StudentAssessmentSummary(
                     a.getId(),
                     assessment != null ? assessment.getId() : null,
-                    assessment != null ? assessment.getTitle() : (content != null ? content.getTitle() : "Quiz"),
+                    testTitle,
                     courseName,
                     a.getObtainedMarks(),
-                    assessment != null ? assessment.getTotalMarks() : a.getTotalQuestions(),
+                    a.getTotalQuestions(),
                     Math.round(a.getPercentage() * 10.0) / 10.0,
                     passingPct,
                     passed,
@@ -269,8 +271,9 @@ public class UserService {
             }
         }
         for (var a : attempts.stream().limit(4).toList()) {
-            String aTitle = a.getAssessment() != null ? a.getAssessment().getTitle() : "Assessment";
-            boolean p = a.getPercentage() >= (a.getAssessment() != null ? a.getAssessment().getPassingPercentage() : 70.0);
+            String aTitle = a.getContent() != null ? a.getContent().getTitle() : "Assessment";
+            double passingPct = a.getAssessment() != null ? a.getAssessment().getPassPercentage() : 60.0;
+            boolean p = a.getPercentage() >= passingPct;
             activityItems.add(new StudentDetailResponse.StudentActivityItem(
                     "ASSESSMENT",
                     (p ? "Passed" : "Attempted") + " " + aTitle,
