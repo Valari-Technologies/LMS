@@ -824,7 +824,7 @@ export default function StudentCourseDashboardPage() {
                       }}
                       title={recResources.length === 1 ? `Download ${recResources[0].name}` : `View and download all ${recResources.length} recording resources`}
                     >
-                      <i className="fa-solid fa-paperclip"></i>
+                      <i className="fa-solid fa-download"></i>
                       <span>Resources ({recResources.length})</span>
                     </button>
                   )}
@@ -881,7 +881,7 @@ export default function StudentCourseDashboardPage() {
                     className={`ot-learn-tab ${effectiveVideoPlayerTab === 'resources' ? 'active' : ''}`}
                     onClick={() => setVideoPlayerTab('resources')}
                   >
-                    <i className="fa-solid fa-paperclip"></i>
+                    <i className="fa-solid fa-download"></i>
                     <span>Resources</span>
                     <span className="ot-tab-badge">{recResources.length}</span>
                   </button>
@@ -945,7 +945,7 @@ export default function StudentCourseDashboardPage() {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
+                        <i className="fa-solid fa-download" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
                         <div>
                           <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Resources</div>
                           <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
@@ -1265,7 +1265,7 @@ export default function StudentCourseDashboardPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
                         <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <i className="fa-solid fa-paperclip" style={{ color: '#5A70D3' }}></i>
+                          <i className="fa-solid fa-download" style={{ color: '#5A70D3' }}></i>
                           <span>Downloadable Class Resources & Materials</span>
                         </h3>
                         <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
