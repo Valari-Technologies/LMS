@@ -25,7 +25,9 @@ export default function AdminLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentNotifications, setRecentNotifications] = useState([]);
   const [avatarImgError, setAvatarImgError] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const notifDropdownRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     setAvatarImgError(false);
@@ -56,25 +58,29 @@ export default function AdminLayout() {
     };
   }, []);
 
-  // Click outside to close notification dropdown
+  // Click outside to close notification dropdown / account menu
   useEffect(() => {
     function handleClickOutside(event) {
       if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
     }
-    if (showNotifications) {
+    if (showNotifications || showUserMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showNotifications]);
+  }, [showNotifications, showUserMenu]);
 
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
     setShowNotifications(false);
+    setShowUserMenu(false);
   }, [location.pathname]);
 
   async function loadUnread() {
@@ -744,21 +750,101 @@ export default function AdminLayout() {
               )}
             </div>
 
-            {/* Profile Avatar Chip */}
-            <div className="admin-topbar-user" title={`Logged in as ${userDisplayName}`}>
-              <div className="avatar-circle small">
-                {user?.profileImage && !avatarImgError ? (
-                  <img
-                    src={user.profileImage}
-                    alt={userDisplayName}
-                    referrerPolicy="no-referrer"
-                    onError={() => setAvatarImgError(true)}
-                  />
-                ) : (
-                  userInitials
-                )}
-              </div>
-              <span className="desktop-only admin-topbar-name">{userDisplayName}</span>
+            {/* Profile Avatar Chip with Account Menu (click to reveal Sign Out) */}
+            <div style={{ position: 'relative' }} ref={userMenuRef}>
+              <button
+                type="button"
+                className="admin-topbar-user"
+                onClick={() => setShowUserMenu(prev => !prev)}
+                title={`Logged in as ${userDisplayName}`}
+                aria-label="Account menu"
+                aria-expanded={showUserMenu}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="avatar-circle small">
+                  {user?.profileImage && !avatarImgError ? (
+                    <img
+                      src={user.profileImage}
+                      alt={userDisplayName}
+                      referrerPolicy="no-referrer"
+                      onError={() => setAvatarImgError(true)}
+                    />
+                  ) : (
+                    userInitials
+                  )}
+                </div>
+                <span className="desktop-only admin-topbar-name">{userDisplayName}</span>
+                <i
+                  className="fa-solid fa-chevron-down desktop-only"
+                  style={{
+                    fontSize: '0.68rem',
+                    color: 'var(--text-muted, #94a3b8)',
+                    transition: 'transform 0.15s ease',
+                    transform: showUserMenu ? 'rotate(180deg)' : 'none'
+                  }}
+                ></i>
+              </button>
+
+              {showUserMenu && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 10px)',
+                    right: 0,
+                    width: '230px',
+                    background: 'var(--bg-surface, #ffffff)',
+                    border: '1px solid var(--border-default, #e2e8f0)',
+                    borderRadius: '14px',
+                    boxShadow: 'var(--shadow-xl, 0 16px 36px rgba(15, 23, 42, 0.15))',
+                    zIndex: 2500,
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle, #f1f5f9)' }}>
+                    <div
+                      style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary, #0f172a)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      title={userDisplayName}
+                    >
+                      {userDisplayName}
+                    </div>
+                    <div
+                      style={{ fontSize: '0.78rem', color: 'var(--text-muted, #94a3b8)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      title={user?.email}
+                    >
+                      {user?.email}
+                    </div>
+                  </div>
+                  <div style={{ padding: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        handleLogout();
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        fontWeight: 700,
+                        fontSize: '0.86rem',
+                        padding: '9px 10px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
