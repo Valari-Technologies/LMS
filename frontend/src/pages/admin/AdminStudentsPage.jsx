@@ -347,11 +347,11 @@ export default function AdminStudentsPage() {
           <div
             style={{
               width: '100%',
-              maxWidth: '740px',
+              maxWidth: 'min(880px, 94vw)',
               height: '100%',
               background: 'var(--bg-surface, #ffffff)',
               borderLeft: '1px solid var(--border-default, #e2e8f0)',
-              boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.25)',
+              boxShadow: '-12px 0 40px rgba(0, 0, 0, 0.28)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden'
@@ -489,11 +489,13 @@ export default function AdminStudentsPage() {
               {/* Navigation Tabs Bar */}
               <div style={{
                 display: 'flex',
-                gap: '6px',
+                gap: '8px',
                 marginTop: '16px',
                 borderBottom: '1px solid var(--border-subtle, #f1f5f9)',
                 paddingBottom: '2px',
-                overflowX: 'auto'
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
               }}>
                 {[
                   { id: 'overview', label: 'Overview', icon: 'fa-chart-pie', count: null },
@@ -587,8 +589,8 @@ export default function AdminStudentsPage() {
                     return (
                       <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                        gap: '12px',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))',
+                        gap: '14px',
                         marginBottom: '28px'
                       }}>
                         {/* 1. Watch Time */}
