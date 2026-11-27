@@ -1550,61 +1550,102 @@ export default function AdminNotificationCenterPage() {
             </p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="modern-table" style={{ width: '100%', minWidth: '960px', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{
                   borderBottom: '1px solid var(--border-default, #e2e8f0)',
-                  fontSize: '0.78rem',
+                  fontSize: '0.74rem',
                   color: 'var(--text-muted)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.04em'
+                  letterSpacing: '0.04em',
+                  background: 'var(--bg-surface, #f8fafc)'
                 }}>
-                  <th style={{ padding: '12px 14px' }}>Notification Details</th>
-                  <th style={{ padding: '12px 14px' }}>Category</th>
-                  <th style={{ padding: '12px 14px' }}>Audience</th>
-                  <th style={{ padding: '12px 14px' }}>Banner</th>
-                  <th style={{ padding: '12px 14px' }}>In-App Delivered</th>
-                  <th style={{ padding: '12px 14px' }}>FCM Push Status</th>
-                  <th style={{ padding: '12px 14px' }}>Dispatched By</th>
-                  <th style={{ padding: '12px 14px' }}>Date</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '12px 10px', width: '24%', verticalAlign: 'middle' }}>Notification Details</th>
+                  <th style={{ padding: '12px 10px', width: '10%', verticalAlign: 'middle' }}>Category</th>
+                  <th style={{ padding: '12px 10px', width: '9%', verticalAlign: 'middle' }}>Audience</th>
+                  <th style={{ padding: '12px 10px', width: '6%', verticalAlign: 'middle', textAlign: 'center' }}>Banner</th>
+                  <th style={{ padding: '12px 10px', width: '10%', verticalAlign: 'middle', textAlign: 'center' }}>In-App Delivered</th>
+                  <th style={{ padding: '12px 10px', width: '11%', verticalAlign: 'middle' }}>FCM Push Status</th>
+                  <th style={{ padding: '12px 10px', width: '9%', verticalAlign: 'middle' }}>Dispatched By</th>
+                  <th style={{ padding: '12px 10px', width: '9%', verticalAlign: 'middle' }}>Date</th>
+                  <th style={{ padding: '12px 10px', width: '12%', verticalAlign: 'middle', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBroadcasts.map((b) => {
                   const bCategory = CATEGORIES.find(c => c.id === b.type) || CATEGORIES[0];
+                  const createdDate = new Date(b.createdAt);
+                  const isValidDate = !isNaN(createdDate.getTime());
+                  const dateStr = isValidDate
+                    ? createdDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '—';
+                  const timeStr = isValidDate
+                    ? createdDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                    : '';
+
                   return (
                     <tr key={b.id} style={{
                       borderBottom: '1px solid var(--border-subtle, #f1f5f9)',
-                      fontSize: '0.88rem',
+                      fontSize: '0.86rem',
                       transition: 'background 0.15s ease'
                     }}>
-                      <td style={{ padding: '14px', maxWidth: '320px' }}>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {/* 1. Notification Details */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                        <div
+                          title={b.title}
+                          style={{
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            fontSize: '0.86rem',
+                            marginBottom: '3px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
                           {b.title}
                         </div>
-                        <div style={{
-                          fontSize: '0.82rem',
-                          color: 'var(--text-secondary)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
+                        <div
+                          title={b.message}
+                          style={{
+                            fontSize: '0.79rem',
+                            color: 'var(--text-secondary)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
                           {b.message}
                         </div>
                         {b.linkUrl && (
-                          <div style={{ fontSize: '0.74rem', color: 'var(--accent-primary, #4f46e5)', marginTop: '4px', fontWeight: 600 }}>
-                            <i className="fa-solid fa-link" style={{ marginRight: '4px' }}></i>
-                            {b.linkUrl}
+                          <div
+                            title={b.linkUrl}
+                            style={{
+                              fontSize: '0.73rem',
+                              color: 'var(--accent-primary, #4f46e5)',
+                              marginTop: '3px',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            <i className="fa-solid fa-link" style={{ fontSize: '0.68rem', flexShrink: 0 }}></i>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.linkUrl}</span>
                           </div>
                         )}
                       </td>
 
-                      <td style={{ padding: '14px' }}>
+                      {/* 2. Category */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
                         <span style={{
-                          fontSize: '0.76rem',
-                          padding: '4px 10px',
+                          fontSize: '0.74rem',
+                          padding: '3px 8px',
                           borderRadius: '6px',
                           fontWeight: 700,
                           background: bCategory.bg,
@@ -1612,94 +1653,167 @@ export default function AdminNotificationCenterPage() {
                           border: `1px solid ${bCategory.border}`,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '5px'
+                          gap: '5px',
+                          whiteSpace: 'nowrap'
                         }}>
-                          <i className={`fa-solid ${bCategory.icon}`}></i>
-                          {bCategory.label}
+                          <i className={`fa-solid ${bCategory.icon}`} style={{ fontSize: '0.7rem' }}></i>
+                          <span>{bCategory.label}</span>
                         </span>
                       </td>
 
-                      <td style={{ padding: '14px' }}>
+                      {/* 3. Audience */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
                         <span style={{
-                          fontSize: '0.78rem',
+                          fontSize: '0.74rem',
                           background: 'var(--bg-surface, #f1f5f9)',
                           color: 'var(--text-primary)',
                           padding: '3px 8px',
                           borderRadius: '6px',
                           fontWeight: 600,
-                          border: '1px solid var(--border-default, #e2e8f0)'
+                          border: '1px solid var(--border-default, #e2e8f0)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          whiteSpace: 'nowrap'
                         }}>
-                          {b.targetRole === 'ALL' ? '👥 All Users' : b.targetRole === 'STUDENT' ? '🎓 Students' : '🛡️ Admins'}
+                          <span>{b.targetRole === 'ALL' ? '👥' : b.targetRole === 'STUDENT' ? '🎓' : '🛡️'}</span>
+                          <span>{b.targetRole === 'ALL' ? 'All Users' : b.targetRole === 'STUDENT' ? 'Students' : 'Admins'}</span>
                         </span>
                       </td>
 
-                      <td style={{ padding: '14px' }}>
+                      {/* 4. Banner */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
                         {b.imageUrl ? (
-                          <a href={b.imageUrl} target="_blank" rel="noreferrer" title="Click to view full image">
+                          <a href={b.imageUrl} target="_blank" rel="noreferrer" title="Click to view image" style={{ display: 'inline-block' }}>
                             <img
                               src={b.imageUrl}
                               alt="Banner"
-                              style={{ width: '56px', height: '36px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-default)' }}
+                              style={{
+                                width: '46px',
+                                height: '30px',
+                                objectFit: 'cover',
+                                borderRadius: '5px',
+                                border: '1px solid var(--border-default, #e2e8f0)',
+                                display: 'block',
+                                margin: '0 auto',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+                              }}
                             />
                           </a>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>No image</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>
                         )}
                       </td>
 
-                      <td style={{ padding: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {b.recipientCount} users
+                      {/* 5. In-App Delivered */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '5px',
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          fontSize: '0.82rem',
+                          width: '100%'
+                        }}>
+                          <i className="fa-solid fa-bell" style={{ color: 'var(--accent-primary, #4f46e5)', fontSize: '0.74rem' }}></i>
+                          <span>{b.recipientCount}</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 500 }}>users</span>
+                        </div>
                       </td>
 
-                      <td style={{ padding: '14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {/* 6. FCM Push Status */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
                           <span style={{
-                            fontSize: '0.76rem',
+                            fontSize: '0.74rem',
                             fontWeight: 700,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
+                            padding: '2px 7px',
+                            borderRadius: '5px',
                             background: 'rgba(16, 185, 129, 0.1)',
                             color: '#059669',
-                            border: '1px solid rgba(16, 185, 129, 0.25)'
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}>
-                            ✓ {b.fcmSuccessCount} delivered
+                            <i className="fa-solid fa-check" style={{ fontSize: '0.68rem' }}></i>
+                            <span>{b.fcmSuccessCount} delivered</span>
                           </span>
                           {b.fcmFailureCount > 0 && (
                             <span style={{
-                              fontSize: '0.74rem',
+                              fontSize: '0.70rem',
                               fontWeight: 600,
                               color: '#dc2626',
                               background: 'rgba(239, 68, 68, 0.1)',
-                              padding: '2px 6px',
-                              borderRadius: '4px'
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(239, 68, 68, 0.2)',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
                             }}>
-                              {b.fcmFailureCount} failed
+                              <i className="fa-solid fa-xmark" style={{ fontSize: '0.68rem' }}></i>
+                              <span>{b.fcmFailureCount} failed</span>
                             </span>
                           )}
                         </div>
                       </td>
 
-                      <td style={{ padding: '14px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                        {b.sentByName || 'System Admin'}
+                      {/* 7. Dispatched By */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                        <div
+                          title={b.sentByName || 'System Admin'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            color: 'var(--text-secondary)',
+                            fontSize: '0.80rem',
+                            maxWidth: '100%',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <i className="fa-regular fa-user" style={{ fontSize: '0.74rem', color: 'var(--text-muted)', flexShrink: 0 }}></i>
+                          <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {b.sentByName || 'System Admin'}
+                          </span>
+                        </div>
                       </td>
 
-                      <td style={{ padding: '14px', color: 'var(--text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                        {new Date(b.createdAt).toLocaleString()}
+                      {/* 8. Date */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.80rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                            {dateStr}
+                          </span>
+                          {timeStr && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                              {timeStr}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
-                      <td style={{ padding: '14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                      {/* 9. Actions */}
+                      <td style={{ padding: '12px 10px', verticalAlign: 'middle', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', width: '100%', whiteSpace: 'nowrap' }}>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            title="Load into composer to edit or tweak before sending"
+                            title="Load into composer to tweak and re-use"
                             onClick={() => handleLoadIntoComposer(b)}
                             style={{
-                              padding: '5px 10px',
-                              fontSize: '0.78rem',
+                              padding: '4px 8px',
+                              fontSize: '0.75rem',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '5px'
+                              gap: '4px',
+                              borderRadius: '6px',
+                              fontWeight: 600
                             }}
                           >
                             <i className="fa-solid fa-pen-to-square"></i>
@@ -1709,15 +1823,17 @@ export default function AdminNotificationCenterPage() {
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            title="Resend this broadcast to target audience immediately"
+                            title="Resend this broadcast immediately"
                             onClick={() => handleResend(b)}
                             disabled={resendingId === b.id}
                             style={{
-                              padding: '5px 12px',
-                              fontSize: '0.78rem',
+                              padding: '4px 9px',
+                              fontSize: '0.75rem',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '6px',
+                              gap: '4px',
+                              borderRadius: '6px',
+                              fontWeight: 600,
                               background: 'linear-gradient(135deg, #4f46e5 0%, #111111 100%)',
                               border: 'none',
                               color: '#ffffff',
@@ -1725,7 +1841,7 @@ export default function AdminNotificationCenterPage() {
                             }}
                           >
                             <i className={`fa-solid ${resendingId === b.id ? 'fa-rotate fa-spin' : 'fa-repeat'}`}></i>
-                            <span>{resendingId === b.id ? 'Resending...' : 'Resend'}</span>
+                            <span>{resendingId === b.id ? 'Sending...' : 'Resend'}</span>
                           </button>
                         </div>
                       </td>
