@@ -21,6 +21,7 @@ export default function AdminLayout() {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadDoubtCount, setUnreadDoubtCount] = useState(0);
   const [liveClassCount, setLiveClassCount] = useState(0);
+  const [needsVerificationCount, setNeedsVerificationCount] = useState(0);
   const [pendingContactCount, setPendingContactCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentNotifications, setRecentNotifications] = useState([]);
@@ -90,7 +91,7 @@ export default function AdminLayout() {
       const [notifRes, chatRes, liveCountRes, contactStatsRes, doubtRes] = await Promise.allSettled([
         getUnreadNotificationCount(),
         getUnreadChatCount(),
-        getUpcomingLiveSessionCount().catch(() => getAdminLiveSessions({ size: 100 })),
+        getAdminLiveSessions({ size: 100 }).catch(() => getUpcomingLiveSessionCount()),
         getAdminContactStats().catch(() => null),
         getUnreadDoubtCount().catch(() => 0),
       ]);
@@ -105,6 +106,13 @@ export default function AdminLayout() {
           setLiveClassCount(liveCountRes.value);
         } else {
           const sessions = Array.isArray(liveCountRes.value) ? liveCountRes.value : (liveCountRes.value?.content || []);
+          
+          // Count recordings awaiting administrator verification
+          const pendingVerification = sessions.reduce((acc, s) => {
+            return acc + (s.recordings || []).filter(r => r.status === 'PENDING_APPROVAL').length;
+          }, 0);
+          setNeedsVerificationCount(pendingVerification);
+
           const now = new Date();
           const activeUpcoming = sessions.filter(s => {
             const st = (s.status || '').toLowerCase();
@@ -198,7 +206,18 @@ export default function AdminLayout() {
         { to: '/admin/banners', label: 'Hero Banners', icon: <i className="fa-solid fa-image"></i> },
         { to: '/admin/promo-banner', label: 'Promo Banner', icon: <i className="fa-solid fa-rectangle-ad"></i> },
         { to: '/admin/media', label: 'Cloudinary Media', icon: <i className="fa-solid fa-cloud-arrow-up"></i> },
-        { to: '/admin/live-sessions', label: 'Live Sessions', icon: <i className="fa-solid fa-video"></i>, badge: liveClassCount > 0 ? (liveClassCount > 99 ? '99+' : liveClassCount) : null },
+        {
+          to: '/admin/live-sessions',
+          label: 'Live Sessions',
+          icon: <i className="fa-solid fa-video"></i>,
+          badge: needsVerificationCount > 0
+            ? (needsVerificationCount > 99 ? '99+' : needsVerificationCount)
+            : (liveClassCount > 0 ? (liveClassCount > 99 ? '99+' : liveClassCount) : null),
+          badgeColor: needsVerificationCount > 0 ? '#f59e0b' : '#22c55e',
+          badgeTitle: needsVerificationCount > 0
+            ? `${needsVerificationCount} recording${needsVerificationCount > 1 ? 's' : ''} awaiting admin verification`
+            : `${liveClassCount} active/upcoming live session${liveClassCount > 1 ? 's' : ''}`
+        },
         { to: '/admin/assessments', label: 'Assessments', icon: <i className="fa-solid fa-list-check"></i> },
       ]
     },
@@ -444,7 +463,7 @@ export default function AdminLayout() {
                       <span
                         style={{
                           marginLeft: 'auto',
-                          background: '#22c55e',
+                          background: item.badgeColor || '#22c55e',
                           color: '#ffffff',
                           fontSize: '11px',
                           fontWeight: 700,
@@ -455,8 +474,9 @@ export default function AdminLayout() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           padding: '0 6px',
-                          boxShadow: '0 2px 4px rgba(34, 197, 94, 0.4)',
+                          boxShadow: `0 2px 4px ${item.badgeColor ? 'rgba(245, 158, 11, 0.45)' : 'rgba(34, 197, 94, 0.4)'}`,
                         }}
+                        title={item.badgeTitle || undefined}
                       >
                         {item.badge}
                       </span>

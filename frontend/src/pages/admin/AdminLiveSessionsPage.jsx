@@ -143,6 +143,7 @@ export default function AdminLiveSessionsPage() {
   const [filterBatches, setFilterBatches] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalNeedsVerification, setTotalNeedsVerification] = useState(0);
   // Track sessions admin manually completed today (so we respect their action even for today's sessions)
   const [manuallyCompletedIds, setManuallyCompletedIds] = useState(new Set());
   // Tick counter: forces re-render every 60s so status badges update based on current time
@@ -483,14 +484,25 @@ export default function AdminLiveSessionsPage() {
   async function loadSessions(showSpinner = true) {
     if (showSpinner) setLoading(true);
     try {
+      const isNeedsVerificationFilter = status === 'NEEDS_VERIFICATION';
       const res = await getAdminLiveSessions({
         courseId: selectedCourseId !== 'ALL' ? selectedCourseId : undefined,
         batchId: selectedBatchId !== 'ALL' ? selectedBatchId : undefined,
-        status,
+        status: isNeedsVerificationFilter ? undefined : status,
         page,
         size: 100
       });
-      const fetchedSessions = res?.content || [];
+      const allFetchedSessions = res?.content || [];
+
+      // Calculate total pending verification count
+      const totalPending = allFetchedSessions.reduce((acc, s) => {
+        return acc + (s.recordings || []).filter(r => r.status === 'PENDING_APPROVAL').length;
+      }, 0);
+      setTotalNeedsVerification(totalPending);
+
+      const fetchedSessions = isNeedsVerificationFilter
+        ? allFetchedSessions.filter(s => (s.recordings || []).some(r => r.status === 'PENDING_APPROVAL'))
+        : allFetchedSessions;
 
       // 1. Parse remote recording metadata (resources, overviews) from backend into local storage
       fetchedSessions.forEach(s => parseSessionRecordingMetadata(s));
@@ -1174,7 +1186,32 @@ export default function AdminLiveSessionsPage() {
     <div className="page">
       <div className="page-header">
         <div className="page-title-wrap">
-          <h1 className="page-title">Live Sessions & Classes</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h1 className="page-title" style={{ margin: 0 }}>Live Sessions & Classes</h1>
+            {totalNeedsVerification > 0 && (
+              <span
+                onClick={() => { setStatus('NEEDS_VERIFICATION'); setPage(0); }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  color: '#b45309',
+                  padding: '3px 10px',
+                  borderRadius: '16px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(245, 158, 11, 0.2)'
+                }}
+                title="Click to view sessions awaiting verification"
+              >
+                <i className="fa-solid fa-clock-rotate-left" style={{ color: '#f59e0b' }}></i>
+                <span>{totalNeedsVerification} Needs Verification</span>
+              </span>
+            )}
+          </div>
           <p className="page-subtitle">
             Schedule interactive live meetings and attach playback recordings.
           </p>
@@ -1196,6 +1233,35 @@ export default function AdminLiveSessionsPage() {
                 {st === 'ALL' ? 'All Sessions' : st.charAt(0) + st.slice(1).toLowerCase()}
               </button>
             ))}
+            <button
+              onClick={() => { setStatus(status === 'NEEDS_VERIFICATION' ? 'ALL' : 'NEEDS_VERIFICATION'); setPage(0); }}
+              className={`btn btn-sm ${status === 'NEEDS_VERIFICATION' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: status === 'NEEDS_VERIFICATION' ? '#f59e0b' : (totalNeedsVerification > 0 ? '#fffbeb' : undefined),
+                borderColor: status === 'NEEDS_VERIFICATION' ? '#d97706' : (totalNeedsVerification > 0 ? '#fde68a' : undefined),
+                color: status === 'NEEDS_VERIFICATION' ? '#ffffff' : (totalNeedsVerification > 0 ? '#b45309' : undefined),
+                fontWeight: 700
+              }}
+              title="Filter sessions that have recordings awaiting admin verification"
+            >
+              <i className="fa-solid fa-clock-rotate-left"></i>
+              <span>Needs Verification</span>
+              {totalNeedsVerification > 0 && (
+                <span style={{
+                  background: status === 'NEEDS_VERIFICATION' ? '#ffffff' : '#f59e0b',
+                  color: status === 'NEEDS_VERIFICATION' ? '#b45309' : '#ffffff',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  padding: '1px 6px',
+                  borderRadius: '10px'
+                }}>
+                  {totalNeedsVerification}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Course & Batch Filter Controls */}
@@ -1479,28 +1545,34 @@ export default function AdminLiveSessionsPage() {
                               }
                               return null;
                             })()}
-                            {/* Pending verification badge for content creator uploads */}
-                            {s.recordings && s.recordings.some(r => r.status === 'PENDING_APPROVAL') && (
-                              <span
-                                onClick={() => setManageRecordingsModal(s)}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 800,
-                                  color: '#b45309',
-                                  background: 'rgba(245, 158, 11, 0.15)',
-                                  border: '1px solid rgba(245, 158, 11, 0.35)',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer'
-                                }}
-                                title="Recording uploaded by Content Creator awaits Admin Verification & Publishing"
-                              >
-                                <i className="fa-solid fa-clock-rotate-left"></i> Needs Verification
-                              </span>
-                            )}
+                            {/* Pending verification badge with count */}
+                            {(() => {
+                              const pendingInSession = (s.recordings || []).filter(r => r.status === 'PENDING_APPROVAL').length;
+                              if (pendingInSession === 0) return null;
+                              return (
+                                <span
+                                  onClick={() => setManageRecordingsModal(s)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    color: '#b45309',
+                                    background: 'rgba(245, 158, 11, 0.15)',
+                                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                                    padding: '2px 7px',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)'
+                                  }}
+                                  title={`Click to review and publish ${pendingInSession} recording${pendingInSession !== 1 ? 's' : ''}`}
+                                >
+                                  <i className="fa-solid fa-clock-rotate-left"></i>
+                                  <span>Needs Verification ({pendingInSession})</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <button
