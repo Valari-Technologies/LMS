@@ -751,6 +751,11 @@ export default function StudentCourseDashboardPage() {
       selectedRecording.sessionId || selectedRecording.session?.id
     );
 
+    // If current tab is resources but this recording has none, default to overview
+    const effectiveVideoPlayerTab = (videoPlayerTab === 'resources' && recResources.length === 0)
+      ? 'overview'
+      : videoPlayerTab;
+
     return (
       <div className="ot-learn-page ot-dashboard-learn-page">
         <div className="ot-learn-container" style={{ paddingTop: '20px' }}>
@@ -877,7 +882,7 @@ export default function StudentCourseDashboardPage() {
               <div className="ot-learn-tabs">
                 <button
                   type="button"
-                  className={`ot-learn-tab ${videoPlayerTab === 'overview' ? 'active' : ''}`}
+                  className={`ot-learn-tab ${effectiveVideoPlayerTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setVideoPlayerTab('overview')}
                 >
                   <i className="fa-regular fa-file-lines"></i>
@@ -885,7 +890,7 @@ export default function StudentCourseDashboardPage() {
                 </button>
                 <button
                   type="button"
-                  className={`ot-learn-tab ${videoPlayerTab === 'notes' ? 'active' : ''}`}
+                  className={`ot-learn-tab ${effectiveVideoPlayerTab === 'notes' ? 'active' : ''}`}
                   onClick={() => setVideoPlayerTab('notes')}
                 >
                   <i className="fa-regular fa-note-sticky"></i>
@@ -893,26 +898,28 @@ export default function StudentCourseDashboardPage() {
                 </button>
                 <button
                   type="button"
-                  className={`ot-learn-tab ${videoPlayerTab === 'community' ? 'active' : ''}`}
+                  className={`ot-learn-tab ${effectiveVideoPlayerTab === 'community' ? 'active' : ''}`}
                   onClick={() => setVideoPlayerTab('community')}
                 >
                   <i className="fa-solid fa-user-group"></i>
                   <span>Community</span>
                 </button>
-                <button
-                  type="button"
-                  className={`ot-learn-tab ${videoPlayerTab === 'resources' ? 'active' : ''}`}
-                  onClick={() => setVideoPlayerTab('resources')}
-                >
-                  <i className="fa-solid fa-paperclip"></i>
-                  <span>Resources</span>
-                  {recResources.length > 0 && <span className="ot-tab-badge">{recResources.length}</span>}
-                </button>
+                {recResources.length > 0 && (
+                  <button
+                    type="button"
+                    className={`ot-learn-tab ${effectiveVideoPlayerTab === 'resources' ? 'active' : ''}`}
+                    onClick={() => setVideoPlayerTab('resources')}
+                  >
+                    <i className="fa-solid fa-paperclip"></i>
+                    <span>Resources</span>
+                    <span className="ot-tab-badge">{recResources.length}</span>
+                  </button>
+                )}
               </div>
 
               {/* Tab Content Panel */}
               <div className="ot-learn-tab-content-wrap">
-                {videoPlayerTab === 'overview' && (
+                {effectiveVideoPlayerTab === 'overview' && (
                   <div className="ot-curriculum-panel-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
                       <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
@@ -1258,7 +1265,7 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 )}
 
-                {videoPlayerTab === 'community' && (
+                {effectiveVideoPlayerTab === 'community' && (
                   <div className="ot-curriculum-panel-card" style={{ padding: 0, overflow: 'hidden', height: '520px', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '12px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1282,7 +1289,7 @@ export default function StudentCourseDashboardPage() {
                   </div>
                 )}
 
-                {videoPlayerTab === 'resources' && (
+                {effectiveVideoPlayerTab === 'resources' && recResources.length > 0 && (
                   <div className="ot-curriculum-panel-card">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                       <div>

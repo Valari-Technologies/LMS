@@ -2558,14 +2558,16 @@ export default function LearningPage() {
                 <span>Community</span>
                 {communityUnreadCount > 0 && <span className="ot-tab-badge">{communityUnreadCount}</span>}
               </button>
-              <button
-                className={`ot-learn-tab ${activeTab === 'resources' ? 'active' : ''}`}
-                onClick={() => setActiveTab('resources')}
-              >
-                <i className="fa-solid fa-paperclip"></i>
-                <span>Resources</span>
-                {lectureResources.length > 0 && <span className="ot-tab-badge">{lectureResources.length}</span>}
-              </button>
+              {lectureResources.length > 0 && (
+                <button
+                  className={`ot-learn-tab ${activeTab === 'resources' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('resources')}
+                >
+                  <i className="fa-solid fa-paperclip"></i>
+                  <span>Resources</span>
+                  <span className="ot-tab-badge">{lectureResources.length}</span>
+                </button>
+              )}
               {currentAssessmentInfo?.enabled && (
                 <button
                   className={`ot-learn-tab ${activeTab === 'assessment' ? 'active' : ''}`}
