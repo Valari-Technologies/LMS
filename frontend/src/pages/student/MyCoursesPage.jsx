@@ -816,41 +816,48 @@ export default function MyCoursesPage() {
                         />
                       </div>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          fontSize: '0.78rem',
-                        }}
-                      >
-                        <span style={{ color: '#0b1f3a', fontWeight: 600 }}>
-                          {pct}% complete
-                        </span>
+                      {c.totalContents === 0 || c.totalLessons === 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600, color: '#64748b' }}>
+                          <i className="fa-solid fa-video-slash" style={{ fontSize: '0.72rem', color: '#94a3b8' }}></i>
+                          <span>No videos (Recordings only)</span>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '0.78rem',
+                          }}
+                        >
+                          <span style={{ color: '#0b1f3a', fontWeight: 600 }}>
+                            {pct}% complete
+                          </span>
 
-                        {isCompleted ? (
-                          <span
-                            style={{
-                              color: '#5A70D3',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <i className="fa-solid fa-circle-check"></i>
-                            <span>Completed</span>
-                          </span>
-                        ) : isNotStarted ? (
-                          <span style={{ color: '#94a3b8', fontWeight: 600 }}>
-                            Not Started
-                          </span>
-                        ) : (
-                          <span style={{ color: '#5A70D3', fontWeight: 700 }}>
-                            In Progress
-                          </span>
-                        )}
-                      </div>
+                          {isCompleted ? (
+                            <span
+                              style={{
+                                color: '#5A70D3',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <i className="fa-solid fa-circle-check"></i>
+                              <span>Completed</span>
+                            </span>
+                          ) : isNotStarted ? (
+                            <span style={{ color: '#94a3b8', fontWeight: 600 }}>
+                              Not Started
+                            </span>
+                          ) : (
+                            <span style={{ color: '#5A70D3', fontWeight: 700 }}>
+                              In Progress
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Buttons Row */}

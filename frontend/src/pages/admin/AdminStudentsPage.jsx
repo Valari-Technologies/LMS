@@ -913,31 +913,56 @@ export default function AdminStudentsPage() {
                                   background: 'var(--bg-surface, #f8fafc)',
                                   border: '1px solid var(--border-subtle, #f1f5f9)'
                                 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                                      {c.courseName}
+                                  {(c.totalContents || 0) === 0 ? (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                                        {c.courseName}
+                                      </div>
+                                      <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 700,
+                                        padding: '2px 8px',
+                                        borderRadius: '6px',
+                                        background: 'var(--bg-surface, #f1f5f9)',
+                                        border: '1px solid var(--border-default, #cbd5e1)',
+                                        color: 'var(--text-muted, #64748b)'
+                                      }}>
+                                        <i className="fa-solid fa-video-slash" style={{ fontSize: '0.7rem' }}></i>
+                                        No videos
+                                      </span>
                                     </div>
-                                    <span style={{
-                                      fontSize: '0.78rem',
-                                      fontWeight: 800,
-                                      color: pct >= 100 ? '#059669' : 'var(--accent-primary, #4f46e5)'
-                                    }}>
-                                      {pct}%
-                                    </span>
-                                  </div>
-                                  <div className="progress-bar-wrap" style={{ height: '7px', marginBottom: '6px' }}>
-                                    <div
-                                      className="progress-bar-fill"
-                                      style={{
-                                        width: `${pct}%`,
-                                        background: pct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined
-                                      }}
-                                    />
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                                    <span>{c.completedContents || 0} / {c.totalContents || 0} lessons completed</span>
-                                    <span>Last seen: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleDateString() : 'Never'}</span>
-                                  </div>
+                                  ) : (
+                                    <>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                                          {c.courseName}
+                                        </div>
+                                        <span style={{
+                                          fontSize: '0.78rem',
+                                          fontWeight: 800,
+                                          color: pct >= 100 ? '#059669' : 'var(--accent-primary, #4f46e5)'
+                                        }}>
+                                          {pct}%
+                                        </span>
+                                      </div>
+                                      <div className="progress-bar-wrap" style={{ height: '7px', marginBottom: '6px' }}>
+                                        <div
+                                          className="progress-bar-fill"
+                                          style={{
+                                            width: `${pct}%`,
+                                            background: pct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined
+                                          }}
+                                        />
+                                      </div>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                        <span>{c.completedContents || 0} / {c.totalContents || 0} lessons completed</span>
+                                        <span>Last seen: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleDateString() : 'Never'}</span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1214,26 +1239,35 @@ export default function AdminStudentsPage() {
                                   </div>
                                 </div>
 
-                                <div className="progress-bar-wrap" style={{ height: '8px', marginTop: '10px', marginBottom: '6px' }}>
-                                  <div
-                                    className="progress-bar-fill"
-                                    style={{
-                                      width: `${pct}%`,
-                                      background: pct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined
-                                    }}
-                                  />
-                                </div>
+                                {(c.totalContents || 0) === 0 ? (
+                                  <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-surface, #f1f5f9)', border: '1px solid var(--border-default, #cbd5e1)', padding: '3px 8px', borderRadius: '6px' }}>
+                                    <i className="fa-solid fa-video-slash" style={{ fontSize: '0.72rem' }}></i>
+                                    <span>No videos (Recordings only)</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="progress-bar-wrap" style={{ height: '8px', marginTop: '10px', marginBottom: '6px' }}>
+                                      <div
+                                        className="progress-bar-fill"
+                                        style={{
+                                          width: `${pct}%`,
+                                          background: pct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined
+                                        }}
+                                      />
+                                    </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                  <span>
-                                    <i className="fa-solid fa-circle-check" style={{ color: '#059669', marginRight: '4px' }}></i>
-                                    {c.completedContents || 0} of {c.totalContents || 0} lessons completed
-                                  </span>
-                                  <span>
-                                    <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
-                                    Last Active: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleDateString() : 'Never'}
-                                  </span>
-                                </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                      <span>
+                                        <i className="fa-solid fa-circle-check" style={{ color: '#059669', marginRight: '4px' }}></i>
+                                        {c.completedContents || 0} of {c.totalContents || 0} lessons completed
+                                      </span>
+                                      <span>
+                                        <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                                        Last Active: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleDateString() : 'Never'}
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
 
                               {/* Expanded Section Details */}

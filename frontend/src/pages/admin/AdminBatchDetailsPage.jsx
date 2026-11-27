@@ -967,27 +967,50 @@ export default function AdminBatchDetailsPage() {
                       })()}
                     </td>
                     <td>
-                      <div style={{ minWidth: '160px', maxWidth: '220px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: (s.progressPercent || 0) >= 100 ? '#10b981' : 'var(--text-primary)' }}>
-                            {Math.round(s.progressPercent || 0)}%
-                          </span>
-                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                            {s.completedContents || 0} / {s.totalContents || 0} lessons
-                          </span>
-                        </div>
-                        <div style={{ height: '6px', width: '100%', background: 'var(--border-default)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div
+                      {(s.totalContents || 0) === 0 ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span
                             style={{
-                              height: '100%',
-                              width: `${Math.min(100, Math.round(s.progressPercent || 0))}%`,
-                              background: (s.progressPercent || 0) >= 100 ? '#10b981' : (s.progressPercent || 0) > 40 ? '#6366f1' : '#3b82f6',
-                              borderRadius: '3px',
-                              transition: 'width 0.3s ease',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              background: 'var(--bg-surface, #f1f5f9)',
+                              border: '1px solid var(--border-default, #cbd5e1)',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              color: 'var(--text-muted, #64748b)',
                             }}
-                          />
+                            title="This class has no video lessons (recordings only)"
+                          >
+                            <i className="fa-solid fa-video-slash" style={{ fontSize: '0.72rem', color: '#94a3b8' }}></i>
+                            <span>No videos</span>
+                          </span>
                         </div>
-                      </div>
+                      ) : (
+                        <div style={{ minWidth: '160px', maxWidth: '220px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: (s.progressPercent || 0) >= 100 ? '#10b981' : 'var(--text-primary)' }}>
+                              {Math.round(s.progressPercent || 0)}%
+                            </span>
+                            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {s.completedContents || 0} / {s.totalContents || 0} lessons
+                            </span>
+                          </div>
+                          <div style={{ height: '6px', width: '100%', background: 'var(--border-default)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                height: '100%',
+                                width: `${Math.min(100, Math.round(s.progressPercent || 0))}%`,
+                                background: (s.progressPercent || 0) >= 100 ? '#10b981' : (s.progressPercent || 0) > 40 ? '#6366f1' : '#3b82f6',
+                                borderRadius: '3px',
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -1293,27 +1316,38 @@ export default function AdminBatchDetailsPage() {
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                     Course Progress Tracking
                   </div>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: (viewStudent.progressPercent || 0) >= 100 ? '#10b981' : '#6366f1' }}>
-                    {Math.round(viewStudent.progressPercent || 0)}%
-                  </span>
+                  {(viewStudent.totalContents || 0) > 0 && (
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: (viewStudent.progressPercent || 0) >= 100 ? '#10b981' : '#6366f1' }}>
+                      {Math.round(viewStudent.progressPercent || 0)}%
+                    </span>
+                  )}
                 </div>
 
-                <div style={{ height: '10px', width: '100%', background: 'var(--border-default)', borderRadius: '5px', overflow: 'hidden', marginBottom: '8px' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${Math.min(100, Math.round(viewStudent.progressPercent || 0))}%`,
-                      background: (viewStudent.progressPercent || 0) >= 100 ? '#10b981' : '#6366f1',
-                      borderRadius: '5px',
-                      transition: 'width 0.4s ease',
-                    }}
-                  />
-                </div>
+                {(viewStudent.totalContents || 0) === 0 ? (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', background: 'rgba(148, 163, 184, 0.12)', border: '1px solid var(--border-default)', fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    <i className="fa-solid fa-video-slash" style={{ color: '#94a3b8' }}></i>
+                    <span>No videos (This class has session recordings only)</span>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ height: '10px', width: '100%', background: 'var(--border-default)', borderRadius: '5px', overflow: 'hidden', marginBottom: '8px' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${Math.min(100, Math.round(viewStudent.progressPercent || 0))}%`,
+                          background: (viewStudent.progressPercent || 0) >= 100 ? '#10b981' : '#6366f1',
+                          borderRadius: '5px',
+                          transition: 'width 0.4s ease',
+                        }}
+                      />
+                    </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  <span>Completed: <strong>{viewStudent.completedContents || 0}</strong> lessons</span>
-                  <span>Total Course Contents: <strong>{viewStudent.totalContents || 0}</strong></span>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      <span>Completed: <strong>{viewStudent.completedContents || 0}</strong> lessons</span>
+                      <span>Total Course Contents: <strong>{viewStudent.totalContents || 0}</strong></span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Live Session Attendance Tracking */}
@@ -1398,7 +1432,11 @@ export default function AdminBatchDetailsPage() {
                       .map(c => (
                         <div key={c.enrollmentId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', padding: '6px 0', borderBottom: '1px dashed var(--border-subtle)' }}>
                           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.courseName}</span>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{Math.round(c.progressPercent || 0)}%</span>
+                          {(c.totalContents || 0) === 0 ? (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>No videos</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{Math.round(c.progressPercent || 0)}%</span>
+                          )}
                         </div>
                       ))}
                   </div>

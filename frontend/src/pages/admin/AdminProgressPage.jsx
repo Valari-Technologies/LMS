@@ -187,55 +187,84 @@ export default function AdminProgressPage() {
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Course #{p.courseId}</div>
                       </td>
                       <td>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                            <span>{percent === 100 ? 'Completed' : percent === 0 ? 'Not Started' : 'In Progress'}</span>
-                            <span>{percent}%</span>
-                          </div>
-                          <div className="progress-bar-wrap">
-                            <div
-                              className="progress-bar-fill"
+                        {(p.totalContents || 0) === 0 ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <span
                               style={{
-                                width: `${percent}%`,
-                                background: percent === 100
-                                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                                  : undefined,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                background: 'var(--bg-surface, #f1f5f9)',
+                                border: '1px solid var(--border-default, #cbd5e1)',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                color: 'var(--text-muted, #64748b)',
                               }}
-                            />
+                              title="This course has no video curriculum lessons (recordings only)"
+                            >
+                              <i className="fa-solid fa-video-slash" style={{ fontSize: '0.74rem', color: '#94a3b8' }}></i>
+                              <span>No videos</span>
+                            </span>
                           </div>
-                          {(() => {
-                            const { primary, isOnline } = formatCourseLastSeen(p.lastAccessedAt);
-                            return (
+                        ) : (
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                              <span>{percent === 100 ? 'Completed' : percent === 0 ? 'Not Started' : 'In Progress'}</span>
+                              <span>{percent}%</span>
+                            </div>
+                            <div className="progress-bar-wrap">
                               <div
+                                className="progress-bar-fill"
                                 style={{
-                                  fontSize: '0.76rem',
-                                  marginTop: '6px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '5px',
-                                  fontWeight: isOnline ? '700' : '500',
-                                  color: isOnline ? '#10b981' : 'var(--text-muted)'
+                                  width: `${percent}%`,
+                                  background: percent === 100
+                                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                    : undefined,
                                 }}
-                              >
-                                <span
+                              />
+                            </div>
+                            {(() => {
+                              const { primary, isOnline } = formatCourseLastSeen(p.lastAccessedAt);
+                              return (
+                                <div
                                   style={{
-                                    width: '7px',
-                                    height: '7px',
-                                    borderRadius: '50%',
-                                    background: isOnline ? '#10b981' : (p.lastAccessedAt ? '#94a3b8' : '#cbd5e1'),
-                                    boxShadow: isOnline ? '0 0 6px rgba(16, 185, 129, 0.7)' : 'none'
+                                    fontSize: '0.76rem',
+                                    marginTop: '6px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontWeight: isOnline ? '700' : '500',
+                                    color: isOnline ? '#10b981' : 'var(--text-muted)'
                                   }}
-                                />
-                                <span>Last Seen: {primary}</span>
-                              </div>
-                            );
-                          })()}
-                        </div>
+                                >
+                                  <span
+                                    style={{
+                                      width: '7px',
+                                      height: '7px',
+                                      borderRadius: '50%',
+                                      background: isOnline ? '#10b981' : (p.lastAccessedAt ? '#94a3b8' : '#cbd5e1'),
+                                      boxShadow: isOnline ? '0 0 6px rgba(16, 185, 129, 0.7)' : 'none'
+                                    }}
+                                  />
+                                  <span>Last Seen: {primary}</span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
                       </td>
                       <td>
-                        <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                          {p.completedContents || 0} / {p.totalContents || 0} items
-                        </span>
+                        {(p.totalContents || 0) === 0 ? (
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            No videos
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                            {p.completedContents || 0} / {p.totalContents || 0} items
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
