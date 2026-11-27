@@ -1,11 +1,18 @@
 package com.onetutor.users.service;
 
+import com.onetutor.assessments.entity.AssessmentAttempt;
+import com.onetutor.assessments.entity.AssessmentStatus;
+import com.onetutor.assessments.repository.AssessmentAttemptRepository;
 import com.onetutor.audit.service.AuditService;
 import com.onetutor.auth.dto.UserSummary;
 import com.onetutor.common.PageResponse;
 import com.onetutor.common.exceptions.BadRequestException;
 import com.onetutor.common.exceptions.NotFoundException;
 import com.onetutor.enrollment.repository.EnrollmentRepository;
+import com.onetutor.live.entity.LiveSessionAttendance;
+import com.onetutor.live.repository.LiveSessionAttendanceRepository;
+import com.onetutor.progress.entity.Progress;
+import com.onetutor.progress.repository.ProgressRepository;
 import com.onetutor.progress.service.ProgressService;
 import com.onetutor.users.dto.CreateAdminRequest;
 import com.onetutor.users.dto.StudentDetailResponse;
@@ -31,17 +38,26 @@ public class UserService {
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ProgressService progressService;
+    private final ProgressRepository progressRepository;
+    private final AssessmentAttemptRepository assessmentAttemptRepository;
+    private final LiveSessionAttendanceRepository liveSessionAttendanceRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                        EnrollmentRepository enrollmentRepository,
                        ProgressService progressService,
+                       ProgressRepository progressRepository,
+                       AssessmentAttemptRepository assessmentAttemptRepository,
+                       LiveSessionAttendanceRepository liveSessionAttendanceRepository,
                        AuditService auditService,
                        PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.progressService = progressService;
+        this.progressRepository = progressRepository;
+        this.assessmentAttemptRepository = assessmentAttemptRepository;
+        this.liveSessionAttendanceRepository = liveSessionAttendanceRepository;
         this.auditService = auditService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -130,20 +146,172 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException("STUDENT_NOT_FOUND", "Student not found"));
 
         var enrollments = enrollmentRepository.findByStudentId(studentId);
-        List<StudentDetailResponse.EnrolledCourseSummary> courseSummaries = enrollments.stream().map(e -> {
+        int totalCompletedCourses = 0;
+        int totalInProgressCourses = 0;
+        double sumProgress = 0.0;
+
+        List<StudentDetailResponse.EnrolledCourseSummary> courseSummaries = new java.util.ArrayList<>();
+        for (var e : enrollments) {
             var course = e.getCourse();
             var cp = progressService.getCourseProgressForStudent(course.getId(), studentId);
-            return new StudentDetailResponse.EnrolledCourseSummary(
+
+            double pPercent = cp.progressPercent();
+            sumProgress += pPercent;
+            if (pPercent >= 100.0) {
+                totalCompletedCourses++;
+            } else if (pPercent > 0.0) {
+                totalInProgressCourses++;
+            }
+
+            List<StudentDetailResponse.SectionProgressSummary> sectionSummaries = cp.sections() != null
+                    ? cp.sections().stream().map(s -> new StudentDetailResponse.SectionProgressSummary(
+                            s.sectionId(),
+                            s.sectionTitle(),
+                            s.totalContents(),
+                            s.completedContents(),
+                            s.progressPercent()
+                    )).toList()
+                    : List.of();
+
+            courseSummaries.add(new StudentDetailResponse.EnrolledCourseSummary(
                     e.getId(),
                     course.getId(),
                     course.getName(),
                     course.getCategory() != null ? course.getCategory().getName() : null,
                     e.getStatus().name(),
                     e.getEnrolledAt(),
-                    cp.progressPercent(),
-                    cp.lastAccessedAt()
-            );
-        }).toList();
+                    pPercent,
+                    cp.completedContents(),
+                    cp.totalContents(),
+                    cp.lastAccessedAt(),
+                    sectionSummaries
+            ));
+        }
+
+        // Progress records for watch time and lessons
+        List<Progress> progressList = progressRepository.findByStudentIdOrderByLastAccessedAtDesc(studentId);
+        int totalLessonsCompleted = (int) progressList.stream().filter(Progress::isCompleted).count();
+        int totalWatchedSeconds = progressList.stream().mapToInt(Progress::getWatchedSeconds).sum();
+        int totalLearningMinutes = totalWatchedSeconds / 60;
+        if (totalLearningMinutes == 0 && totalLessonsCompleted > 0) {
+            totalLearningMinutes = totalLessonsCompleted * 12;
+        }
+
+        double overallProgressPercent = enrollments.isEmpty() ? 0.0 : Math.round((sumProgress / enrollments.size()) * 10.0) / 10.0;
+
+        // Assessment attempts
+        List<AssessmentAttempt> attempts = assessmentAttemptRepository.findByStudentIdOrderByStartedAtDesc(studentId);
+        int totalQuizzesTaken = attempts.size();
+        int quizzesPassed = 0;
+        double totalScorePercent = 0.0;
+        List<StudentDetailResponse.StudentAssessmentSummary> assessmentSummaries = new java.util.ArrayList<>();
+
+        for (var a : attempts) {
+            var assessment = a.getAssessment();
+            var content = a.getContent();
+            double passingPct = assessment != null ? assessment.getPassingPercentage() : 70.0;
+            boolean passed = a.getPercentage() >= passingPct && a.getStatus() == AssessmentStatus.COMPLETED;
+            if (passed) quizzesPassed++;
+            totalScorePercent += a.getPercentage();
+
+            String courseName = (content != null && content.getSection() != null && content.getSection().getCourse() != null)
+                    ? content.getSection().getCourse().getName()
+                    : "Course Assessment";
+
+            assessmentSummaries.add(new StudentDetailResponse.StudentAssessmentSummary(
+                    a.getId(),
+                    assessment != null ? assessment.getId() : null,
+                    assessment != null ? assessment.getTitle() : (content != null ? content.getTitle() : "Quiz"),
+                    courseName,
+                    a.getObtainedMarks(),
+                    assessment != null ? assessment.getTotalMarks() : a.getTotalQuestions(),
+                    Math.round(a.getPercentage() * 10.0) / 10.0,
+                    passingPct,
+                    passed,
+                    a.getStatus().name(),
+                    a.getStartedAt(),
+                    a.getSubmittedAt()
+            ));
+        }
+
+        double averageQuizScore = totalQuizzesTaken > 0
+                ? Math.round((totalScorePercent / totalQuizzesTaken) * 10.0) / 10.0
+                : 0.0;
+
+        // Attendance records
+        List<LiveSessionAttendance> attendances = liveSessionAttendanceRepository.findByStudentIdOrderByAttendedAtDesc(studentId);
+        int liveSessionsAttended = (int) attendances.stream().filter(att -> "PRESENT".equalsIgnoreCase(att.getStatus())).count();
+        List<StudentDetailResponse.StudentAttendanceSummary> attendanceSummaries = attendances.stream().map(att ->
+                new StudentDetailResponse.StudentAttendanceSummary(
+                        att.getId(),
+                        att.getSession() != null ? att.getSession().getId() : null,
+                        att.getSession() != null ? att.getSession().getTitle() : "Live Class",
+                        att.getCourse() != null ? att.getCourse().getName() : "Live Course",
+                        att.getSession() != null ? att.getSession().getScheduledAt() : att.getAttendedAt(),
+                        att.getJoinTime() != null ? att.getJoinTime() : att.getAttendedAt(),
+                        att.getStatus()
+                )
+        ).toList();
+
+        // Recent activity items
+        List<StudentDetailResponse.StudentActivityItem> activityItems = new java.util.ArrayList<>();
+        for (var p : progressList.stream().limit(6).toList()) {
+            if (p.getLastAccessedAt() != null) {
+                String cTitle = p.getContent() != null ? p.getContent().getTitle() : "Lesson Content";
+                String action = p.isCompleted() ? "Completed lesson" : "Watched lesson";
+                activityItems.add(new StudentDetailResponse.StudentActivityItem(
+                        p.isCompleted() ? "LESSON_COMPLETED" : "LESSON_ACCESSED",
+                        action + ": " + cTitle,
+                        p.isCompleted() ? "100% completed" : (p.getProgressPercent() + "% progress (" + (p.getWatchedSeconds() / 60) + "m)"),
+                        p.getLastAccessedAt(),
+                        p.isCompleted() ? "fa-circle-check" : "fa-play"
+                ));
+            }
+        }
+        for (var a : attempts.stream().limit(4).toList()) {
+            String aTitle = a.getAssessment() != null ? a.getAssessment().getTitle() : "Assessment";
+            boolean p = a.getPercentage() >= (a.getAssessment() != null ? a.getAssessment().getPassingPercentage() : 70.0);
+            activityItems.add(new StudentDetailResponse.StudentActivityItem(
+                    "ASSESSMENT",
+                    (p ? "Passed" : "Attempted") + " " + aTitle,
+                    "Score: " + Math.round(a.getPercentage()) + "% (" + (p ? "Passed" : "Needs Review") + ")",
+                    a.getSubmittedAt() != null ? a.getSubmittedAt() : a.getStartedAt(),
+                    p ? "fa-award" : "fa-file-lines"
+            ));
+        }
+        for (var att : attendances.stream().limit(4).toList()) {
+            String sTitle = att.getSession() != null ? att.getSession().getTitle() : "Live Session";
+            activityItems.add(new StudentDetailResponse.StudentActivityItem(
+                    "LIVE_SESSION",
+                    "Attended " + sTitle,
+                    "Status: " + att.getStatus() + (att.getDurationSeconds() != null && att.getDurationSeconds() > 0 ? " (" + (att.getDurationSeconds() / 60) + "m)" : ""),
+                    att.getJoinTime() != null ? att.getJoinTime() : att.getAttendedAt(),
+                    "fa-video"
+            ));
+        }
+        activityItems.sort((x, y) -> {
+            if (x.timestamp() == null && y.timestamp() == null) return 0;
+            if (x.timestamp() == null) return 1;
+            if (y.timestamp() == null) return -1;
+            return y.timestamp().compareTo(x.timestamp());
+        });
+        if (activityItems.size() > 8) {
+            activityItems = activityItems.subList(0, 8);
+        }
+
+        StudentDetailResponse.StudentAnalyticsSummary analytics = new StudentDetailResponse.StudentAnalyticsSummary(
+                courseSummaries.size(),
+                totalCompletedCourses,
+                totalInProgressCourses,
+                totalLessonsCompleted,
+                totalLearningMinutes,
+                overallProgressPercent,
+                totalQuizzesTaken,
+                quizzesPassed,
+                averageQuizScore,
+                liveSessionsAttended,
+                attendances.size()
+        );
 
         return new StudentDetailResponse(
                 student.getId(),
@@ -153,8 +321,13 @@ public class UserService {
                 student.getProfileImage(),
                 student.isEmailVerified(),
                 student.getCreatedAt(),
+                student.getLastActiveAt(),
                 courseSummaries.size(),
-                courseSummaries
+                analytics,
+                courseSummaries,
+                assessmentSummaries,
+                attendanceSummaries,
+                activityItems
         );
     }
 

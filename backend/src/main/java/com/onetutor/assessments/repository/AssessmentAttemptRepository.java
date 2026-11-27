@@ -13,6 +13,8 @@ public interface AssessmentAttemptRepository extends JpaRepository<AssessmentAtt
 
     List<AssessmentAttempt> findByAssessmentIdOrderByStartedAtDesc(Long assessmentId);
 
+    List<AssessmentAttempt> findByStudentIdOrderByStartedAtDesc(Long studentId);
+
     List<AssessmentAttempt> findByStudentIdAndContentIdOrderByStartedAtDesc(Long studentId, Long contentId);
     
     Optional<AssessmentAttempt> findFirstByStudentIdAndContentIdAndStatus(Long studentId, Long contentId, AssessmentStatus status);

@@ -46,6 +46,9 @@ export default function AdminStudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [profileTab, setProfileTab] = useState('overview'); // 'overview' | 'courses' | 'tests' | 'attendance' | 'activity'
+  const [expandedCourseId, setExpandedCourseId] = useState(null);
+  const [testFilter, setTestFilter] = useState('ALL'); // 'ALL' | 'PASSED' | 'FAILED'
 
   useEffect(() => {
     loadStudents(true);
@@ -112,6 +115,9 @@ export default function AdminStudentsPage() {
 
   async function openStudentDetail(id) {
     setDetailLoading(true);
+    setProfileTab('overview');
+    setExpandedCourseId(null);
+    setTestFilter('ALL');
     try {
       const detail = await getStudentDetail(id);
       setSelectedStudent(detail);
@@ -329,109 +335,1062 @@ export default function AdminStudentsPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(5px)',
             zIndex: 3000,
             display: 'flex',
-            justifyContent: 'flex-end'
+            justifyContent: 'flex-end',
+            animation: 'fadeIn 0.2s ease-out'
           }}
           onClick={() => setSelectedStudent(null)}
         >
           <div
             style={{
               width: '100%',
-              maxWidth: '480px',
+              maxWidth: '740px',
               height: '100%',
-              background: 'var(--bg-surface)',
-              borderLeft: '1px solid var(--border-default)',
-              boxShadow: 'var(--shadow-xl)',
-              overflowY: 'auto',
-              padding: '28px'
+              background: 'var(--bg-surface, #ffffff)',
+              borderLeft: '1px solid var(--border-default, #e2e8f0)',
+              boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>Student Profile</h2>
-              <button className="btn btn-secondary btn-sm" onClick={() => setSelectedStudent(null)}>✕</button>
-            </div>
-
-            {detailLoading ? (
-              <div>Loading profile details…</div>
-            ) : (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                  <div className="avatar-circle" style={{ width: '56px', height: '56px', fontSize: '1.3rem' }}>
-                    {selectedStudent.profileImage ? (
-                      <img src={selectedStudent.profileImage} alt={selectedStudent.name} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    ) : (
-                      selectedStudent.name ? selectedStudent.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'S'
-                    )}
-                  </div>
+            {/* 1. STICKY TOP HEADER */}
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              background: 'var(--bg-surface, #ffffff)',
+              borderBottom: '1px solid var(--border-default, #e2e8f0)',
+              padding: '20px 28px 16px 28px',
+              backdropFilter: 'blur(8px)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(79, 70, 229, 0.1)',
+                    color: 'var(--accent-primary, #4f46e5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1rem'
+                  }}>
+                    <i className="fa-solid fa-user-graduate"></i>
+                  </span>
                   <div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-primary)' }}>{selectedStudent.name}</div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>{selectedStudent.email}</div>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                      <span className={`status-badge ${selectedStudent.status}`}>{selectedStudent.status}</span>
-                      <span style={{ fontSize: '0.74rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'var(--accent-subtle)', color: 'var(--accent-primary)', fontWeight: '700' }}>
-                        {selectedStudent.emailVerified ? 'Verified' : 'Unverified'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <i className="fa-solid fa-clock" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}></i>
-                      <span>
-                        Last Visit: {selectedStudent.lastActiveAt ? new Date(selectedStudent.lastActiveAt).toLocaleString() : 'Never'}
-                      </span>
-                    </div>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                      Student Learning & Performance Profile
+                    </h2>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Comprehensive learning analytics, test results & engagement metrics
+                    </span>
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '20px', marginBottom: '24px' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '14px', color: 'var(--text-primary)' }}>
-                    Enrolled Courses ({selectedStudent.enrolledCourses?.length || 0})
-                  </h3>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setSelectedStudent(null)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem'
+                  }}
+                  title="Close Profile"
+                >
+                  ✕
+                </button>
+              </div>
 
-                  {(!selectedStudent.enrolledCourses || selectedStudent.enrolledCourses.length === 0) ? (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', textAlign: 'center', padding: '20px 0' }}>
-                      No active enrollments found for this student.
+              {/* Student Identity Card */}
+              {selectedStudent && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 18px',
+                  borderRadius: '12px',
+                  background: 'var(--bg-card, #f8fafc)',
+                  border: '1px solid var(--border-subtle, #f1f5f9)',
+                  gap: '16px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div className="avatar-circle" style={{
+                      width: '52px',
+                      height: '52px',
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                      color: '#ffffff',
+                      boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+                      flexShrink: 0
+                    }}>
+                      {selectedStudent.profileImage ? (
+                        <img src={selectedStudent.profileImage} alt={selectedStudent.name} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      ) : (
+                        selectedStudent.name ? selectedStudent.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'S'
+                      )}
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {selectedStudent.enrolledCourses.map((c) => (
-                        <div
-                          key={c.enrollmentId}
-                          style={{
-                            padding: '14px',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--border-subtle)',
-                            background: 'var(--bg-card)'
-                          }}
-                        >
-                          <div style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                            {c.courseName}
+                    <div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        {selectedStudent.name}
+                      </div>
+                      <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '1px' }}>
+                        {selectedStudent.email}
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
+                        <span className={`status-badge ${selectedStudent.status}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
+                          {selectedStudent.status}
+                        </span>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-full, 9999px)',
+                          background: selectedStudent.emailVerified ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          color: selectedStudent.emailVerified ? '#059669' : '#dc2626',
+                          fontWeight: 700,
+                          border: `1px solid ${selectedStudent.emailVerified ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`
+                        }}>
+                          {selectedStudent.emailVerified ? '✓ Verified' : 'Unverified'}
+                        </span>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          • Enrolled in {selectedStudent.enrolledCourses?.length || 0} courses
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Action Button */}
+                  {!isReadOnly && (
+                    <button
+                      className={`btn btn-sm ${selectedStudent.status === 'active' ? 'btn-danger' : 'btn-primary'}`}
+                      disabled={actionLoading}
+                      onClick={() => handleToggleStatus(selectedStudent)}
+                      style={{ padding: '6px 14px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <i className={`fa-solid ${selectedStudent.status === 'active' ? 'fa-user-slash' : 'fa-user-check'}`}></i>
+                      <span>{selectedStudent.status === 'active' ? 'Disable Account' : 'Enable Account'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Navigation Tabs Bar */}
+              <div style={{
+                display: 'flex',
+                gap: '6px',
+                marginTop: '16px',
+                borderBottom: '1px solid var(--border-subtle, #f1f5f9)',
+                paddingBottom: '2px',
+                overflowX: 'auto'
+              }}>
+                {[
+                  { id: 'overview', label: 'Overview', icon: 'fa-chart-pie', count: null },
+                  { id: 'courses', label: 'Courses', icon: 'fa-book-open', count: selectedStudent?.enrolledCourses?.length || 0 },
+                  { id: 'tests', label: 'Tests & Quizzes', icon: 'fa-clipboard-check', count: selectedStudent?.assessments?.length || 0 },
+                  { id: 'attendance', label: 'Live Attendance', icon: 'fa-video', count: selectedStudent?.attendanceRecords?.length || 0 },
+                  { id: 'activity', label: 'Timeline', icon: 'fa-clock-rotate-left', count: selectedStudent?.recentActivity?.length || 0 }
+                ].map((t) => {
+                  const isActive = profileTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setProfileTab(t.id)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '0.84rem',
+                        fontWeight: isActive ? 700 : 600,
+                        border: 'none',
+                        borderBottom: isActive ? '3px solid var(--accent-primary, #4f46e5)' : '3px solid transparent',
+                        background: isActive ? 'rgba(79, 70, 229, 0.08)' : 'transparent',
+                        color: isActive ? 'var(--accent-primary, #4f46e5)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <i className={`fa-solid ${t.icon}`} style={{ fontSize: '0.8rem' }}></i>
+                      <span>{t.label}</span>
+                      {t.count !== null && (
+                        <span style={{
+                          fontSize: '0.72rem',
+                          padding: '1px 6px',
+                          borderRadius: '10px',
+                          background: isActive ? 'var(--accent-primary, #4f46e5)' : 'var(--border-default, #e2e8f0)',
+                          color: isActive ? '#ffffff' : 'var(--text-muted)',
+                          fontWeight: 700
+                        }}>
+                          {t.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. SCROLLABLE BODY */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px 28px 48px 28px',
+              scrollBehavior: 'smooth'
+            }}>
+              {detailLoading ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2rem', color: 'var(--accent-primary)', marginBottom: '12px' }}></i>
+                  <div style={{ fontWeight: 600 }}>Loading student learning analytics…</div>
+                </div>
+              ) : selectedStudent && (
+                <div>
+                  {/* KPI METRICS OVERVIEW (4-CARD GRID) */}
+                  {(() => {
+                    const analytics = selectedStudent.analytics || {
+                      totalCoursesEnrolled: selectedStudent.enrolledCourses?.length || 0,
+                      completedCourses: (selectedStudent.enrolledCourses || []).filter(c => (c.progressPercent || 0) >= 100).length,
+                      inProgressCourses: (selectedStudent.enrolledCourses || []).filter(c => (c.progressPercent || 0) > 0 && (c.progressPercent || 0) < 100).length,
+                      totalLessonsCompleted: (selectedStudent.enrolledCourses || []).reduce((acc, c) => acc + (c.completedContents || 0), 0),
+                      totalLearningMinutes: 0,
+                      overallProgressPercent: selectedStudent.enrolledCourses?.length
+                        ? Math.round((selectedStudent.enrolledCourses.reduce((acc, c) => acc + (c.progressPercent || 0), 0) / selectedStudent.enrolledCourses.length) * 10) / 10
+                        : 0,
+                      totalQuizzesTaken: selectedStudent.assessments?.length || 0,
+                      quizzesPassed: (selectedStudent.assessments || []).filter(a => a.passed).length,
+                      averageQuizScore: 0,
+                      liveSessionsAttended: (selectedStudent.attendanceRecords || []).filter(a => a.status === 'PRESENT').length,
+                      totalLiveSessions: selectedStudent.attendanceRecords?.length || 0
+                    };
+
+                    const learnHours = Math.floor(analytics.totalLearningMinutes / 60);
+                    const learnMins = analytics.totalLearningMinutes % 60;
+                    const learnTimeDisplay = learnHours > 0 ? `${learnHours}h ${learnMins}m` : `${learnMins || analytics.totalLessonsCompleted * 15}m`;
+
+                    const attendanceRate = analytics.totalLiveSessions > 0
+                      ? Math.round((analytics.liveSessionsAttended / analytics.totalLiveSessions) * 100)
+                      : (analytics.liveSessionsAttended > 0 ? 100 : 0);
+
+                    return (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '12px',
+                        marginBottom: '28px'
+                      }}>
+                        {/* 1. Watch Time */}
+                        <div style={{
+                          padding: '14px 16px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(99, 102, 241, 0.02) 100%)',
+                          border: '1px solid rgba(79, 70, 229, 0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Learning Time
+                            </span>
+                            <span style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(79, 70, 229, 0.12)', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
+                              <i className="fa-solid fa-clock"></i>
+                            </span>
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            {c.categoryName || 'General'} • Enrolled {new Date(c.enrolledAt).toLocaleDateString()}
-                          </div>
-                          <div style={{ marginTop: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                              <span>Progress</span>
-                              <span>{Math.round(c.progressPercent || 0)}%</span>
+                          <div>
+                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                              {learnTimeDisplay}
                             </div>
-                            <div className="progress-bar-wrap">
-                              <div className="progress-bar-fill" style={{ width: `${c.progressPercent || 0}%` }} />
-                            </div>
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <i className="fa-regular fa-clock" style={{ fontSize: '0.7rem' }}></i>
-                              <span>Course Last Seen: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : 'Never'}</span>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                              {analytics.totalLessonsCompleted} lessons completed
                             </div>
                           </div>
                         </div>
-                      ))}
+
+                        {/* 2. Course Progress */}
+                        <div style={{
+                          padding: '14px 16px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(5, 150, 105, 0.02) 100%)',
+                          border: '1px solid rgba(16, 185, 129, 0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Avg Progress
+                            </span>
+                            <span style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.12)', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
+                              <i className="fa-solid fa-graduation-cap"></i>
+                            </span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                              {Math.round(analytics.overallProgressPercent)}%
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                              {analytics.completedCourses} Done • {analytics.inProgressCourses} In-Progress
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Tests & Assessments */}
+                        <div style={{
+                          padding: '14px 16px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(217, 119, 6, 0.02) 100%)',
+                          border: '1px solid rgba(245, 158, 11, 0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Test Score
+                            </span>
+                            <span style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
+                              <i className="fa-solid fa-award"></i>
+                            </span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                              {analytics.totalQuizzesTaken > 0 ? `${Math.round(analytics.averageQuizScore)}%` : '—'}
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                              {analytics.quizzesPassed} / {analytics.totalQuizzesTaken} Tests Passed
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. Live Attendance */}
+                        <div style={{
+                          padding: '14px 16px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(124, 58, 237, 0.02) 100%)',
+                          border: '1px solid rgba(139, 92, 246, 0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Live Attendance
+                            </span>
+                            <span style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
+                              <i className="fa-solid fa-video"></i>
+                            </span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                              {attendanceRate}%
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                              {analytics.liveSessionsAttended} / {analytics.totalLiveSessions || analytics.liveSessionsAttended} Attended
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* TAB 1: OVERVIEW */}
+                  {profileTab === 'overview' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                      {/* Course Completion Breakdown */}
+                      <div style={{
+                        padding: '20px',
+                        borderRadius: '14px',
+                        background: 'var(--bg-card, #ffffff)',
+                        border: '1px solid var(--border-default, #e2e8f0)',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                          <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                            Enrolled Courses & Progress Snapshot
+                          </h3>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setProfileTab('courses')}
+                            style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                          >
+                            View All Courses →
+                          </button>
+                        </div>
+
+                        {(!selectedStudent.enrolledCourses || selectedStudent.enrolledCourses.length === 0) ? (
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.86rem', textAlign: 'center', padding: '24px 0' }}>
+                            No courses enrolled yet.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {selectedStudent.enrolledCourses.map((c) => {
+                              const pct = Math.round(c.progressPercent || 0);
+                              return (
+                                <div key={c.enrollmentId} style={{
+                                  padding: '12px 14px',
+                                  borderRadius: '10px',
+                                  background: 'var(--bg-surface, #f8fafc)',
+                                  border: '1px solid var(--border-subtle, #f1f5f9)'
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                                      {c.courseName}
+                                    </div>
+                                    <span style={{
+                                      fontSize: '0.78rem',
+                                      fontWeight: 800,
+                                      color: pct >= 100 ? '#059669' : 'var(--accent-primary, #4f46e5)'
+                                    }}>
+                                      {pct}%
+                                    </span>
+                                  </div>
+                                  <div className="progress-bar-wrap" style={{ height: '7px', marginBottom: '6px' }}>
+                                    <div
+                                      className="progress-bar-fill"
+                                      style={{
+                                        width: `${pct}%`,
+                                        background: pct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined
+                                      }}
+                                    />
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                    <span>{c.completedContents || 0} / {c.totalContents || 0} lessons completed</span>
+                                    <span>Last seen: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleDateString() : 'Never'}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Performance Insights Summary */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gap: '16px'
+                      }}>
+                        {/* Test Quick Summary */}
+                        <div style={{
+                          padding: '18px',
+                          borderRadius: '14px',
+                          background: 'var(--bg-card, #ffffff)',
+                          border: '1px solid var(--border-default, #e2e8f0)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h4 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                              <i className="fa-solid fa-award" style={{ color: '#d97706', marginRight: '6px' }}></i>
+                              Assessment Performance
+                            </h4>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setProfileTab('tests')}
+                              style={{ fontSize: '0.74rem', padding: '3px 8px' }}
+                            >
+                              Details
+                            </button>
+                          </div>
+                          {(!selectedStudent.assessments || selectedStudent.assessments.length === 0) ? (
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem', padding: '16px 0', textAlign: 'center' }}>
+                              No tests attempted yet.
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Passing Rate</span>
+                                <span style={{ fontWeight: 800, color: '#059669', fontSize: '0.88rem' }}>
+                                  {Math.round((selectedStudent.assessments.filter(a => a.passed).length / selectedStudent.assessments.length) * 100)}%
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {selectedStudent.assessments.slice(0, 2).map((a) => (
+                                  <div key={a.attemptId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-surface, #f8fafc)' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                                      {a.title}
+                                    </span>
+                                    <span style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700,
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      background: a.passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                      color: a.passed ? '#059669' : '#dc2626'
+                                    }}>
+                                      {Math.round(a.percentage)}% {a.passed ? 'PASS' : 'FAIL'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Live Session Quick Summary */}
+                        <div style={{
+                          padding: '18px',
+                          borderRadius: '14px',
+                          background: 'var(--bg-card, #ffffff)',
+                          border: '1px solid var(--border-default, #e2e8f0)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h4 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                              <i className="fa-solid fa-video" style={{ color: '#7c3aed', marginRight: '6px' }}></i>
+                              Live Class Attendance
+                            </h4>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setProfileTab('attendance')}
+                              style={{ fontSize: '0.74rem', padding: '3px 8px' }}
+                            >
+                              History
+                            </button>
+                          </div>
+                          {(!selectedStudent.attendanceRecords || selectedStudent.attendanceRecords.length === 0) ? (
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem', padding: '16px 0', textAlign: 'center' }}>
+                              No live sessions scheduled or joined.
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Classes Attended</span>
+                                <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: '0.88rem' }}>
+                                  {selectedStudent.attendanceRecords.filter(a => a.status === 'PRESENT').length} / {selectedStudent.attendanceRecords.length}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {selectedStudent.attendanceRecords.slice(0, 2).map((att) => (
+                                  <div key={att.attendanceId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-surface, #f8fafc)' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                                      {att.sessionTitle}
+                                    </span>
+                                    <span style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700,
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      background: att.status === 'PRESENT' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(100, 116, 139, 0.1)',
+                                      color: att.status === 'PRESENT' ? '#059669' : '#64748b'
+                                    }}>
+                                      {att.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Recent Activity Mini-Feed */}
+                      {selectedStudent.recentActivity && selectedStudent.recentActivity.length > 0 && (
+                        <div style={{
+                          padding: '20px',
+                          borderRadius: '14px',
+                          background: 'var(--bg-card, #ffffff)',
+                          border: '1px solid var(--border-default, #e2e8f0)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                            <h3 style={{ fontSize: '0.96rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                              Recent Learning Milestones
+                            </h3>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setProfileTab('activity')}
+                              style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                            >
+                              Full Log →
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {selectedStudent.recentActivity.slice(0, 4).map((act, idx) => (
+                              <div key={idx} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                background: 'var(--bg-surface, #f8fafc)',
+                                border: '1px solid var(--border-subtle, #f1f5f9)'
+                              }}>
+                                <span style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  background: act.type === 'LESSON_COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : act.type === 'ASSESSMENT' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(79, 70, 229, 0.12)',
+                                  color: act.type === 'LESSON_COMPLETED' ? '#059669' : act.type === 'ASSESSMENT' ? '#d97706' : '#4f46e5',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.8rem',
+                                  flexShrink: 0
+                                }}>
+                                  <i className={`fa-solid ${act.icon || 'fa-bolt'}`}></i>
+                                </span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {act.title}
+                                  </div>
+                                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                    {act.description}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                  {act.timestamp ? new Date(act.timestamp).toLocaleDateString() : ''}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: ENROLLED COURSES & CURRICULUM */}
+                  {profileTab === 'courses' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          Enrolled Courses ({selectedStudent.enrolledCourses?.length || 0})
+                        </span>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                          Click a course to expand section-level curriculum progress
+                        </span>
+                      </div>
+
+                      {(!selectedStudent.enrolledCourses || selectedStudent.enrolledCourses.length === 0) ? (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '48px 20px',
+                          background: 'var(--bg-card, #ffffff)',
+                          borderRadius: '14px',
+                          border: '1px dashed var(--border-default, #e2e8f0)',
+                          color: 'var(--text-muted)'
+                        }}>
+                          <i className="fa-solid fa-book-open" style={{ fontSize: '2rem', marginBottom: '10px', color: 'var(--border-default)' }}></i>
+                          <div style={{ fontWeight: 700 }}>No course enrollments found</div>
+                          <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>This student is not enrolled in any courses yet.</div>
+                        </div>
+                      ) : (
+                        selectedStudent.enrolledCourses.map((c) => {
+                          const isExpanded = expandedCourseId === c.courseId;
+                          const pct = Math.round(c.progressPercent || 0);
+                          return (
+                            <div
+                              key={c.enrollmentId}
+                              style={{
+                                borderRadius: '14px',
+                                border: '1px solid var(--border-default, #e2e8f0)',
+                                background: 'var(--bg-card, #ffffff)',
+                                boxShadow: 'var(--shadow-sm)',
+                                overflow: 'hidden',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <div
+                                style={{
+                                  padding: '18px 20px',
+                                  cursor: 'pointer',
+                                  background: isExpanded ? 'var(--bg-surface, #f8fafc)' : 'transparent',
+                                  borderBottom: isExpanded ? '1px solid var(--border-subtle, #f1f5f9)' : 'none'
+                                }}
+                                onClick={() => setExpandedCourseId(isExpanded ? null : c.courseId)}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '8px' }}>
+                                  <div>
+                                    <div style={{ fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                                      {c.courseName}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                      <span style={{
+                                        fontSize: '0.72rem',
+                                        padding: '2px 8px',
+                                        borderRadius: '6px',
+                                        background: 'rgba(79, 70, 229, 0.08)',
+                                        color: '#4f46e5',
+                                        fontWeight: 700
+                                      }}>
+                                        {c.categoryName || 'Course'}
+                                      </span>
+                                      <span>• Enrolled {new Date(c.enrolledAt).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{
+                                      fontSize: '0.88rem',
+                                      fontWeight: 800,
+                                      color: pct >= 100 ? '#059669' : 'var(--accent-primary, #4f46e5)',
+                                      background: pct >= 100 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(79, 70, 229, 0.08)',
+                                      padding: '3px 9px',
+                                      borderRadius: '6px'
+                                    }}>
+                                      {pct}%
+                                    </span>
+                                    <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}></i>
+                                  </div>
+                                </div>
+
+                                <div className="progress-bar-wrap" style={{ height: '8px', marginTop: '10px', marginBottom: '6px' }}>
+                                  <div
+                                    className="progress-bar-fill"
+                                    style={{
+                                      width: `${pct}%`,
+                                      background: pct >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' : undefined
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                  <span>
+                                    <i className="fa-solid fa-circle-check" style={{ color: '#059669', marginRight: '4px' }}></i>
+                                    {c.completedContents || 0} of {c.totalContents || 0} lessons completed
+                                  </span>
+                                  <span>
+                                    <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                                    Last Active: {c.lastAccessedAt ? new Date(c.lastAccessedAt).toLocaleDateString() : 'Never'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Expanded Section Details */}
+                              {isExpanded && (
+                                <div style={{ padding: '16px 20px', background: 'var(--bg-surface, #f8fafc)' }}>
+                                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                    Curriculum Sections Breakdown
+                                  </div>
+                                  {(!c.sections || c.sections.length === 0) ? (
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                      No detailed section telemetry available for this course.
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {c.sections.map((sec) => (
+                                        <div key={sec.sectionId} style={{
+                                          padding: '10px 14px',
+                                          borderRadius: '8px',
+                                          background: 'var(--bg-card, #ffffff)',
+                                          border: '1px solid var(--border-subtle, #f1f5f9)',
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center'
+                                        }}>
+                                          <div style={{ flex: 1, marginRight: '16px' }}>
+                                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                              {sec.sectionTitle}
+                                            </div>
+                                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                              {sec.completedContents} / {sec.totalContents} lessons done
+                                            </div>
+                                          </div>
+                                          <div style={{ width: '110px', textAlign: 'right' }}>
+                                            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: sec.progressPercent >= 100 ? '#059669' : 'var(--text-primary)' }}>
+                                              {Math.round(sec.progressPercent)}%
+                                            </div>
+                                            <div className="progress-bar-wrap" style={{ height: '5px', marginTop: '4px' }}>
+                                              <div
+                                                className="progress-bar-fill"
+                                                style={{
+                                                  width: `${sec.progressPercent}%`,
+                                                  background: sec.progressPercent >= 100 ? '#10b981' : undefined
+                                                }}
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: TESTS & ASSESSMENTS */}
+                  {profileTab === 'tests' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Assessment & Quiz Attempts ({selectedStudent.assessments?.length || 0})
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {['ALL', 'PASSED', 'FAILED'].map((flt) => (
+                            <button
+                              key={flt}
+                              className={`btn btn-xs ${testFilter === flt ? 'btn-primary' : 'btn-secondary'}`}
+                              onClick={() => setTestFilter(flt)}
+                              style={{ padding: '3px 10px', fontSize: '0.74rem' }}
+                            >
+                              {flt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {(!selectedStudent.assessments || selectedStudent.assessments.length === 0) ? (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '52px 20px',
+                          background: 'var(--bg-card, #ffffff)',
+                          borderRadius: '14px',
+                          border: '1px dashed var(--border-default, #e2e8f0)',
+                          color: 'var(--text-muted)'
+                        }}>
+                          <i className="fa-solid fa-clipboard-check" style={{ fontSize: '2.2rem', marginBottom: '12px', color: 'var(--border-default)' }}></i>
+                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-primary)' }}>No Assessments Attempted</div>
+                          <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
+                            This student has not taken any module quizzes or exams yet.
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {selectedStudent.assessments
+                            .filter((a) => {
+                              if (testFilter === 'PASSED') return a.passed;
+                              if (testFilter === 'FAILED') return !a.passed;
+                              return true;
+                            })
+                            .map((a) => {
+                              const pct = Math.round(a.percentage || 0);
+                              return (
+                                <div
+                                  key={a.attemptId}
+                                  style={{
+                                    padding: '16px 18px',
+                                    borderRadius: '12px',
+                                    background: 'var(--bg-card, #ffffff)',
+                                    border: `1px solid ${a.passed ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                    boxShadow: 'var(--shadow-sm)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: '16px'
+                                  }}
+                                >
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                      <span style={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: 800,
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        background: a.passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        color: a.passed ? '#059669' : '#dc2626',
+                                        border: `1px solid ${a.passed ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`
+                                      }}>
+                                        {a.passed ? '✓ PASSED' : '✕ FAILED'}
+                                      </span>
+                                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                        {a.courseName}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {a.title}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                      <span>Score: {a.score} / {a.totalMarks} marks</span>
+                                      <span>• Requires {Math.round(a.passingPercentage)}% to pass</span>
+                                      {a.completedAt && (
+                                        <span>• Completed: {new Date(a.completedAt).toLocaleString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                    <div style={{
+                                      fontSize: '1.4rem',
+                                      fontWeight: 800,
+                                      color: a.passed ? '#059669' : '#dc2626',
+                                      lineHeight: 1.1
+                                    }}>
+                                      {pct}%
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                      {a.status}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 4: LIVE CLASS ATTENDANCE */}
+                  {profileTab === 'attendance' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Live Meeting Attendance Log ({selectedStudent.attendanceRecords?.length || 0})
+                        </span>
+                      </div>
+
+                      {(!selectedStudent.attendanceRecords || selectedStudent.attendanceRecords.length === 0) ? (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '52px 20px',
+                          background: 'var(--bg-card, #ffffff)',
+                          borderRadius: '14px',
+                          border: '1px dashed var(--border-default, #e2e8f0)',
+                          color: 'var(--text-muted)'
+                        }}>
+                          <i className="fa-solid fa-video" style={{ fontSize: '2.2rem', marginBottom: '12px', color: 'var(--border-default)' }}></i>
+                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-primary)' }}>No Live Attendance Records</div>
+                          <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
+                            The student has not attended scheduled live meeting sessions yet.
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {selectedStudent.attendanceRecords.map((att) => {
+                            const isPresent = att.status === 'PRESENT';
+                            return (
+                              <div
+                                key={att.attendanceId}
+                                style={{
+                                  padding: '14px 16px',
+                                  borderRadius: '12px',
+                                  background: 'var(--bg-card, #ffffff)',
+                                  border: '1px solid var(--border-default, #e2e8f0)',
+                                  boxShadow: 'var(--shadow-sm)',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  gap: '14px'
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                                    {att.sessionTitle}
+                                  </div>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    {att.courseName} • Scheduled: {att.scheduledAt ? new Date(att.scheduledAt).toLocaleString() : 'N/A'}
+                                  </div>
+                                  {att.joinedAt && (
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--accent-primary, #4f46e5)', marginTop: '3px' }}>
+                                      <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                                      Joined at {new Date(att.joinedAt).toLocaleTimeString()}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <span style={{
+                                  fontSize: '0.74rem',
+                                  fontWeight: 800,
+                                  padding: '3px 10px',
+                                  borderRadius: '6px',
+                                  background: isPresent ? 'rgba(16, 185, 129, 0.1)' : 'rgba(100, 116, 139, 0.1)',
+                                  color: isPresent ? '#059669' : '#64748b',
+                                  border: `1px solid ${isPresent ? 'rgba(16, 185, 129, 0.25)' : 'rgba(100, 116, 139, 0.25)'}`
+                                }}>
+                                  {isPresent ? '✓ PRESENT' : 'ABSENT'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 5: ACTIVITY TIMELINE */}
+                  {profileTab === 'activity' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Learning Activity & Audit Trail
+                      </div>
+
+                      {(!selectedStudent.recentActivity || selectedStudent.recentActivity.length === 0) ? (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '52px 20px',
+                          background: 'var(--bg-card, #ffffff)',
+                          borderRadius: '14px',
+                          border: '1px dashed var(--border-default, #e2e8f0)',
+                          color: 'var(--text-muted)'
+                        }}>
+                          <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: '2.2rem', marginBottom: '12px', color: 'var(--border-default)' }}></i>
+                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-primary)' }}>No Activity Recorded</div>
+                          <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
+                            Activity will appear here as the student watches videos, completes lessons, or attends live classes.
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          position: 'relative',
+                          paddingLeft: '8px'
+                        }}>
+                          {selectedStudent.recentActivity.map((act, idx) => (
+                            <div key={idx} style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '14px',
+                              padding: '12px 16px',
+                              borderRadius: '12px',
+                              background: 'var(--bg-card, #ffffff)',
+                              border: '1px solid var(--border-default, #e2e8f0)',
+                              boxShadow: 'var(--shadow-sm)'
+                            }}>
+                              <span style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                background: act.type === 'LESSON_COMPLETED' ? 'rgba(16, 185, 129, 0.12)' : act.type === 'ASSESSMENT' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(79, 70, 229, 0.12)',
+                                color: act.type === 'LESSON_COMPLETED' ? '#059669' : act.type === 'ASSESSMENT' ? '#d97706' : '#4f46e5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.85rem',
+                                flexShrink: 0
+                              }}>
+                                <i className={`fa-solid ${act.icon || 'fa-bolt'}`}></i>
+                              </span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                  {act.title}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  {act.description}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                  <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                                  {act.timestamp ? new Date(act.timestamp).toLocaleString() : ''}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

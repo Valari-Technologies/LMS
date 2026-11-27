@@ -14,6 +14,8 @@ public interface LiveSessionAttendanceRepository extends JpaRepository<LiveSessi
 
     Optional<LiveSessionAttendance> findBySessionIdAndStudentId(Long sessionId, Long studentId);
 
+    List<LiveSessionAttendance> findByStudentIdOrderByAttendedAtDesc(Long studentId);
+
     List<LiveSessionAttendance> findByCourseIdAndStudentId(Long courseId, Long studentId);
 
     List<LiveSessionAttendance> findBySessionId(Long sessionId);
