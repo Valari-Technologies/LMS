@@ -915,15 +915,7 @@ export default function StudentCourseDashboardPage() {
                       </div>
                     </div>
 
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                      gap: '12px',
-                      padding: '16px',
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      border: '1px solid #eef2f6'
-                    }}>
+                    <div className="ot-recording-overview-meta-grid">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <i className="fa-regular fa-calendar" style={{ color: '#5A70D3', fontSize: '1.1rem' }}></i>
                         <div>

@@ -9745,6 +9745,16 @@ body:has(.ud-header) .ot-learn-tabs {
   box-sizing: border-box;
 }
 
+.ot-recording-overview-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #eef2f6;
+}
+
 .ot-curriculum-panel-header {
   display: flex;
   align-items: center;
@@ -10152,6 +10162,10 @@ body:has(.ud-header) .ot-course-content-sidebar {
 @media (max-width: 768px) {
   .ot-course-content-sidebar {
     display: none;
+  }
+
+  .ot-recording-overview-meta-grid {
+    display: none !important;
   }
 
   .ot-learn-page {
