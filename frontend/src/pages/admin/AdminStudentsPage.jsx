@@ -33,6 +33,43 @@ function formatLastSeen(timestamp) {
   return { primary: formattedDateTime, secondary: null, isOnline: false };
 }
 
+/**
+ * Returns high-resolution original image URL by stripping thumbnail/resize modifiers
+ * (e.g. Google OAuth =s96-c, Cloudinary /c_thumb,w_100/, GitHub ?s=64, etc.)
+ */
+export function getHighResAvatarUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  const cleaned = url.trim();
+
+  // 1. Google OAuth user avatars (lh3.googleusercontent.com)
+  // Strips =s96-c or =s120 to =s0 (uncompressed original high-res photo)
+  if (cleaned.includes('googleusercontent.com')) {
+    if (/=s\d+(-c)?(\?.*)?$/.test(cleaned)) {
+      return cleaned.replace(/=s\d+(-c)?(\?.*)?$/, '=s0$2');
+    }
+    if (/[?&]sz=\d+/.test(cleaned)) {
+      return cleaned.replace(/([?&])sz=\d+/, '$1sz=1000');
+    }
+  }
+
+  // 2. Cloudinary thumbnail transformation URLs
+  if (cleaned.includes('cloudinary.com') && cleaned.includes('/upload/')) {
+    return cleaned.replace(/\/upload\/(?:[a-zA-Z]_[^/]+\/)+/, '/upload/q_auto,f_auto/');
+  }
+
+  // 3. GitHub avatars
+  if (cleaned.includes('githubusercontent.com') && /[?&]s=\d+/.test(cleaned)) {
+    return cleaned.replace(/([?&])s=\d+/, '$1s=800');
+  }
+
+  // 4. Gravatar avatars
+  if (cleaned.includes('gravatar.com/avatar') && /[?&]s=\d+/.test(cleaned)) {
+    return cleaned.replace(/([?&])s=\d+/, '$1s=800');
+  }
+
+  return cleaned;
+}
+
 export default function AdminStudentsPage() {
   const { isReadOnly } = usePermission();
   const { toast, confirm } = useNotification();
@@ -51,12 +88,14 @@ export default function AdminStudentsPage() {
   const [testFilter, setTestFilter] = useState('ALL'); // 'ALL' | 'PASSED' | 'FAILED'
   const [previewImage, setPreviewImage] = useState(null); // { url, title, email, studentId }
   const [isFullScreenView, setIsFullScreenView] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
         if (isFullScreenView) {
           setIsFullScreenView(false);
+          setZoomLevel(1);
         } else if (previewImage) {
           setPreviewImage(null);
         }
@@ -1481,429 +1520,569 @@ export default function AdminStudentsPage() {
       )}
 
       {/* WhatsApp-Style Profile Picture Viewer & Quick Card */}
-      {previewImage && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: isFullScreenView ? '#000000' : 'rgba(11, 20, 26, 0.78)',
-            backdropFilter: isFullScreenView ? 'none' : 'blur(8px)',
-            WebkitBackdropFilter: isFullScreenView ? 'none' : 'blur(8px)',
-            zIndex: 4000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: isFullScreenView ? 0 : '16px',
-            animation: 'fadeIn 0.18s ease-out'
-          }}
-          onClick={() => {
-            if (isFullScreenView) {
-              setIsFullScreenView(false);
-            } else {
-              setPreviewImage(null);
-            }
-          }}
-        >
-          {!isFullScreenView ? (
-            /* WhatsApp Signature Square Popup Card */
-            <div
-              style={{
-                position: 'relative',
-                width: 'min(360px, 92vw)',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                background: '#111b21',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.15)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Square Image Box (1:1 Aspect Ratio) */}
+      {previewImage && (() => {
+        const hdImageUrl = getHighResAvatarUrl(previewImage.url);
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: isFullScreenView ? '#000000' : 'rgba(11, 20, 26, 0.78)',
+              backdropFilter: isFullScreenView ? 'none' : 'blur(8px)',
+              WebkitBackdropFilter: isFullScreenView ? 'none' : 'blur(8px)',
+              zIndex: 4000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: isFullScreenView ? 0 : '16px',
+              animation: 'fadeIn 0.18s ease-out'
+            }}
+            onClick={() => {
+              if (isFullScreenView) {
+                setIsFullScreenView(false);
+                setZoomLevel(1);
+              } else {
+                setPreviewImage(null);
+              }
+            }}
+          >
+            {!isFullScreenView ? (
+              /* WhatsApp Signature Square Popup Card */
               <div
                 style={{
                   position: 'relative',
-                  width: '100%',
-                  aspectRatio: '1 / 1',
-                  background: '#0b141a',
+                  width: 'min(380px, 92vw)',
+                  borderRadius: '16px',
                   overflow: 'hidden',
-                  cursor: 'pointer'
+                  background: '#111b21',
+                  boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.15)',
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
-                onClick={() => setIsFullScreenView(true)}
-                title="Click to view full photo"
+                onClick={(e) => e.stopPropagation()}
               >
-                <img
-                  src={previewImage.url}
-                  alt={previewImage.title}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    display: 'block'
-                  }}
-                />
-
-                {/* Top Gradient Overlay with Contact Name */}
+                {/* Square Image Box (1:1 Aspect Ratio) */}
                 <div
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    padding: '14px 16px 36px 16px',
-                    background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%)',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    pointerEvents: 'none'
+                    position: 'relative',
+                    width: '100%',
+                    aspectRatio: '1 / 1',
+                    background: '#0b141a',
+                    overflow: 'hidden',
+                    cursor: 'pointer'
                   }}
+                  onClick={() => {
+                    setIsFullScreenView(true);
+                    setZoomLevel(1);
+                  }}
+                  title="Click to view full photo"
                 >
-                  <div style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)' }}>
-                    <div style={{
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      fontSize: '1.18rem',
-                      letterSpacing: '0.2px'
-                    }}>
-                      {previewImage.title}
-                    </div>
-                    {previewImage.email && (
+                  <img
+                    src={hdImageUrl}
+                    alt={previewImage.title}
+                    onError={(e) => {
+                      if (e.currentTarget.src !== previewImage.url) {
+                        e.currentTarget.src = previewImage.url;
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      imageRendering: '-webkit-optimize-contrast'
+                    }}
+                  />
+
+                  {/* Top Gradient Overlay with Contact Name */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      padding: '14px 16px 36px 16px',
+                      background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)' }}>
                       <div style={{
-                        color: 'rgba(255, 255, 255, 0.85)',
-                        fontSize: '0.78rem',
-                        marginTop: '2px'
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        fontSize: '1.18rem',
+                        letterSpacing: '0.2px'
                       }}>
-                        {previewImage.email}
+                        {previewImage.title}
                       </div>
-                    )}
+                      {previewImage.email && (
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.85)',
+                          fontSize: '0.78rem',
+                          marginTop: '2px'
+                        }}>
+                          {previewImage.email}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(null);
+                      }}
+                      style={{
+                        pointerEvents: 'auto',
+                        background: 'rgba(0, 0, 0, 0.45)',
+                        border: 'none',
+                        color: '#ffffff',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        backdropFilter: 'blur(4px)',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.75)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.45)'}
+                      title="Close (Esc)"
+                    >
+                      ✕
+                    </button>
                   </div>
 
+                  {/* Subtle Click Cue Overlay */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      right: '10px',
+                      background: 'rgba(0, 0, 0, 0.55)',
+                      color: '#ffffff',
+                      borderRadius: '20px',
+                      padding: '4px 9px',
+                      fontSize: '0.72rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      backdropFilter: 'blur(4px)',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <i className="fa-solid fa-expand"></i>
+                    <span>Full View</span>
+                  </div>
+                </div>
+
+                {/* WhatsApp Signature Bottom Action Bar */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                    padding: '8px 12px',
+                    background: '#ffffff',
+                    borderTop: '1px solid rgba(0, 0, 0, 0.06)'
+                  }}
+                >
+                  {/* Message / Email Action */}
+                  <a
+                    href={previewImage.email ? `mailto:${previewImage.email}` : '#'}
+                    title={`Send Email to ${previewImage.title}`}
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#00a884',
+                      fontSize: '1.2rem',
+                      textDecoration: 'none',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <i className="fa-solid fa-comment-dots"></i>
+                  </a>
+
+                  {/* View Student Profile Action */}
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    title="View Student Learning Profile"
+                    onClick={() => {
+                      if (previewImage.studentId) {
+                        openStudentDetail(previewImage.studentId);
+                      }
                       setPreviewImage(null);
                     }}
                     style={{
-                      pointerEvents: 'auto',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: 'none',
-                      color: '#ffffff',
-                      width: '32px',
-                      height: '32px',
+                      width: '44px',
+                      height: '44px',
                       borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      backdropFilter: 'blur(4px)',
-                      transition: 'background 0.15s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.75)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.45)'}
-                    title="Close (Esc)"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Subtle Click Cue Overlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '10px',
-                    right: '10px',
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    color: '#ffffff',
-                    borderRadius: '20px',
-                    padding: '4px 9px',
-                    fontSize: '0.72rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    backdropFilter: 'blur(4px)',
-                    pointerEvents: 'none'
-                  }}
-                >
-                  <i className="fa-solid fa-expand"></i>
-                  <span>Full View</span>
-                </div>
-              </div>
-
-              {/* WhatsApp Signature Bottom Action Bar */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-around',
-                  padding: '8px 12px',
-                  background: '#ffffff',
-                  borderTop: '1px solid rgba(0, 0, 0, 0.06)'
-                }}
-              >
-                {/* Message / Email Action */}
-                <a
-                  href={previewImage.email ? `mailto:${previewImage.email}` : '#'}
-                  title={`Send Email to ${previewImage.title}`}
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00a884',
-                    fontSize: '1.2rem',
-                    textDecoration: 'none',
-                    transition: 'background 0.15s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <i className="fa-solid fa-comment-dots"></i>
-                </a>
-
-                {/* View Student Profile Action */}
-                <button
-                  type="button"
-                  title="View Student Learning Profile"
-                  onClick={() => {
-                    if (previewImage.studentId) {
-                      openStudentDetail(previewImage.studentId);
-                    }
-                    setPreviewImage(null);
-                  }}
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00a884',
-                    fontSize: '1.2rem',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <i className="fa-solid fa-circle-info"></i>
-                </button>
-
-                {/* Open Original Image */}
-                <a
-                  href={previewImage.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Open Original Image in New Tab"
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00a884',
-                    fontSize: '1.15rem',
-                    textDecoration: 'none',
-                    transition: 'background 0.15s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>
-
-                {/* Fullscreen Expand Action */}
-                <button
-                  type="button"
-                  title="View Full Screen"
-                  onClick={() => setIsFullScreenView(true)}
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#00a884',
-                    fontSize: '1.15rem',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <i className="fa-solid fa-expand"></i>
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* WhatsApp Full-Screen Photo Viewer */
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                background: '#000000',
-                display: 'flex',
-                flexDirection: 'column',
-                zIndex: 4100
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* WhatsApp App Bar */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 20px',
-                  background: 'rgba(11, 20, 26, 0.95)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                  color: '#ffffff'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsFullScreenView(false)}
-                    style={{
+                      border: 'none',
                       background: 'transparent',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: '1.25rem',
-                      cursor: 'pointer',
-                      padding: '6px 10px',
-                      borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      color: '#00a884',
+                      fontSize: '1.2rem',
+                      cursor: 'pointer',
                       transition: 'background 0.15s'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    title="Back (Esc)"
                   >
-                    <i className="fa-solid fa-arrow-left"></i>
+                    <i className="fa-solid fa-circle-info"></i>
                   </button>
-                  <div
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      background: '#1f2c34',
-                      flexShrink: 0
-                    }}
-                  >
-                    <img src={previewImage.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '1.05rem', color: '#ffffff' }}>
-                      {previewImage.title}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#8696a0' }}>
-                      {previewImage.email || 'Student Profile Photo'}
-                    </div>
-                  </div>
-                </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Open Original Image */}
                   <a
-                    href={previewImage.url}
+                    href={hdImageUrl}
                     target="_blank"
                     rel="noreferrer"
+                    title="Open Original HD Image in New Tab"
                     style={{
-                      color: '#aebac1',
-                      fontSize: '1.15rem',
-                      padding: '8px 12px',
+                      width: '44px',
+                      height: '44px',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      color: '#00a884',
+                      fontSize: '1.15rem',
                       textDecoration: 'none',
-                      transition: 'color 0.15s, background 0.15s'
+                      transition: 'background 0.15s'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#ffffff';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#aebac1';
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                    title="Open Original"
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <i className="fa-solid fa-arrow-up-right-from-square"></i>
                   </a>
+
+                  {/* Fullscreen Expand Action */}
                   <button
                     type="button"
-                    onClick={() => setPreviewImage(null)}
+                    title="View Full Screen"
+                    onClick={() => {
+                      setIsFullScreenView(true);
+                      setZoomLevel(1);
+                    }}
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#aebac1',
-                      fontSize: '1.25rem',
-                      cursor: 'pointer',
-                      padding: '8px 12px',
+                      width: '44px',
+                      height: '44px',
                       borderRadius: '50%',
+                      border: 'none',
+                      background: 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transition: 'color 0.15s, background 0.15s'
+                      color: '#00a884',
+                      fontSize: '1.15rem',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#ffffff';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#aebac1';
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                    title="Close"
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 168, 132, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    ✕
+                    <i className="fa-solid fa-expand"></i>
                   </button>
                 </div>
               </div>
-
-              {/* Large Image View */}
+            ) : (
+              /* WhatsApp Full-Screen Photo Viewer */
               <div
                 style={{
-                  flex: 1,
+                  position: 'fixed',
+                  inset: 0,
+                  background: '#000000',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '24px',
-                  overflow: 'auto',
-                  background: '#000000'
+                  flexDirection: 'column',
+                  zIndex: 4100
                 }}
-                onClick={() => setIsFullScreenView(false)}
+                onClick={(e) => e.stopPropagation()}
               >
-                <img
-                  src={previewImage.url}
-                  alt={previewImage.title}
+                {/* WhatsApp App Bar */}
+                <div
                   style={{
-                    maxWidth: '92vw',
-                    maxHeight: '82vh',
-                    width: 'auto',
-                    height: 'auto',
-                    objectFit: 'contain',
-                    boxShadow: '0 0 50px rgba(0, 0, 0, 0.85)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 20px',
+                    background: 'rgba(11, 20, 26, 0.95)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    color: '#ffffff'
                   }}
-                  onClick={(e) => e.stopPropagation()}
-                />
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsFullScreenView(false);
+                        setZoomLevel(1);
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '1.25rem',
+                        cursor: 'pointer',
+                        padding: '6px 10px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      title="Back (Esc)"
+                    >
+                      <i className="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        background: '#1f2c34',
+                        flexShrink: 0
+                      }}
+                    >
+                      <img src={hdImageUrl} alt="" onError={(e) => { if (e.currentTarget.src !== previewImage.url) e.currentTarget.src = previewImage.url; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '1.05rem', color: '#ffffff' }}>
+                        {previewImage.title}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#8696a0' }}>
+                        {previewImage.email || 'Student Profile Photo'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions & Zoom Controls in App Bar */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {/* Zoom In */}
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(z => Math.min(+(z + 0.4).toFixed(1), 3))}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#aebac1',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                        padding: '8px 10px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#aebac1';
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                      title="Zoom In"
+                    >
+                      <i className="fa-solid fa-magnifying-glass-plus"></i>
+                    </button>
+
+                    {/* Zoom Out */}
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(z => Math.max(+(z - 0.4).toFixed(1), 1))}
+                      disabled={zoomLevel <= 1}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: zoomLevel <= 1 ? '#4b5563' : '#aebac1',
+                        fontSize: '1.1rem',
+                        cursor: zoomLevel <= 1 ? 'not-allowed' : 'pointer',
+                        padding: '8px 10px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (zoomLevel > 1) {
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (zoomLevel > 1) {
+                          e.currentTarget.style.color = '#aebac1';
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                      title="Zoom Out"
+                    >
+                      <i className="fa-solid fa-magnifying-glass-minus"></i>
+                    </button>
+
+                    {zoomLevel > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel(1)}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: 'none',
+                          color: '#ffffff',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          cursor: 'pointer'
+                        }}
+                        title="Reset zoom (1:1)"
+                      >
+                        Reset
+                      </button>
+                    )}
+
+                    <div style={{ width: '1px', height: '20px', background: 'rgba(255, 255, 255, 0.15)', margin: '0 4px' }} />
+
+                    {/* Open Original */}
+                    <a
+                      href={hdImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        color: '#aebac1',
+                        fontSize: '1.1rem',
+                        padding: '8px 10px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textDecoration: 'none',
+                        transition: 'color 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#aebac1';
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                      title="Open Original HD Image"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+
+                    {/* Close */}
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage(null)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#aebac1',
+                        fontSize: '1.25rem',
+                        cursor: 'pointer',
+                        padding: '8px 10px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#aebac1';
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                      title="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Big Immersive Image Canvas */}
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px',
+                    overflow: 'auto',
+                    background: '#000000',
+                    position: 'relative'
+                  }}
+                  onClick={() => {
+                    if (zoomLevel > 1) {
+                      setZoomLevel(1);
+                    } else {
+                      setIsFullScreenView(false);
+                    }
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 'min(760px, 92vw)',
+                      height: 'min(760px, 80vh)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: `scale(${zoomLevel})`,
+                      transition: 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
+                      cursor: zoomLevel > 1 ? 'zoom-out' : 'zoom-in',
+                      position: 'relative'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoomLevel(z => z > 1 ? 1 : 1.6);
+                    }}
+                    title={zoomLevel > 1 ? "Click to zoom out" : "Click to zoom in"}
+                  >
+                    <img
+                      src={hdImageUrl}
+                      alt={previewImage.title}
+                      onError={(e) => {
+                        if (e.currentTarget.src !== previewImage.url) {
+                          e.currentTarget.src = previewImage.url;
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        filter: 'drop-shadow(0 15px 45px rgba(0, 0, 0, 0.9))',
+                        userSelect: 'none',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

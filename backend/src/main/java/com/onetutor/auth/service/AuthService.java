@@ -220,6 +220,9 @@ public class AuthService {
         String normalizedEmail = req.email().toLowerCase().trim();
         String effectiveName = req.name() != null ? req.name().trim() : null;
         String effectivePicture = req.picture();
+        if (effectivePicture != null && effectivePicture.contains("googleusercontent.com")) {
+            effectivePicture = effectivePicture.replaceAll("=s\\d+(-c)?$", "=s0");
+        }
 
         // If Google Client ID is configured and an idToken is provided, verify with Google
         if (googleClientId != null && !googleClientId.isBlank() && req.idToken() != null && !req.idToken().isBlank()) {
@@ -248,7 +251,9 @@ public class AuthService {
                 }
                 String tokenPic = (String) tokenInfo.get("picture");
                 if (tokenPic != null && !tokenPic.isBlank()) {
-                    effectivePicture = tokenPic;
+                    effectivePicture = tokenPic.contains("googleusercontent.com")
+                            ? tokenPic.replaceAll("=s\\d+(-c)?$", "=s0")
+                            : tokenPic;
                 }
             } catch (UnauthorizedException e) {
                 throw e;
