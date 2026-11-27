@@ -246,6 +246,7 @@ export default function AdminLayout() {
           items: [
             { to: '/admin/courses', label: 'Courses', icon: <i className="fa-solid fa-book-open"></i> },
             { to: '/admin/categories', label: 'Categories', icon: <i className="fa-solid fa-tags"></i> },
+            { to: '/admin/live-sessions', label: 'Live Sessions', icon: <i className="fa-solid fa-video"></i> },
             { to: '/admin/media', label: 'Cloudinary Media', icon: <i className="fa-solid fa-cloud-arrow-up"></i> },
             { to: '/admin/assessments', label: 'Assessments', icon: <i className="fa-solid fa-list-check"></i> },
           ]
