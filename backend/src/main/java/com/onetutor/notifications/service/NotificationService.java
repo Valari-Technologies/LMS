@@ -296,6 +296,27 @@ public class NotificationService {
     }
 
     @Transactional
+    public void deleteNotification(Long id, User user) {
+        if (id != null && user != null) {
+            notificationRepository.deleteByUserIdAndId(user.getId(), id);
+        }
+    }
+
+    @Transactional
+    public void deleteAllNotifications(User user) {
+        if (user != null) {
+            notificationRepository.deleteAllByUserId(user.getId());
+        }
+    }
+
+    @Transactional
+    public void deleteNotificationsBatch(List<Long> ids, User user) {
+        if (ids != null && !ids.isEmpty() && user != null) {
+            notificationRepository.deleteAllByUserIdAndIdIn(user.getId(), ids);
+        }
+    }
+
+    @Transactional
     public void deleteCommunityNotifications(Long userId, String linkUrl) {
         if (userId != null && linkUrl != null) {
             notificationRepository.deleteCommunityNotificationsForUserAndLink(userId, linkUrl);

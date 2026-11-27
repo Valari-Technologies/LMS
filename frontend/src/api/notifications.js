@@ -20,6 +20,21 @@ export async function markAllNotificationsRead() {
   return res.data.data;
 }
 
+export async function deleteNotification(id) {
+  const res = await api.delete(`/notifications/${id}`);
+  return res.data.data;
+}
+
+export async function deleteAllNotifications() {
+  const res = await api.delete('/notifications/all');
+  return res.data.data;
+}
+
+export async function deleteNotificationsBatch(ids) {
+  const res = await api.post('/notifications/delete-batch', { ids });
+  return res.data.data;
+}
+
 export async function registerFcmToken(token, deviceType = 'web') {
   const res = await api.post('/notifications/fcm-token', { token, deviceType });
   return res.data.data;

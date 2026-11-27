@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     Page<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
     long countByUserIdAndReadFalse(Long userId);
@@ -15,6 +17,18 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("UPDATE Notification n SET n.read = true WHERE n.user.id = :userId")
     void markAllReadForUser(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.user.id = :userId AND n.id IN :ids")
+    void deleteAllByUserIdAndIdIn(@Param("userId") Long userId, @Param("ids") List<Long> ids);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.user.id = :userId AND n.id = :id")
+    void deleteByUserIdAndId(@Param("userId") Long userId, @Param("id") Long id);
 
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.user.id = :userId AND n.type = com.onetutor.notifications.entity.NotificationType.COMMUNITY AND n.linkUrl = :linkUrl")

@@ -46,6 +46,27 @@ public class NotificationController {
         return ApiResponse.ok("All notifications marked as read", null);
     }
 
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteNotification(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        notificationService.deleteNotification(id, user);
+        return ApiResponse.ok("Notification deleted successfully", null);
+    }
+
+    @DeleteMapping("/all")
+    public ApiResponse<Void> deleteAllNotifications(@AuthenticationPrincipal User user) {
+        notificationService.deleteAllNotifications(user);
+        return ApiResponse.ok("All notifications deleted successfully", null);
+    }
+
+    @PostMapping("/delete-batch")
+    public ApiResponse<Void> deleteBatch(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, java.util.List<Long>> req) {
+        java.util.List<Long> ids = req.get("ids");
+        notificationService.deleteNotificationsBatch(ids, user);
+        return ApiResponse.ok("Selected notifications deleted successfully", null);
+    }
+
     @PostMapping("/fcm-token")
     public ApiResponse<Void> registerFcmToken(
             @AuthenticationPrincipal User user,
