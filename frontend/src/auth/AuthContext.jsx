@@ -104,8 +104,25 @@ export function AuthProvider({ children }) {
       }
 
       api.post('/users/heartbeat')
-        .then(() => {
+        .then((res) => {
           consecutiveFailures = 0;
+          const freshUser = res.data?.data;
+          if (freshUser) {
+            setUser((prev) => {
+              if (!prev) return prev;
+              const hasDiff =
+                prev.permissions !== freshUser.permissions ||
+                prev.role !== freshUser.role ||
+                prev.name !== freshUser.name ||
+                prev.profileImage !== freshUser.profileImage;
+              if (hasDiff) {
+                const updated = sanitizeUser({ ...prev, ...freshUser });
+                updateStoredUser(updated);
+                return updated;
+              }
+              return prev;
+            });
+          }
         })
         .catch(() => {
           consecutiveFailures++;
@@ -121,10 +138,24 @@ export function AuthProvider({ children }) {
       }
     }
 
+    function handleWindowFocus() {
+      sendHeartbeat();
+    }
+
+    function handleCustomPermissionsUpdated(e) {
+      if (e.detail?.userId === user?.id || !e.detail?.userId) {
+        sendHeartbeat();
+      }
+    }
+
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('auth:permissions-updated', handleCustomPermissionsUpdated);
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('auth:permissions-updated', handleCustomPermissionsUpdated);
     };
   }, [user]);
 

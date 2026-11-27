@@ -4,26 +4,41 @@ import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../auth/AuthContext';
 import AlertBanner from '../../components/AlertBanner';
 
-const ALL_NAVBAR_ITEMS = [
-  { path: '/admin', label: 'Dashboard / Overview' },
-  { path: '/admin/creator-dashboard', label: 'Creator Studio' },
-  { path: '/admin/courses', label: 'Courses' },
-  { path: '/admin/batches', label: 'Batches' },
-  { path: '/admin/categories', label: 'Categories' },
-  { path: '/admin/coupons', label: 'Coupons & Discounts' },
-  { path: '/admin/banners', label: 'Hero Banners' },
-  { path: '/admin/promo-banner', label: 'Promo Banner' },
-  { path: '/admin/media', label: 'Media Library' },
-  { path: '/admin/live-sessions', label: 'Live Sessions' },
-  { path: '/admin/contact-messages', label: 'Support Inquiries' },
-  { path: '/admin/notifications', label: 'Notification Center' },
-  { path: '/admin/community', label: 'Community' },
-  { path: '/admin/students', label: 'Students' },
-  { path: '/admin/admins', label: 'Administrators / Staff' },
-  { path: '/admin/enrollments', label: 'Enrollments' },
-  { path: '/admin/progress', label: 'Progress Tracking' },
-  { path: '/admin/audit-logs', label: 'Audit Logs' },
+export const ALL_NAVBAR_ITEMS = [
+  { path: '/admin', label: 'Dashboard', category: 'Overview' },
+  { path: '/admin/creator-dashboard', label: 'Creator Studio', category: 'Overview' },
+  { path: '/admin/courses', label: 'Courses', category: 'Academics & Content' },
+  { path: '/admin/reviews', label: 'Course Reviews', category: 'Academics & Content' },
+  { path: '/admin/batches', label: 'Batches', category: 'Academics & Content' },
+  { path: '/admin/categories', label: 'Categories', category: 'Academics & Content' },
+  { path: '/admin/coupons', label: 'Coupons & Discounts', category: 'Academics & Content' },
+  { path: '/admin/banners', label: 'Hero Banners', category: 'Academics & Content' },
+  { path: '/admin/promo-banner', label: 'Promo Banner', category: 'Academics & Content' },
+  { path: '/admin/media', label: 'Cloudinary Media', category: 'Academics & Content' },
+  { path: '/admin/live-sessions', label: 'Live Sessions', category: 'Academics & Content' },
+  { path: '/admin/assessments', label: 'Assessments', category: 'Academics & Content' },
+  { path: '/admin/doubts', label: 'Doubt Clearance', category: 'Communications' },
+  { path: '/admin/contact-messages', label: 'Support Inquiries', category: 'Communications' },
+  { path: '/admin/notifications', label: 'Notification Center', category: 'Communications' },
+  { path: '/admin/community', label: 'Community', category: 'Communications' },
+  { path: '/admin/students', label: 'Students', category: 'Users & Records' },
+  { path: '/admin/admins', label: 'Administrators / Staff', category: 'Users & Records' },
+  { path: '/admin/enrollments', label: 'Enrollments', category: 'Users & Records' },
+  { path: '/admin/progress', label: 'Progress Tracking', category: 'Users & Records' },
+  { path: '/admin/audit-logs', label: 'Audit Logs', category: 'System' },
 ];
+
+const CONTENT_CREATOR_DEFAULT_PATHS = new Set([
+  '/admin',
+  '/admin/creator-dashboard',
+  '/admin/courses',
+  '/admin/reviews',
+  '/admin/categories',
+  '/admin/media',
+  '/admin/live-sessions',
+  '/admin/assessments',
+  '/admin/doubts'
+]);
 
 function getDefaultPermissions(role) {
   const map = {};
@@ -32,7 +47,7 @@ function getDefaultPermissions(role) {
 
   ALL_NAVBAR_ITEMS.forEach((item) => {
     if (isContent) {
-      const enabled = item.path === '/admin/courses' || item.path === '/admin/categories' || item.path === '/admin/media' || item.path === '/admin/creator-dashboard';
+      const enabled = CONTENT_CREATOR_DEFAULT_PATHS.has(item.path);
       map[item.path] = { enabled, mode: 'EDITABLE' };
     } else if (isReadOnly) {
       map[item.path] = { enabled: true, mode: 'READ_ONLY' };
@@ -49,10 +64,15 @@ function parsePermissionsToState(permissionsJson, role) {
   }
   try {
     const parsed = typeof permissionsJson === 'string' ? JSON.parse(permissionsJson) : permissionsJson;
+    if (!parsed || typeof parsed !== 'object') {
+      return getDefaultPermissions(role);
+    }
     const map = {};
     ALL_NAVBAR_ITEMS.forEach((item) => {
-      if (parsed && parsed[item.path] !== undefined) {
-        map[item.path] = { enabled: true, mode: parsed[item.path] === 'READ_ONLY' ? 'READ_ONLY' : 'EDITABLE' };
+      if (parsed[item.path] !== undefined) {
+        const val = parsed[item.path];
+        const mode = (val === 'READ_ONLY' || val?.mode === 'READ_ONLY') ? 'READ_ONLY' : 'EDITABLE';
+        map[item.path] = { enabled: true, mode };
       } else {
         map[item.path] = { enabled: false, mode: 'READ_ONLY' };
       }
@@ -223,10 +243,11 @@ export default function AdminAdminsPage() {
         permissions: JSON.stringify(activePermissionsMap),
       });
       setShowPermissionsModal(false);
-      toast.success(`Permissions for ${selectedUser.name} updated successfully!`);
+      toast.success(`Access rights for ${selectedUser.name} updated successfully!`);
       if (currentUser && currentUser.id === selectedUser.id && refreshUser) {
         await refreshUser();
       }
+      window.dispatchEvent(new CustomEvent('auth:permissions-updated', { detail: { userId: selectedUser.id } }));
       setSelectedUser(null);
       loadAdmins();
     } catch (err) {
@@ -344,92 +365,113 @@ export default function AdminAdminsPage() {
       setPermissionsMap(updated);
     };
 
+    const categories = ['Overview', 'Academics & Content', 'Communications', 'Users & Records', 'System'];
+    const activeCount = Object.values(permissionsMap).filter(p => p?.enabled).length;
+
     return (
       <div style={{ marginTop: '14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '16px', background: 'var(--bg-card)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
           <div>
-            <div style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>Navbar Links &amp; Access Rights</div>
+            <div style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>Navbar Links &amp; Access Rights</span>
+              <span style={{ fontSize: '0.74rem', fontWeight: '700', padding: '2px 8px', borderRadius: '12px', background: activeCount > 0 ? 'rgba(99, 102, 241, 0.12)' : 'rgba(148, 163, 184, 0.2)', color: activeCount > 0 ? 'var(--accent-primary, #6366f1)' : 'var(--text-muted)' }}>
+                {activeCount} of {ALL_NAVBAR_ITEMS.length} granted
+              </span>
+            </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Select which pages appear in sidebar and set Read-Only vs Editable mode</div>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.72rem', padding: '2px 8px' }} onClick={() => setAllMode('EDITABLE')}>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.72rem', padding: '3px 9px' }} onClick={() => setAllMode('EDITABLE')}>
               Select All (Editable)
             </button>
-            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.72rem', padding: '2px 8px' }} onClick={() => setAllMode('READ_ONLY')}>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.72rem', padding: '3px 9px' }} onClick={() => setAllMode('READ_ONLY')}>
               Select All (Read-Only)
             </button>
-            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.72rem', padding: '2px 8px' }} onClick={clearAll}>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.72rem', padding: '3px 9px' }} onClick={clearAll}>
               Clear All
             </button>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
-          {ALL_NAVBAR_ITEMS.map((item) => {
-            const state = permissionsMap[item.path] || { enabled: false, mode: 'READ_ONLY' };
+        <div style={{ maxHeight: '380px', overflowY: 'auto', paddingRight: '6px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {categories.map((cat) => {
+            const items = ALL_NAVBAR_ITEMS.filter((i) => i.category === cat);
+            if (items.length === 0) return null;
             return (
-              <div
-                key={item.path}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: state.enabled ? '1px solid var(--accent-primary, #6366f1)' : '1px solid var(--border-subtle)',
-                  background: state.enabled ? 'var(--accent-subtle, rgba(99, 102, 241, 0.05))' : 'var(--bg-surface)'
-                }}
-              >
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: state.enabled ? '700' : '500', color: 'var(--text-primary)', flex: 1, margin: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={state.enabled}
-                    onChange={(e) => {
-                      setPermissionsMap({
-                        ...permissionsMap,
-                        [item.path]: { ...state, enabled: e.target.checked }
-                      });
-                    }}
-                  />
-                  <span>{item.label}</span>
-                </label>
+              <div key={cat}>
+                <div style={{ fontSize: '0.72rem', fontWeight: '800', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  {cat}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
+                  {items.map((item) => {
+                    const state = permissionsMap[item.path] || { enabled: false, mode: 'READ_ONLY' };
+                    return (
+                      <div
+                        key={item.path}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '7px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: state.enabled ? '1px solid var(--accent-primary, #6366f1)' : '1px solid var(--border-subtle)',
+                          background: state.enabled ? 'var(--accent-subtle, rgba(99, 102, 241, 0.05))' : 'var(--bg-surface)'
+                        }}
+                      >
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.84rem', fontWeight: state.enabled ? '700' : '500', color: 'var(--text-primary)', flex: 1, margin: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={state.enabled}
+                            onChange={(e) => {
+                              setPermissionsMap({
+                                ...permissionsMap,
+                                [item.path]: { ...state, enabled: e.target.checked }
+                              });
+                            }}
+                          />
+                          <span>{item.label}</span>
+                        </label>
 
-                {state.enabled && (
-                  <div style={{ display: 'flex', gap: '4px', marginLeft: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setPermissionsMap({ ...permissionsMap, [item.path]: { ...state, mode: 'READ_ONLY' } })}
-                      style={{
-                        padding: '2px 7px',
-                        fontSize: '0.7rem',
-                        fontWeight: '700',
-                        borderRadius: '4px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: state.mode === 'READ_ONLY' ? '#f59e0b' : 'var(--bg-surface)',
-                        color: state.mode === 'READ_ONLY' ? '#ffffff' : 'var(--text-muted)'
-                      }}
-                    >
-                      Read-Only
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPermissionsMap({ ...permissionsMap, [item.path]: { ...state, mode: 'EDITABLE' } })}
-                      style={{
-                        padding: '2px 7px',
-                        fontSize: '0.7rem',
-                        fontWeight: '700',
-                        borderRadius: '4px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: state.mode === 'EDITABLE' ? '#10b981' : 'var(--bg-surface)',
-                        color: state.mode === 'EDITABLE' ? '#ffffff' : 'var(--text-muted)'
-                      }}
-                    >
-                      Editable
-                    </button>
-                  </div>
-                )}
+                        {state.enabled && (
+                          <div style={{ display: 'flex', gap: '4px', marginLeft: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setPermissionsMap({ ...permissionsMap, [item.path]: { ...state, mode: 'READ_ONLY' } })}
+                              style={{
+                                padding: '2px 7px',
+                                fontSize: '0.68rem',
+                                fontWeight: '700',
+                                borderRadius: '4px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: state.mode === 'READ_ONLY' ? '#f59e0b' : 'var(--bg-surface)',
+                                color: state.mode === 'READ_ONLY' ? '#ffffff' : 'var(--text-muted)'
+                              }}
+                            >
+                              Read-Only
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPermissionsMap({ ...permissionsMap, [item.path]: { ...state, mode: 'EDITABLE' } })}
+                              style={{
+                                padding: '2px 7px',
+                                fontSize: '0.68rem',
+                                fontWeight: '700',
+                                borderRadius: '4px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: state.mode === 'EDITABLE' ? '#10b981' : 'var(--bg-surface)',
+                                color: state.mode === 'EDITABLE' ? '#ffffff' : 'var(--text-muted)'
+                              }}
+                            >
+                              Editable
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
@@ -618,7 +660,7 @@ export default function AdminAdminsPage() {
       {/* Create Account Modal */}
       {showCreateModal && (
         <div className="modal-backdrop" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-dialog" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog" style={{ maxWidth: '780px', width: '92vw' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '14px', marginBottom: '18px' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>
                 Create Staff / Creator Account
@@ -722,7 +764,7 @@ export default function AdminAdminsPage() {
       {/* Edit Permissions Modal */}
       {showPermissionsModal && selectedUser && (
         <div className="modal-backdrop" onClick={() => setShowPermissionsModal(false)}>
-          <div className="modal-dialog" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog" style={{ maxWidth: '780px', width: '92vw' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '14px', marginBottom: '18px' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>
                 Configure Access Rights for {selectedUser.name}

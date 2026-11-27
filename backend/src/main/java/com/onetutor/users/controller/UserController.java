@@ -39,9 +39,22 @@ public class UserController {
     }
 
     @PostMapping("/heartbeat")
-    public ApiResponse<Void> heartbeat(@AuthenticationPrincipal User user) {
+    public ApiResponse<UserSummary> heartbeat(@AuthenticationPrincipal User user) {
         if (user != null) {
             userService.updateLastActive(user.getId());
+            User refreshed = userService.findById(user.getId());
+            if (refreshed != null) {
+                String displayName = refreshed.getName();
+                if (displayName == null || displayName.equalsIgnoreCase("Super Admin")
+                        || displayName.toLowerCase().contains("super admin")
+                        || (refreshed.getRole() == com.onetutor.users.entity.UserRole.super_admin && "Admin".equalsIgnoreCase(displayName))) {
+                    displayName = "One Tutor";
+                }
+                UserSummary summary = new UserSummary(
+                        refreshed.getId(), displayName, refreshed.getEmail(),
+                        refreshed.getRole().name(), refreshed.isEmailVerified(), refreshed.getProfileImage(), refreshed.getPermissions());
+                return ApiResponse.ok(summary);
+            }
         }
         return ApiResponse.ok(null);
     }

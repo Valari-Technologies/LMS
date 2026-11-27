@@ -177,15 +177,26 @@ export default function AdminLayout() {
   const isReadOnlyAdmin = userRole === 'readonly_admin' || userRole === 'read_only_admin';
 
   let parsedPermissions = null;
-  if (user?.permissions) {
+  const hasCustomPermissions = user?.permissions !== null && user?.permissions !== undefined && user?.permissions !== '';
+  if (hasCustomPermissions) {
     try {
       parsedPermissions = typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
     } catch (e) {
-      // ignore
+      parsedPermissions = null;
     }
   }
 
-  const hasCustomPermissions = parsedPermissions && Object.keys(parsedPermissions).length > 0;
+  const CONTENT_CREATOR_DEFAULT_PATHS = [
+    '/admin',
+    '/admin/creator-dashboard',
+    '/admin/courses',
+    '/admin/reviews',
+    '/admin/categories',
+    '/admin/media',
+    '/admin/live-sessions',
+    '/admin/assessments',
+    '/admin/doubts'
+  ];
 
   const allNavGroups = [
     {
@@ -247,7 +258,7 @@ export default function AdminLayout() {
     }
   ];
 
-  const navGroups = hasCustomPermissions
+  const navGroups = (hasCustomPermissions && parsedPermissions)
     ? allNavGroups.map(group => ({
         ...group,
         items: group.items.filter(item => parsedPermissions[item.to] !== undefined)
@@ -258,16 +269,30 @@ export default function AdminLayout() {
           title: 'OVERVIEW',
           items: [
             { to: '/admin', label: 'Dashboard', icon: <i className="fa-solid fa-chart-line"></i>, end: true },
+            { to: '/admin/creator-dashboard', label: 'Creator Studio', icon: <i className="fa-solid fa-wand-magic-sparkles"></i> },
           ]
         },
         {
           title: 'CONTENT MANAGEMENT',
           items: [
             { to: '/admin/courses', label: 'Courses', icon: <i className="fa-solid fa-book-open"></i> },
+            { to: '/admin/reviews', label: 'Course Reviews', icon: <i className="fa-solid fa-star"></i> },
             { to: '/admin/categories', label: 'Categories', icon: <i className="fa-solid fa-tags"></i> },
-            { to: '/admin/live-sessions', label: 'Live Sessions', icon: <i className="fa-solid fa-video"></i> },
             { to: '/admin/media', label: 'Cloudinary Media', icon: <i className="fa-solid fa-cloud-arrow-up"></i> },
+            {
+              to: '/admin/live-sessions',
+              label: 'Live Sessions',
+              icon: <i className="fa-solid fa-video"></i>,
+              badge: needsVerificationCount > 0
+                ? (needsVerificationCount > 99 ? '99+' : needsVerificationCount)
+                : (liveClassCount > 0 ? (liveClassCount > 99 ? '99+' : liveClassCount) : null),
+              badgeColor: needsVerificationCount > 0 ? '#f59e0b' : '#22c55e',
+              badgeTitle: needsVerificationCount > 0
+                ? `${needsVerificationCount} recording${needsVerificationCount > 1 ? 's' : ''} awaiting admin verification`
+                : `${liveClassCount} active/upcoming live session${liveClassCount > 1 ? 's' : ''}`
+            },
             { to: '/admin/assessments', label: 'Assessments', icon: <i className="fa-solid fa-list-check"></i> },
+            { to: '/admin/doubts', label: 'Doubt Clearance', icon: <i className="fa-solid fa-circle-question"></i>, badge: unreadDoubtCount > 0 ? (unreadDoubtCount > 99 ? '99+' : unreadDoubtCount) : null },
           ]
         }
       ]
@@ -277,7 +302,7 @@ export default function AdminLayout() {
 
   // Determine if the current page should be rendered as read-only based on role OR granular permissions
   let isCurrentPageReadOnly = isReadOnlyAdmin;
-  if (!isCurrentPageReadOnly && hasCustomPermissions) {
+  if (!isCurrentPageReadOnly && hasCustomPermissions && parsedPermissions) {
     const keys = Object.keys(parsedPermissions);
     const sortedKeys = keys.sort((a, b) => b.length - a.length);
     const matchedKey = sortedKeys.find(k => k !== '/admin' && currentPath.startsWith(k)) || (parsedPermissions[currentPath] ? currentPath : null);
@@ -287,20 +312,27 @@ export default function AdminLayout() {
     }
   }
 
-  // Route protection for users with custom permissions
+  // Route protection for users with custom permissions or role-based restrictions
   useEffect(() => {
-    if (!hasCustomPermissions) return;
+    const allowedPaths = (hasCustomPermissions && parsedPermissions)
+      ? Object.keys(parsedPermissions)
+      : isContentCreator
+      ? CONTENT_CREATOR_DEFAULT_PATHS
+      : null;
 
-    const allowedPaths = Object.keys(parsedPermissions);
+    if (!allowedPaths) return;
+
     const isAllowed = allowedPaths.some(p => p === currentPath || (p !== '/admin' && currentPath.startsWith(p)));
 
     if (!isAllowed) {
-      const firstAvailable = navGroups[0]?.items[0]?.to || '/admin/courses';
+      const firstAvailable = navGroups[0]?.items[0]?.to;
       if (firstAvailable && firstAvailable !== currentPath) {
         navigate(firstAvailable, { replace: true });
+      } else if (!firstAvailable) {
+        navigate('/admin', { replace: true });
       }
     }
-  }, [hasCustomPermissions, currentPath, navGroups, navigate, parsedPermissions]);
+  }, [hasCustomPermissions, currentPath, navGroups, navigate, parsedPermissions, isContentCreator]);
 
   // Build a multi-step breadcrumb from the current pathname
   function buildBreadcrumbs() {
@@ -872,7 +904,22 @@ export default function AdminLayout() {
 
         {/* Page Content Outlet */}
         <main className="admin-content-area">
-          <Outlet context={{ isReadOnlyPage: isCurrentPageReadOnly }} />
+          {navGroups.length === 0 ? (
+            <div style={{ maxWidth: '520px', margin: '80px auto', textAlign: 'center', padding: '36px 24px', background: 'var(--bg-surface, #ffffff)', borderRadius: '16px', border: '1px solid var(--border-default, #e2e8f0)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', margin: '0 auto 16px auto' }}>
+                <i className="fa-solid fa-lock"></i>
+              </div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>Access Restricted</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginBottom: '20px' }}>
+                Your account does not currently have permissions to view any administration pages. Please contact a Super Administrator to configure your access rights.
+              </p>
+              <button className="btn btn-secondary" onClick={handleLogout}>
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Outlet context={{ isReadOnlyPage: isCurrentPageReadOnly }} />
+          )}
         </main>
         {!isContentCreator && <CommunityToastNotifier role="admin" />}
       </div>

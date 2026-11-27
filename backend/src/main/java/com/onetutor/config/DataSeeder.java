@@ -112,6 +112,8 @@ public class DataSeeder implements CommandLineRunner {
             }
         });
 
+        final String defaultCreatorPermissions = "{\"/admin\":\"EDITABLE\",\"/admin/creator-dashboard\":\"EDITABLE\",\"/admin/courses\":\"EDITABLE\",\"/admin/reviews\":\"EDITABLE\",\"/admin/categories\":\"EDITABLE\",\"/admin/media\":\"EDITABLE\",\"/admin/live-sessions\":\"EDITABLE\",\"/admin/assessments\":\"EDITABLE\",\"/admin/doubts\":\"EDITABLE\"}";
+
         User creator = userRepository.findByEmail("creator@onetutor.local").orElseGet(() -> {
             User c = new User();
             c.setName("Content Creator");
@@ -121,10 +123,16 @@ public class DataSeeder implements CommandLineRunner {
             c.setStatus(UserStatus.active);
             c.setEmailVerified(true);
             c.setLastActiveAt(java.time.Instant.now());
+            c.setPermissions(defaultCreatorPermissions);
             userRepository.save(c);
             log.info("Seeded dev content creator account: creator@onetutor.local (password: Creator@12345)");
             return c;
         });
+
+        if (creator != null && (creator.getPermissions() == null || creator.getPermissions().isBlank())) {
+            creator.setPermissions(defaultCreatorPermissions);
+            userRepository.save(creator);
+        }
 
         // Ensure category exists
         com.onetutor.categories.entity.Category category = categoryRepository.findAll().stream().findFirst().orElseGet(() -> {

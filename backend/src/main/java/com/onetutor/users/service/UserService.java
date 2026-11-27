@@ -95,6 +95,11 @@ public class UserService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public User findById(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
     @Transactional
     public void updateLastActive(Long userId) {
         userRepository.findById(userId).ifPresent(u -> {
