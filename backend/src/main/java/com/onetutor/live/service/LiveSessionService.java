@@ -23,6 +23,7 @@ import com.onetutor.live.repository.SessionRecordingRatingRepository;
 import com.onetutor.live.repository.SessionRecordingRepository;
 import com.onetutor.sections.repository.SectionRepository;
 import com.onetutor.users.entity.User;
+import com.onetutor.users.entity.UserRole;
 import com.onetutor.users.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
