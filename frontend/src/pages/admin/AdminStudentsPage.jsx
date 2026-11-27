@@ -226,14 +226,58 @@ export default function AdminStudentsPage() {
             })}
           </div>
 
-          <div className="table-search">
+          <div className="table-search" style={{ width: '460px', maxWidth: '100%', position: 'relative' }}>
+            <i
+              className="fa-solid fa-magnifying-glass"
+              style={{
+                position: 'absolute',
+                left: '14px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-muted, #94a3b8)',
+                fontSize: '0.9rem',
+                pointerEvents: 'none'
+              }}
+            />
             <input
               type="search"
               className="form-control"
               placeholder="Search by name or email…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              style={{
+                width: '100%',
+                paddingLeft: '38px',
+                paddingRight: search ? '36px' : '14px',
+                height: '42px',
+                fontSize: '0.92rem'
+              }}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setPage(0); }}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted, #94a3b8)',
+                  cursor: 'pointer',
+                  padding: '4px 6px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem'
+                }}
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
