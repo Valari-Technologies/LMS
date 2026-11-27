@@ -1551,25 +1551,25 @@ export default function AdminNotificationCenterPage() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto', width: '100%' }}>
-            <table className="modern-table" style={{ width: '100%', minWidth: '960px', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <table className="modern-table" style={{ width: '100%', minWidth: '1060px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{
                   borderBottom: '1px solid var(--border-default, #e2e8f0)',
-                  fontSize: '0.74rem',
-                  color: 'var(--text-muted)',
+                  fontSize: '0.76rem',
+                  color: 'var(--text-muted, #64748b)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.04em',
                   background: 'var(--bg-surface, #f8fafc)'
                 }}>
-                  <th style={{ padding: '12px 10px', width: '24%', verticalAlign: 'middle' }}>Notification Details</th>
-                  <th style={{ padding: '12px 10px', width: '10%', verticalAlign: 'middle' }}>Category</th>
-                  <th style={{ padding: '12px 10px', width: '9%', verticalAlign: 'middle' }}>Audience</th>
-                  <th style={{ padding: '12px 10px', width: '6%', verticalAlign: 'middle', textAlign: 'center' }}>Banner</th>
-                  <th style={{ padding: '12px 10px', width: '10%', verticalAlign: 'middle', textAlign: 'center' }}>In-App Delivered</th>
-                  <th style={{ padding: '12px 10px', width: '11%', verticalAlign: 'middle' }}>FCM Push Status</th>
-                  <th style={{ padding: '12px 10px', width: '9%', verticalAlign: 'middle' }}>Dispatched By</th>
-                  <th style={{ padding: '12px 10px', width: '9%', verticalAlign: 'middle' }}>Date</th>
-                  <th style={{ padding: '12px 10px', width: '12%', verticalAlign: 'middle', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '12px 14px', width: '22%', minWidth: '220px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Notification Details</th>
+                  <th style={{ padding: '12px 14px', width: '10%', minWidth: '110px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Category</th>
+                  <th style={{ padding: '12px 14px', width: '9%', minWidth: '100px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Audience</th>
+                  <th style={{ padding: '12px 14px', width: '7%', minWidth: '75px', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap' }}>Banner</th>
+                  <th style={{ padding: '12px 14px', width: '11%', minWidth: '135px', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap' }}>In-App Delivered</th>
+                  <th style={{ padding: '12px 14px', width: '13%', minWidth: '140px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>FCM Push Status</th>
+                  <th style={{ padding: '12px 14px', width: '10%', minWidth: '120px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Dispatched By</th>
+                  <th style={{ padding: '12px 14px', width: '8%', minWidth: '110px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Date</th>
+                  <th style={{ padding: '12px 14px', width: '10%', minWidth: '130px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1591,7 +1591,7 @@ export default function AdminNotificationCenterPage() {
                       transition: 'background 0.15s ease'
                     }}>
                       {/* 1. Notification Details */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle', maxWidth: '320px' }}>
                         <div
                           title={b.title}
                           style={{
@@ -1642,7 +1642,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 2. Category */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                         <span style={{
                           fontSize: '0.74rem',
                           padding: '3px 8px',
@@ -1662,7 +1662,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 3. Audience */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                         <span style={{
                           fontSize: '0.74rem',
                           background: 'var(--bg-surface, #f1f5f9)',
@@ -1682,7 +1682,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 4. Banner */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                         {b.imageUrl ? (
                           <a href={b.imageUrl} target="_blank" rel="noreferrer" title="Click to view image" style={{ display: 'inline-block' }}>
                             <img
@@ -1706,7 +1706,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 5. In-App Delivered */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -1724,7 +1724,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 6. FCM Push Status */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
                           <span style={{
                             fontSize: '0.74rem',
@@ -1764,7 +1764,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 7. Dispatched By */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                         <div
                           title={b.sentByName || 'System Admin'}
                           style={{
@@ -1785,7 +1785,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 8. Date */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
                           <span style={{ fontWeight: 600, fontSize: '0.80rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                             {dateStr}
@@ -1799,7 +1799,7 @@ export default function AdminNotificationCenterPage() {
                       </td>
 
                       {/* 9. Actions */}
-                      <td style={{ padding: '12px 10px', verticalAlign: 'middle', textAlign: 'right' }}>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'middle', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end', width: '100%', whiteSpace: 'nowrap' }}>
                           <button
                             type="button"
