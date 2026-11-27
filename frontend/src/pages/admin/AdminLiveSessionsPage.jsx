@@ -3539,6 +3539,60 @@ export default function AdminLiveSessionsPage() {
                   </div>
                 )}
 
+                {/* Video Player Preview in Edit Modal */}
+                {editRecordingForm.url && (
+                  <div style={{
+                    border: '1px solid var(--border-subtle, #e2e8f0)',
+                    borderRadius: 'var(--radius-md, 10px)',
+                    overflow: 'hidden',
+                    background: '#0f172a',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+                  }}>
+                    <div style={{
+                      padding: '7px 12px',
+                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.76rem',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f8fafc', fontWeight: 700 }}>
+                        <i className="fa-solid fa-circle-play" style={{ color: '#818cf8', fontSize: '0.85rem' }}></i>
+                        <span>Video Player Preview</span>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                        {getYouTubeEmbedUrl(resolveMediaUrl(editRecordingForm.url)) ? 'YouTube Stream' : 'Class Replay Video'}
+                      </span>
+                    </div>
+
+                    <div style={{ background: '#000000', display: 'flex', justifyContent: 'center', position: 'relative' }}>
+                      {getYouTubeEmbedUrl(resolveMediaUrl(editRecordingForm.url)) ? (
+                        <iframe
+                          title="Video Preview"
+                          src={getYouTubeEmbedUrl(resolveMediaUrl(editRecordingForm.url)).replace('autoplay=1', 'autoplay=0')}
+                          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          style={{ width: '100%', height: '220px', border: 'none', display: 'block' }}
+                        />
+                      ) : (
+                        <RecordingVideoPlayer
+                          url={resolveMediaUrl(editRecordingForm.url)}
+                          title={editRecordingForm.title || 'Recording Preview'}
+                          subtitleUrl={showEditRecordingModal.recording?.subtitleUrl}
+                          autoPlay={false}
+                          onDurationDetected={(exactSecs) => {
+                            if (exactSecs && exactSecs > 0 && !editRecordingForm.duration) {
+                              setEditRecordingForm(prev => ({ ...prev, duration: Math.round(exactSecs) }));
+                            }
+                          }}
+                          style={{ width: '100%', maxHeight: '230px' }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label className="form-label">Duration (seconds, optional)</label>
                   <input
