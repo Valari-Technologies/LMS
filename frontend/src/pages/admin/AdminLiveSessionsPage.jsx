@@ -351,6 +351,7 @@ export default function AdminLiveSessionsPage() {
   const [showEditRecordingModal, setShowEditRecordingModal] = useState(null); // { session, recording }
   const [editRecordingForm, setEditRecordingForm] = useState({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
   const [editRecordingTab, setEditRecordingTab] = useState('url'); // 'upload' | 'library' | 'url'
+  const [copiedEditUrl, setCopiedEditUrl] = useState(false);
   const [resourceModalRecording, setResourceModalRecording] = useState(null); // { recording, session }
   const [overviewModalRecording, setOverviewModalRecording] = useState(null); // { recording, session }
   const [overviewModalForm, setOverviewModalForm] = useState({ title: '', overview: '' });
@@ -1075,7 +1076,20 @@ export default function AdminLiveSessionsPage() {
       mediaAssetId: recording.mediaAssetId || null,
     });
     setEditRecordingTab(recording.mediaAssetId ? 'library' : 'url');
+    setCopiedEditUrl(false);
   }
+
+  const handleCopyUrl = (urlToCopy) => {
+    if (!urlToCopy) return;
+    try {
+      navigator.clipboard.writeText(urlToCopy);
+      setCopiedEditUrl(true);
+      toast.success('Video link copied to clipboard!');
+      setTimeout(() => setCopiedEditUrl(false), 2200);
+    } catch (err) {
+      toast.error('Failed to copy link to clipboard');
+    }
+  };
 
   async function handleUpdateRecording(e) {
     if (e) e.preventDefault();
@@ -3486,15 +3500,37 @@ export default function AdminLiveSessionsPage() {
 
                 {editRecordingTab === 'url' ? (
                   <div className="form-group">
-                    <label className="form-label">Recording Video URL *</label>
-                    <input
-                      type="url"
-                      required
-                      className="form-control"
-                      placeholder="https://www.youtube.com/watch?v=... or direct MP4/video link"
-                      value={editRecordingForm.url}
-                      onChange={(e) => setEditRecordingForm(prev => ({ ...prev, url: e.target.value, mediaAssetId: null }))}
-                    />
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.84rem' }}>Recording Video URL *</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="url"
+                        required
+                        className="form-control"
+                        placeholder="https://www.youtube.com/watch?v=... or direct MP4/video link"
+                        value={editRecordingForm.url}
+                        onChange={(e) => setEditRecordingForm(prev => ({ ...prev, url: e.target.value, mediaAssetId: null }))}
+                      />
+                      {editRecordingForm.url && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            flexShrink: 0,
+                            padding: '6px 12px',
+                            fontWeight: 700,
+                            fontSize: '0.78rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}
+                          onClick={() => handleCopyUrl(editRecordingForm.url)}
+                          title="Copy video link"
+                        >
+                          <i className={`fa-solid ${copiedEditUrl ? 'fa-check' : 'fa-copy'}`}></i>
+                          <span>{copiedEditUrl ? 'Copied!' : 'Copy'}</span>
+                        </button>
+                      )}
+                    </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                       Supports YouTube links, external video files, or media storage paths.
                     </div>
@@ -3532,8 +3568,71 @@ export default function AdminLiveSessionsPage() {
                         })}
                     </div>
                     {editRecordingForm.url && (
-                      <div style={{ padding: '8px 12px', background: '#E8EBFA', border: '1px solid #E8E8E8', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', color: '#166534' }}>
-                        <i className="fa-solid fa-circle-check" style={{ marginRight: '6px' }}></i> Selected: {editRecordingForm.url}
+                      <div style={{
+                        padding: '10px 14px',
+                        background: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: 'var(--radius-md)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            color: '#15803d',
+                            marginBottom: '4px'
+                          }}>
+                            <i className="fa-solid fa-circle-check"></i>
+                            <span>Selected Video URL:</span>
+                          </div>
+                          <div style={{
+                            fontSize: '0.76rem',
+                            color: '#1e293b',
+                            background: '#ffffff',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #dcfce7',
+                            wordBreak: 'break-all',
+                            overflowWrap: 'anywhere',
+                            fontFamily: 'monospace',
+                            lineHeight: 1.45,
+                            maxHeight: '68px',
+                            overflowY: 'auto'
+                          }}>
+                            {editRecordingForm.url}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleCopyUrl(editRecordingForm.url)}
+                          style={{
+                            flexShrink: 0,
+                            padding: '6px 14px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            borderRadius: '6px',
+                            border: copiedEditUrl ? '1px solid #16a34a' : '1px solid #cbd5e1',
+                            background: copiedEditUrl ? '#dcfce7' : '#ffffff',
+                            color: copiedEditUrl ? '#15803d' : '#334155',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            transition: 'all 0.15s'
+                          }}
+                          title="Copy video link to clipboard"
+                        >
+                          <i className={`fa-solid ${copiedEditUrl ? 'fa-check' : 'fa-copy'}`}></i>
+                          <span>{copiedEditUrl ? 'Copied!' : 'Copy Link'}</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -3561,9 +3660,32 @@ export default function AdminLiveSessionsPage() {
                         <i className="fa-solid fa-circle-play" style={{ color: '#818cf8', fontSize: '0.85rem' }}></i>
                         <span>Video Player Preview</span>
                       </div>
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                        {getYouTubeEmbedUrl(resolveMediaUrl(editRecordingForm.url)) ? 'YouTube Stream' : 'Class Replay Video'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          {getYouTubeEmbedUrl(resolveMediaUrl(editRecordingForm.url)) ? 'YouTube Stream' : 'Class Replay Video'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyUrl(editRecordingForm.url)}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            color: copiedEditUrl ? '#86efac' : '#e2e8f0',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Copy video link"
+                        >
+                          <i className={`fa-solid ${copiedEditUrl ? 'fa-check' : 'fa-copy'}`}></i>
+                          <span>{copiedEditUrl ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div style={{ background: '#000000', display: 'flex', justifyContent: 'center', position: 'relative' }}>
