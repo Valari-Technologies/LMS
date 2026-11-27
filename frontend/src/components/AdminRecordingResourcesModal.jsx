@@ -47,8 +47,6 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
   useEffect(() => {
     if (session) {
       parseSessionRecordingMetadata(session);
-      // Auto-sync existing local resources to backend database
-      syncSessionRecordingDataToBackend(session, recId);
     }
     reloadResources();
   }, [recId, recording?.subtitleUrl, session?.id]);
@@ -159,7 +157,7 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
       toast.error('System generated subtitle streams cannot be deleted here.');
       return;
     }
-    deleteRecordingResource(recId, r.id);
+    deleteRecordingResource(recId, r.id, session?.id);
     const latest = getRecordingResources(recId, recording?.subtitleUrl, session?.id);
     await syncSessionRecordingDataToBackend(session, recId, latest);
     toast.success(`Removed "${r.name}".`);
@@ -282,7 +280,7 @@ export default function AdminRecordingResourcesModal({ recording, session, onClo
                   <button
                     type="button"
                     onClick={async () => {
-                      clearAllRecordingResources(recId);
+                      clearAllRecordingResources(recId, session?.id);
                       await syncSessionRecordingDataToBackend(session, recId, []);
                       toast.success('All attached resources removed.');
                       reloadResources();

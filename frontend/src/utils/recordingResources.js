@@ -52,11 +52,10 @@ export function parseSessionRecordingMetadata(session) {
 
       Object.entries(data.recordings).forEach(([recId, recData]) => {
         if (Array.isArray(recData.resources)) {
-          // If remote has resources, merge/sync them so students always see them
+          // If remote has resources, merge/sync them per recording
           const cleanRes = recData.resources.filter(r => !isLegacySampleResource(r));
           resMap[String(recId)] = cleanRes;
           if (session.id) {
-            resMap[`sess_${session.id}`] = cleanRes;
             resMap[`sess_${session.id}_${recId}`] = cleanRes;
           }
         }
@@ -67,7 +66,6 @@ export function parseSessionRecordingMetadata(session) {
           };
           ovMap[String(recId)] = ovObj;
           if (session.id) {
-            ovMap[`sess_${session.id}`] = ovObj;
             ovMap[`sess_${session.id}_${recId}`] = ovObj;
           }
         }
@@ -118,28 +116,15 @@ export async function syncSessionRecordingDataToBackend(session, recordingId, up
     if (updatedResources !== null) {
       resourcesToSave = updatedResources.filter(r => !isLegacySampleResource(r));
     } else {
-      if (Array.isArray(resMap[recKey]) && resMap[recKey].length > 0) {
+      if (Array.isArray(resMap[recKey])) {
         resourcesToSave = resMap[recKey].filter(r => !isLegacySampleResource(r));
-      } else if (Array.isArray(resMap[`sess_${session.id}`]) && resMap[`sess_${session.id}`].length > 0) {
-        resourcesToSave = resMap[`sess_${session.id}`].filter(r => !isLegacySampleResource(r));
-      } else if (Array.isArray(resMap[String(session.id)])) {
-        resourcesToSave = resMap[String(session.id)].filter(r => !isLegacySampleResource(r));
+      } else if (Array.isArray(resMap[`sess_${session.id}_${recKey}`])) {
+        resourcesToSave = resMap[`sess_${session.id}_${recKey}`].filter(r => !isLegacySampleResource(r));
       }
     }
 
     if (resourcesToSave !== null) {
       currentData.recordings[recKey].resources = resourcesToSave;
-      currentData.recordings[`sess_${session.id}`] = {
-        ...(currentData.recordings[`sess_${session.id}`] || {}),
-        resources: resourcesToSave
-      };
-      // Also alias to recording 1 if this is the first recording
-      if (session.recordings && session.recordings[0] && String(session.recordings[0].id) === recKey) {
-        currentData.recordings['1'] = {
-          ...(currentData.recordings['1'] || {}),
-          resources: resourcesToSave
-        };
-      }
     }
 
     // Determine overview & title to save
@@ -323,16 +308,13 @@ export function getRecordingResources(recordingId, subtitleUrl = null, fallbackS
     const raw = localStorage.getItem(RESOURCES_KEY);
     if (raw) {
       const map = JSON.parse(raw);
-      if (recordingId && Array.isArray(map[String(recordingId)]) && map[String(recordingId)].length > 0) {
+      if (recordingId && Array.isArray(map[String(recordingId)])) {
         list = [...map[String(recordingId)]];
-      } else if (fallbackSessionId && Array.isArray(map[`sess_${fallbackSessionId}`]) && map[`sess_${fallbackSessionId}`].length > 0) {
-        list = [...map[`sess_${fallbackSessionId}`]];
-      } else if (fallbackSessionId && recordingId && Array.isArray(map[`sess_${fallbackSessionId}_${recordingId}`]) && map[`sess_${fallbackSessionId}_${recordingId}`].length > 0) {
+      } else if (fallbackSessionId && recordingId && Array.isArray(map[`sess_${fallbackSessionId}_${recordingId}`])) {
         list = [...map[`sess_${fallbackSessionId}_${recordingId}`]];
-      } else if (fallbackSessionId && Array.isArray(map[String(fallbackSessionId)]) && map[String(fallbackSessionId)].length > 0) {
-        list = [...map[String(fallbackSessionId)]];
-      } else if (Array.isArray(map['1']) && map['1'].length > 0) {
-        list = [...map['1']];
+      } else if (!recordingId && fallbackSessionId && Array.isArray(map[`sess_${fallbackSessionId}`])) {
+        // Only fallback to session-level if no specific recordingId was provided
+        list = [...map[`sess_${fallbackSessionId}`]];
       }
     }
   } catch (e) {
@@ -406,7 +388,7 @@ export function addRecordingResource(recordingId, resource) {
 /**
  * Remove an attached resource from a recording.
  */
-export function deleteRecordingResource(recordingId, resourceId) {
+export function deleteRecordingResource(recordingId, resourceId, fallbackSessionId = null) {
   if (!recordingId || !resourceId) return false;
   try {
     const raw = localStorage.getItem(RESOURCES_KEY);
@@ -416,6 +398,9 @@ export function deleteRecordingResource(recordingId, resourceId) {
     // Filter out the requested resource AND any legacy sample resources
     const filtered = list.filter(r => String(r.id) !== String(resourceId) && !isLegacySampleResource(r));
     map[String(recordingId)] = filtered;
+    if (fallbackSessionId) {
+      map[`sess_${fallbackSessionId}_${recordingId}`] = filtered;
+    }
     localStorage.setItem(RESOURCES_KEY, JSON.stringify(map));
 
     if (typeof window !== 'undefined') {
@@ -432,12 +417,20 @@ export function deleteRecordingResource(recordingId, resourceId) {
 /**
  * Clear all attached resources for a recording.
  */
-export function clearAllRecordingResources(recordingId) {
-  if (!recordingId) return false;
+export function clearAllRecordingResources(recordingId, fallbackSessionId = null) {
+  if (!recordingId && !fallbackSessionId) return false;
   try {
     const raw = localStorage.getItem(RESOURCES_KEY);
     const map = raw ? JSON.parse(raw) : {};
-    map[String(recordingId)] = [];
+    if (recordingId) {
+      map[String(recordingId)] = [];
+      if (fallbackSessionId) {
+        map[`sess_${fallbackSessionId}_${recordingId}`] = [];
+      }
+    }
+    if (!recordingId && fallbackSessionId) {
+      map[`sess_${fallbackSessionId}`] = [];
+    }
     localStorage.setItem(RESOURCES_KEY, JSON.stringify(map));
 
     if (typeof window !== 'undefined') {

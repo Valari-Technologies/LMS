@@ -905,7 +905,9 @@ export default function AdminLiveSessionsPage() {
       }
 
       // Sync recording overview, title, and resources to backend database so students instantly receive them
-      const currentList = getRecordingResources(targetRecId, null, showRecordingModal.id);
+      const currentList = newRecordingResources.length > 0
+        ? getRecordingResources(targetRecId, null, null)
+        : [];
       await syncSessionRecordingDataToBackend(
         showRecordingModal,
         targetRecId,
