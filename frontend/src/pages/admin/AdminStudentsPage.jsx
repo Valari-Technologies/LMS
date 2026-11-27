@@ -49,6 +49,17 @@ export default function AdminStudentsPage() {
   const [profileTab, setProfileTab] = useState('overview'); // 'overview' | 'courses' | 'tests' | 'attendance' | 'activity'
   const [expandedCourseId, setExpandedCourseId] = useState(null);
   const [testFilter, setTestFilter] = useState('ALL'); // 'ALL' | 'PASSED' | 'FAILED'
+  const [previewImage, setPreviewImage] = useState(null); // { url, title, email }
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        if (previewImage) setPreviewImage(null);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewImage]);
 
   useEffect(() => {
     loadStudents(true);
@@ -211,7 +222,26 @@ export default function AdminStudentsPage() {
                     <tr key={s.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div className="avatar-circle" style={{ width: '36px', height: '36px', fontSize: '0.85rem' }}>
+                          <div
+                            className="avatar-circle"
+                            title={s.profileImage ? "Click to view full photo" : undefined}
+                            onClick={() => {
+                              if (s.profileImage) {
+                                setPreviewImage({
+                                  url: s.profileImage,
+                                  title: s.name,
+                                  email: s.email
+                                });
+                              }
+                            }}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              fontSize: '0.85rem',
+                              cursor: s.profileImage ? 'pointer' : 'default',
+                              position: 'relative'
+                            }}
+                          >
                             {s.profileImage ? (
                               <img src={s.profileImage} alt={s.name} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             ) : (
@@ -426,18 +456,62 @@ export default function AdminStudentsPage() {
                   flexWrap: 'wrap'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div className="avatar-circle" style={{
-                      width: '52px',
-                      height: '52px',
-                      fontSize: '1.25rem',
-                      fontWeight: 800,
-                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                      color: '#ffffff',
-                      boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
-                      flexShrink: 0
-                    }}>
+                    <div
+                      className="avatar-circle"
+                      title={selectedStudent.profileImage ? "Click to view full size photo" : undefined}
+                      onClick={() => {
+                        if (selectedStudent.profileImage) {
+                          setPreviewImage({
+                            url: selectedStudent.profileImage,
+                            title: selectedStudent.name,
+                            email: selectedStudent.email
+                          });
+                        }
+                      }}
+                      style={{
+                        width: '54px',
+                        height: '54px',
+                        fontSize: '1.25rem',
+                        fontWeight: 800,
+                        background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                        color: '#ffffff',
+                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+                        flexShrink: 0,
+                        cursor: selectedStudent.profileImage ? 'pointer' : 'default',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                      }}
+                    >
                       {selectedStudent.profileImage ? (
-                        <img src={selectedStudent.profileImage} alt={selectedStudent.name} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <>
+                          <img
+                            src={selectedStudent.profileImage}
+                            alt={selectedStudent.name}
+                            referrerPolicy="no-referrer"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              borderRadius: '50%',
+                              background: 'rgba(15, 23, 42, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: 0,
+                              transition: 'opacity 0.15s ease',
+                              color: '#ffffff',
+                              fontSize: '0.88rem'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
+                          >
+                            <i className="fa-solid fa-magnifying-glass-plus"></i>
+                          </div>
+                        </>
                       ) : (
                         selectedStudent.name ? selectedStudent.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'S'
                       )}
@@ -1392,6 +1466,127 @@ export default function AdminStudentsPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Size Profile Image Lightbox Modal */}
+      {previewImage && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.88)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 4000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '560px',
+              width: '100%',
+              background: 'var(--bg-card, #1e293b)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(0, 0, 0, 0.25)'
+            }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#ffffff' }}>
+                  {previewImage.title}
+                </div>
+                {previewImage.email && (
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                    {previewImage.email}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <a
+                  href={previewImage.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  title="Open original image in new tab"
+                  style={{
+                    padding: '5px 10px',
+                    fontSize: '0.78rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff'
+                  }}
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                  <span>Original</span>
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setPreviewImage(null)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    fontSize: '0.9rem'
+                  }}
+                  title="Close (Esc)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Image Container */}
+            <div style={{
+              padding: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(0, 0, 0, 0.35)',
+              minHeight: '280px'
+            }}>
+              <img
+                src={previewImage.url}
+                alt={previewImage.title}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '65vh',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
+                }}
+              />
             </div>
           </div>
         </div>
