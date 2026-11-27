@@ -421,7 +421,16 @@ export default function StudentCourseDashboardPage() {
   });
 
   const liveActiveSessions = courseSessions.filter(s => getLiveEffectiveStatus(s) === 'live');
-  const recordingSessions = courseSessions.filter(s => (s.recordings && s.recordings.length > 0) || s.recordingUrl);
+  const recordingSessions = courseSessions
+    .map(s => {
+      const publishedRecs = (s.recordings || []).filter(r => !r.status || r.status.toUpperCase() === 'PUBLISHED');
+      return {
+        ...s,
+        recordings: publishedRecs,
+        hasUnpublishedRecordings: (s.recordings || []).some(r => r.status && r.status.toUpperCase() !== 'PUBLISHED')
+      };
+    })
+    .filter(s => (s.recordings && s.recordings.length > 0) || (s.recordingUrl && !s.hasUnpublishedRecordings));
 
   // Filtered and sorted recordings for the Recordings tab
   const displayedRecordings = recordingSessions

@@ -85,6 +85,26 @@ public class AdminLiveSessionController {
         return ApiResponse.ok("Recording deleted successfully", null);
     }
 
+    @PatchMapping("/{sessionId}/recordings/{recordingId}/verify-publish")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<SessionRecordingResponse> verifyAndPublishRecording(
+            @PathVariable Long sessionId,
+            @PathVariable Long recordingId,
+            @AuthenticationPrincipal User actor) {
+        return ApiResponse.ok("Recording verified and published live to students successfully",
+                liveSessionService.verifyAndPublishRecording(sessionId, recordingId, actor));
+    }
+
+    @DeleteMapping("/{sessionId}/recordings/{recordingId}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<Void> rejectRecording(
+            @PathVariable Long sessionId,
+            @PathVariable Long recordingId,
+            @AuthenticationPrincipal User actor) {
+        liveSessionService.rejectRecording(sessionId, recordingId, actor);
+        return ApiResponse.ok("Recording rejected and removed successfully", null);
+    }
+
     @PostMapping("/{sessionId}/recordings/{recordingId}/generate-subtitles")
     public ApiResponse<SessionRecordingResponse> generateSubtitles(@PathVariable Long sessionId,
                                                                    @PathVariable Long recordingId,

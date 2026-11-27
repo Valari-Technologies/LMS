@@ -9,6 +9,8 @@ import {
   attachRecording,
   updateRecording,
   deleteRecording,
+  verifyAndPublishRecording,
+  rejectRecording,
   generateRecordingSubtitles,
   getRecordingRatings,
   togglePublishRecordingRating,
@@ -31,6 +33,7 @@ import {
 import { useNotification, confirmDialog } from '../../context/NotificationContext';
 import { subscribeSyncEvents, SYNC_EVENTS } from '../../utils/syncEvents';
 import { usePermission } from '../../hooks/usePermission';
+import { useAuth } from '../../auth/AuthContext';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import AdminRecordingResourcesModal from '../../components/AdminRecordingResourcesModal';
@@ -127,6 +130,9 @@ function isSessionToday(session) {
 export default function AdminLiveSessionsPage() {
   const { isReadOnly } = usePermission();
   const { toast, confirm } = useNotification();
+  const { user } = useAuth();
+  const isContentCreator = (user?.role || '').toLowerCase() === 'content_creator';
+  const isAdminOrSuperAdmin = (user?.role || '').toLowerCase() === 'admin' || (user?.role || '').toLowerCase() === 'super_admin';
   const [searchParams] = useSearchParams();
   const [sessions, setSessions] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -912,15 +918,78 @@ export default function AdminLiveSessionsPage() {
       setRecordingForm({ title: '', overview: '', url: '', duration: '', mediaAssetId: null });
       setNewRecordingResources([]);
       setSelectedMediaAsset(null);
-      toast.success(newRecordingResources.length > 0
-        ? `Recording, overview, and ${newRecordingResources.length} resource(s) saved successfully!`
-        : 'Recording attached and overview saved successfully!'
-      );
+      if (isContentCreator) {
+        toast.success('Recording submitted for Admin Verification! It will go live once verified & published by an administrator.');
+      } else {
+        toast.success(newRecordingResources.length > 0
+          ? `Recording, overview, and ${newRecordingResources.length} resource(s) saved & published live!`
+          : 'Recording attached and published live successfully!'
+        );
+      }
       loadSessions();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to attach recording');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleVerifyAndPublishRecording(session, recordingId) {
+    if (isReadOnly) return;
+    try {
+      await verifyAndPublishRecording(session.id, recordingId);
+      toast.success('Recording verified & published live! Content creator has been notified.');
+      setSessions(prev => prev.map(s => {
+        if (s.id !== session.id) return s;
+        return {
+          ...s,
+          recordings: (s.recordings || []).map(r => r.id === recordingId ? { ...r, status: 'PUBLISHED' } : r)
+        };
+      }));
+      setManageRecordingsModal(prev => {
+        if (!prev || prev.id !== session.id) return prev;
+        return {
+          ...prev,
+          recordings: (prev.recordings || []).map(r => r.id === recordingId ? { ...r, status: 'PUBLISHED' } : r)
+        };
+      });
+      loadSessions(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to verify and publish recording');
+    }
+  }
+
+  async function handleRejectRecording(session, recordingId) {
+    if (isReadOnly) return;
+    const ok = await confirm({
+      title: 'Reject Recording?',
+      message: 'Are you sure you want to reject this recording? It will be removed and the content creator will receive a notification.',
+      confirmText: 'Reject & Remove',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (!ok) return;
+
+    try {
+      await rejectRecording(session.id, recordingId);
+      toast.success('Recording rejected and removed. Content creator has been notified.');
+      setSessions(prev => prev.map(s => {
+        if (s.id !== session.id) return s;
+        return {
+          ...s,
+          recordings: (s.recordings || []).filter(r => r.id !== recordingId)
+        };
+      }));
+      setManageRecordingsModal(prev => {
+        if (!prev || prev.id !== session.id) return prev;
+        return {
+          ...prev,
+          recordings: (prev.recordings || []).filter(r => r.id !== recordingId)
+        };
+      });
+      loadSessions(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reject recording');
     }
   }
 
@@ -1394,6 +1463,28 @@ export default function AdminLiveSessionsPage() {
                               }
                               return null;
                             })()}
+                            {/* Pending verification badge for content creator uploads */}
+                            {s.recordings && s.recordings.some(r => r.status === 'PENDING_APPROVAL') && (
+                              <span
+                                onClick={() => setManageRecordingsModal(s)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  color: '#b45309',
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Recording uploaded by Content Creator awaits Admin Verification & Publishing"
+                              >
+                                <i className="fa-solid fa-clock-rotate-left"></i> Needs Verification
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <button
@@ -2439,6 +2530,26 @@ export default function AdminLiveSessionsPage() {
               </div>
             )}
 
+            {isContentCreator && (
+              <div style={{
+                padding: '10px 14px',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '10px',
+                fontSize: '0.82rem',
+                color: '#1e40af',
+                marginTop: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <i className="fa-solid fa-circle-info" style={{ fontSize: '1.05rem', color: '#3b82f6' }}></i>
+                <div>
+                  <strong>Content Creator Notice:</strong> Your uploaded recording will be submitted for Admin Verification. Once an administrator reviews and clicks <strong>Verify & Publish</strong>, it will become live for enrolled students.
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '24px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2477,8 +2588,11 @@ export default function AdminLiveSessionsPage() {
                   className="btn btn-primary"
                   disabled={submitting || !recordingForm.url || uploadingVideo}
                   onClick={handleAttachRecording}
+                  style={isContentCreator ? { background: '#5A70D3', borderColor: '#5A70D3' } : undefined}
                 >
-                  {submitting ? 'Saving…' : 'Save Recording'}
+                  {isContentCreator
+                    ? (submitting ? 'Submitting for Verification…' : 'Submit for Verification')
+                    : (submitting ? 'Saving…' : 'Save & Publish Live')}
                 </button>
               </div>
             </div>
@@ -2684,6 +2798,45 @@ export default function AdminLiveSessionsPage() {
                     {/* Info row */}
                     <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid var(--border-subtle, #f1f5f9)' }}>
                       <div>
+                        {/* Verification & Publication Status Badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                          {r.status === 'PENDING_APPROVAL' ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              border: '1px solid #fde68a',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.73rem',
+                              fontWeight: 800
+                            }}>
+                              <i className="fa-solid fa-clock-rotate-left"></i> Awaiting Admin Verification
+                            </span>
+                          ) : (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              background: '#dcfce7',
+                              color: '#166534',
+                              border: '1px solid #bbf7d0',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.73rem',
+                              fontWeight: 800
+                            }}>
+                              <i className="fa-solid fa-circle-check"></i> Published Live to Students
+                            </span>
+                          )}
+                          {r.uploadedByName && (
+                            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              Uploaded by: <strong>{r.uploadedByName}</strong>
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
                           {getRecordingCustomTitle(r.id, `Recording ${idx + 1}`)} {manageRecordingsModal.recordings.length > 1 ? `(Part ${idx + 1})` : ''}
                         </div>
@@ -2737,7 +2890,57 @@ export default function AdminLiveSessionsPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {/* Verify & Publish / Reject Actions for Admins */}
+                        {r.status === 'PENDING_APPROVAL' && !isContentCreator && !isReadOnly && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={{
+                                background: '#16a34a',
+                                color: '#ffffff',
+                                border: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.78rem',
+                                padding: '5px 12px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => handleVerifyAndPublishRecording(manageRecordingsModal, r.id)}
+                              title="Verify video recording and publish live to enrolled students"
+                            >
+                              <i className="fa-solid fa-circle-check"></i>
+                              <span>Verify & Publish Live</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={{
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                border: '1px solid #fca5a5',
+                                fontWeight: 700,
+                                fontSize: '0.78rem',
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => handleRejectRecording(manageRecordingsModal, r.id)}
+                              title="Reject this video recording and notify content creator"
+                            >
+                              <i className="fa-solid fa-xmark"></i>
+                              <span>Reject</span>
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
@@ -2791,6 +2994,25 @@ export default function AdminLiveSessionsPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Content Creator Pending Review Notice Banner */}
+                    {r.status === 'PENDING_APPROVAL' && isContentCreator && (
+                      <div style={{
+                        padding: '10px 16px',
+                        background: '#fffbeb',
+                        borderBottom: '1px solid #fde68a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        fontSize: '0.8rem',
+                        color: '#92400e'
+                      }}>
+                        <i className="fa-solid fa-shield-halved" style={{ fontSize: '1.1rem', color: '#f59e0b' }}></i>
+                        <div>
+                          <strong>Awaiting Administrator Verification:</strong> Your uploaded video recording has been submitted. Once an administrator verifies and clicks <strong>Verify & Publish Live</strong>, this recording will reach enrolled students on their course learning dashboard.
+                        </div>
+                      </div>
+                    )}
 
                     {/* Prominent Recording Overview Banner Card */}
                     <div style={{

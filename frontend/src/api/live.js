@@ -105,6 +105,18 @@ export async function deleteRecording(sessionId, recordingId) {
   return res.data.data;
 }
 
+export async function verifyAndPublishRecording(sessionId, recordingId) {
+  const res = await api.patch(`/admin/live-sessions/${sessionId}/recordings/${recordingId}/verify-publish`);
+  emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+  return res.data.data;
+}
+
+export async function rejectRecording(sessionId, recordingId) {
+  const res = await api.delete(`/admin/live-sessions/${sessionId}/recordings/${recordingId}/reject`);
+  emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);
+  return res.data.data;
+}
+
 export async function generateRecordingSubtitles(sessionId, recordingId) {
   const res = await api.post(`/admin/live-sessions/${sessionId}/recordings/${recordingId}/generate-subtitles`);
   emitSyncEvent(SYNC_EVENTS.LIVE_SESSIONS_CHANGED);

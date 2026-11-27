@@ -18,6 +18,10 @@ public record SessionRecordingResponse(
         Integer totalRatings,
         Integer userRating,
         String userComment,
+        String status,
+        Long uploadedById,
+        String uploadedByName,
+        String uploadedByRole,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -49,6 +53,10 @@ public record SessionRecordingResponse(
                 totalRatings != null ? totalRatings : 0,
                 userRating,
                 userComment,
+                r.getStatus() != null ? r.getStatus() : "PUBLISHED",
+                r.getUploadedBy() != null ? r.getUploadedBy().getId() : null,
+                r.getUploadedBy() != null ? r.getUploadedBy().getName() : null,
+                r.getUploadedBy() != null && r.getUploadedBy().getRole() != null ? r.getUploadedBy().getRole().name() : null,
                 r.getCreatedAt(),
                 r.getUpdatedAt()
         );

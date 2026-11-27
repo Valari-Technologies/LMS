@@ -1,6 +1,7 @@
 package com.onetutor.live.entity;
 
 import com.onetutor.media.entity.MediaAsset;
+import com.onetutor.users.entity.User;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -21,10 +22,17 @@ public class SessionRecording {
     @JoinColumn(name = "media_asset_id")
     private MediaAsset mediaAsset;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by_id")
+    private User uploadedBy;
+
     @Column(nullable = false, length = 500)
     private String url;
 
     private Integer duration;
+
+    @Column(name = "status", nullable = false, length = 30)
+    private String status = "PUBLISHED";
 
     @Column(name = "subtitle_url", length = 1000)
     private String subtitleUrl;
@@ -60,6 +68,10 @@ public class SessionRecording {
     public void setSession(LiveSession session) { this.session = session; }
     public MediaAsset getMediaAsset() { return mediaAsset; }
     public void setMediaAsset(MediaAsset mediaAsset) { this.mediaAsset = mediaAsset; }
+    public User getUploadedBy() { return uploadedBy; }
+    public void setUploadedBy(User uploadedBy) { this.uploadedBy = uploadedBy; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     public String getUrl() { return url; }
     public void setUrl(String url) { this.url = url; }
     public Integer getDuration() { return duration; }

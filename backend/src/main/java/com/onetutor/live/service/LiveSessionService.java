@@ -284,6 +284,13 @@ public class LiveSessionService {
 
         SessionRecording recording = new SessionRecording();
         recording.setSession(session);
+        recording.setUploadedBy(actor);
+        boolean isCreator = actor != null && actor.getRole() == UserRole.content_creator;
+        if (isCreator) {
+            recording.setStatus("PENDING_APPROVAL");
+        } else {
+            recording.setStatus("PUBLISHED");
+        }
 
         String effectiveUrl = req.url() != null ? req.url().trim() : null;
         if (req.mediaAssetId() != null) {
@@ -308,6 +315,20 @@ public class LiveSessionService {
         if (session.getStatus() == LiveSessionStatus.live || session.getStatus() == LiveSessionStatus.upcoming) {
             session.setStatus(LiveSessionStatus.completed);
             liveSessionRepository.save(session);
+        }
+
+        // If uploaded by content creator, notify all administrators that a recording awaits verification
+        if (isCreator) {
+            try {
+                List<User> admins = userRepository.findByRoleIn(List.of(UserRole.admin, UserRole.super_admin));
+                String creatorName = actor.getName() != null ? actor.getName() : "Content Creator";
+                String courseName = session.getCourse() != null ? session.getCourse().getName() : "Course";
+                String title = "New Recording Pending Verification";
+                String msg = creatorName + " uploaded a video recording for session '" + session.getTitle() + "' in '" + courseName + "'. Please review and publish.";
+                notificationService.notifyUsers(admins, title, msg, com.onetutor.notifications.entity.NotificationType.LIVE_CLASS, null, "/admin/live-sessions");
+            } catch (Exception ex) {
+                log.warn("[LiveSessionService] Failed to notify admins of pending recording: {}", ex.getMessage());
+            }
         }
 
         // Automatically trigger English subtitle generation for this recording
@@ -357,7 +378,26 @@ public class LiveSessionService {
             recording.setDuration(req.duration());
         }
 
+        boolean isCreatorUpdate = actor != null && actor.getRole() == UserRole.content_creator;
+        if (isCreatorUpdate) {
+            recording.setStatus("PENDING_APPROVAL");
+            recording.setUploadedBy(actor);
+        }
+
         sessionRecordingRepository.save(recording);
+
+        if (isCreatorUpdate) {
+            try {
+                List<User> admins = userRepository.findByRoleIn(List.of(UserRole.admin, UserRole.super_admin));
+                String creatorName = actor.getName() != null ? actor.getName() : "Content Creator";
+                String courseName = session.getCourse() != null ? session.getCourse().getName() : "Course";
+                String title = "Recording Update Pending Verification";
+                String msg = creatorName + " updated a recording for session '" + session.getTitle() + "' in '" + courseName + "'. Please review and publish.";
+                notificationService.notifyUsers(admins, title, msg, com.onetutor.notifications.entity.NotificationType.LIVE_CLASS, null, "/admin/live-sessions");
+            } catch (Exception ex) {
+                log.warn("[LiveSessionService] Failed to notify admins of updated recording: {}", ex.getMessage());
+            }
+        }
 
         if (urlChanged) {
             try {
@@ -458,7 +498,7 @@ public class LiveSessionService {
             } catch (IllegalArgumentException ignored) {}
         }
         Page<LiveSession> page = liveSessionRepository.filterSessions(courseId, batchId, status, pageable);
-        return PageResponse.from(page.map(s -> toSessionResponseWithRatings(s, meetingProvider.getJoinUrl(s.getMeetingUrl()), true, null)));
+        return PageResponse.from(page.map(s -> toSessionResponseWithRatings(s, meetingProvider.getJoinUrl(s.getMeetingUrl()), true, null, true)));
     }
 
     @Transactional
@@ -516,9 +556,16 @@ public class LiveSessionService {
     }
 
     public LiveSessionResponse toSessionResponseWithRatings(LiveSession s, String joinUrl, Boolean enrolled, User student) {
+        return toSessionResponseWithRatings(s, joinUrl, enrolled, student, false);
+    }
+
+    public LiveSessionResponse toSessionResponseWithRatings(LiveSession s, String joinUrl, Boolean enrolled, User student, boolean includeAllRecordings) {
         List<SessionRecordingResponse> recordingsWithRatings = List.of();
         if (s.getRecordings() != null && !s.getRecordings().isEmpty()) {
-            recordingsWithRatings = s.getRecordings().stream().map(r -> {
+            boolean isStaff = includeAllRecordings || (student != null && (student.getRole() == UserRole.admin || student.getRole() == UserRole.super_admin || student.getRole() == UserRole.content_creator || student.getRole() == UserRole.readonly_admin));
+            recordingsWithRatings = s.getRecordings().stream()
+                    .filter(r -> isStaff || r.getStatus() == null || "PUBLISHED".equalsIgnoreCase(r.getStatus()))
+                    .map(r -> {
                 Double avg = null;
                 long count = 0;
                 Integer userRating = null;
@@ -1062,6 +1109,64 @@ public class LiveSessionService {
                 att.setJoinTime(Instant.now());
             }
             liveSessionAttendanceRepository.save(att);
+        }
+    }
+
+    @Transactional
+    public SessionRecordingResponse verifyAndPublishRecording(Long sessionId, Long recordingId, User actor) {
+        SessionRecording recording = sessionRecordingRepository.findById(recordingId)
+                .orElseThrow(() -> new NotFoundException("RECORDING_NOT_FOUND", "Recording not found with ID: " + recordingId));
+        if (sessionId != null && !recording.getSession().getId().equals(sessionId)) {
+            throw new BadRequestException("INVALID_RECORDING", "Recording does not belong to this session");
+        }
+        recording.setStatus("PUBLISHED");
+        sessionRecordingRepository.save(recording);
+
+        auditService.log(actor, "PUBLISH_RECORDING", "SessionRecording", recording.getId(),
+                "Verified and published recording #" + recordingId + " for session '" + recording.getSession().getTitle() + "'");
+
+        // Notify Content Creator who uploaded it
+        if (recording.getUploadedBy() != null) {
+            try {
+                String sessionTitle = recording.getSession().getTitle();
+                String courseName = recording.getSession().getCourse() != null ? recording.getSession().getCourse().getName() : "Course";
+                String title = "Recording Verified & Published Live";
+                String msg = "Your uploaded video recording for session '" + sessionTitle + "' (" + courseName + ") has been verified and published live to students.";
+                notificationService.notify(recording.getUploadedBy(), title, msg, com.onetutor.notifications.entity.NotificationType.LIVE_CLASS, null, "/admin/live-sessions");
+            } catch (Exception ex) {
+                log.warn("[LiveSessionService] Failed to notify creator of published recording: {}", ex.getMessage());
+            }
+        }
+
+        return SessionRecordingResponse.from(recording);
+    }
+
+    @Transactional
+    public void rejectRecording(Long sessionId, Long recordingId, User actor) {
+        SessionRecording recording = sessionRecordingRepository.findById(recordingId)
+                .orElseThrow(() -> new NotFoundException("RECORDING_NOT_FOUND", "Recording not found with ID: " + recordingId));
+        if (sessionId != null && !recording.getSession().getId().equals(sessionId)) {
+            throw new BadRequestException("INVALID_RECORDING", "Recording does not belong to this session");
+        }
+        LiveSession session = recording.getSession();
+        User creator = recording.getUploadedBy();
+
+        sessionRecordingRepository.delete(recording);
+
+        auditService.log(actor, "REJECT_RECORDING", "SessionRecording", recordingId,
+                "Rejected and removed recording #" + recordingId + " for session '" + session.getTitle() + "'");
+
+        // Notify Content Creator who uploaded it
+        if (creator != null) {
+            try {
+                String sessionTitle = session.getTitle();
+                String courseName = session.getCourse() != null ? session.getCourse().getName() : "Course";
+                String title = "Recording Rejected";
+                String msg = "Your uploaded video recording for session '" + sessionTitle + "' in course '" + courseName + "' was reviewed and rejected by the administrator.";
+                notificationService.notify(creator, title, msg, com.onetutor.notifications.entity.NotificationType.LIVE_CLASS, null, "/admin/live-sessions");
+            } catch (Exception ex) {
+                log.warn("[LiveSessionService] Failed to notify creator of rejected recording: {}", ex.getMessage());
+            }
         }
     }
 }
