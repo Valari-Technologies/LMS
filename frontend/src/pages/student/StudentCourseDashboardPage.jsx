@@ -51,19 +51,26 @@ function getLiveEffectiveStatus(session) {
   return 'live';
 }
 
-function renderStars(rating, max = 5) {
+function renderStars(rating, max = 5, isFlipped = false) {
   const rounded = Math.round((rating || 0) * 10) / 10;
   const fullStars = Math.floor(rounded);
   const hasHalf = rounded - fullStars >= 0.4;
   const stars = [];
 
   for (let i = 1; i <= max; i++) {
+    const delay = `${(i - 1) * 0.1}s`;
+    const flipClass = isFlipped ? 'ot-star-flip-item is-flipped' : 'ot-star-flip-item';
+    const starStyle = {
+      color: (i <= fullStars || (i === fullStars + 1 && hasHalf)) ? '#eab308' : '#cbd5e1',
+      animationDelay: isFlipped ? delay : undefined
+    };
+
     if (i <= fullStars) {
-      stars.push(<i key={i} className="fa-solid fa-star" style={{ color: '#eab308' }} />);
+      stars.push(<i key={i} className={`fa-solid fa-star ${flipClass}`} style={starStyle} />);
     } else if (i === fullStars + 1 && hasHalf) {
-      stars.push(<i key={i} className="fa-solid fa-star-half-stroke" style={{ color: '#eab308' }} />);
+      stars.push(<i key={i} className={`fa-solid fa-star-half-stroke ${flipClass}`} style={starStyle} />);
     } else {
-      stars.push(<i key={i} className="fa-regular fa-star" style={{ color: '#cbd5e1' }} />);
+      stars.push(<i key={i} className={`fa-regular fa-star ${flipClass}`} style={starStyle} />);
     }
   }
   return stars;
@@ -140,6 +147,43 @@ export default function StudentCourseDashboardPage() {
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [videoPlayerTab, setVideoPlayerTab] = useState('overview'); // 'overview' | 'curriculum' | 'notes' | 'community' | 'resources'
   const [expandedSections, setExpandedSections] = useState({});
+
+  // Rating section observer & star flip animation
+  const ratingSectionRef = useRef(null);
+  const [hasReachedRatings, setHasReachedRatings] = useState(false);
+  const prevRatingRecIdRef = useRef(selectedRecording?.id);
+
+  useEffect(() => {
+    if (prevRatingRecIdRef.current !== selectedRecording?.id) {
+      prevRatingRecIdRef.current = selectedRecording?.id;
+      setHasReachedRatings(false);
+    }
+  }, [selectedRecording?.id]);
+
+  useEffect(() => {
+    if (hasReachedRatings || !ratingSectionRef.current) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setHasReachedRatings(true);
+      return;
+    }
+
+    const node = ratingSectionRef.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry && entry.isIntersecting) {
+          setHasReachedRatings(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [selectedRecording?.id, videoPlayerTab, hasReachedRatings]);
 
   // Recordings tab state (Search & Sort)
   const [recordingSearch, setRecordingSearch] = useState('');
@@ -958,7 +1002,7 @@ export default function StudentCourseDashboardPage() {
                     </div>
 
                     {/* Rating Summary Card inside Overview */}
-                    <div className={`ot-overview-rating-card ${curTotalRatings > 0 ? 'has-ratings' : 'no-ratings'}`}>
+                    <div ref={ratingSectionRef} className={`ot-overview-rating-card ${curTotalRatings > 0 ? 'has-ratings' : 'no-ratings'}`}>
                       {curTotalRatings > 0 && curAvgRating ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                           <div style={{
@@ -980,7 +1024,7 @@ export default function StudentCourseDashboardPage() {
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', marginBottom: '4px' }}>
-                              {renderStars(curAvgRating || 0)}
+                              {renderStars(curAvgRating || 0, 5, hasReachedRatings)}
                               <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#b45309', marginLeft: '6px' }}>
                                 {curAvgRating.toFixed(1)} / 5
                               </span>
@@ -1025,7 +1069,7 @@ export default function StudentCourseDashboardPage() {
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', marginBottom: '4px' }}>
-                              {renderStars(0)}
+                              {renderStars(0, 5, hasReachedRatings)}
                               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#94a3b8', marginLeft: '6px' }}>
                                 Unrated
                               </span>

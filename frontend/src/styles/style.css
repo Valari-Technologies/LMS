@@ -9825,6 +9825,40 @@ body:has(.ud-header) .ot-learn-tabs {
   }
 }
 
+/* Star 3D Flip Animation */
+@keyframes otStar3DFlip {
+  0% {
+    transform: perspective(400px) rotateY(0deg) scale(1);
+  }
+  35% {
+    transform: perspective(400px) rotateY(180deg) scale(1.38);
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.65));
+  }
+  70% {
+    transform: perspective(400px) rotateY(360deg) scale(1.1);
+  }
+  100% {
+    transform: perspective(400px) rotateY(360deg) scale(1);
+    filter: none;
+  }
+}
+
+.ot-star-flip-item {
+  display: inline-block;
+  transform-origin: center center;
+  backface-visibility: visible;
+  will-change: transform;
+  transition: transform 0.25s ease;
+}
+
+.ot-star-flip-item.is-flipped {
+  animation: otStar3DFlip 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.ot-star-flip-item:hover {
+  transform: scale(1.22);
+}
+
 .ot-curriculum-panel-header {
   display: flex;
   align-items: center;
