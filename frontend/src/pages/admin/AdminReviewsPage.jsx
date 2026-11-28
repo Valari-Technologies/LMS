@@ -635,7 +635,7 @@ export default function AdminReviewsPage() {
             <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}></i>
             <input
               type="text"
-              placeholder={reviewType === 'courses' ? "Search student ID, name, or comment…" : "Search student, recording, or comment…"}
+              placeholder={reviewType === 'courses' ? "Search student name, course, or comment…" : "Search student, recording, or comment…"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
@@ -731,7 +731,7 @@ export default function AdminReviewsPage() {
           <span>Showing <strong>{reviews.length}</strong> of <strong>{totalElements}</strong> {reviewType === 'courses' ? 'course' : 'recording'} reviews</span>
           {courseFilter && (
             <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
-              Filtered by: {courses.find(c => String(c.id) === String(courseFilter))?.name || `Course #${courseFilter}`}
+              Filtered by: {courses.find(c => String(c.id) === String(courseFilter))?.name || 'Selected Course'}
             </span>
           )}
         </div>
@@ -761,7 +761,7 @@ export default function AdminReviewsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  <th style={{ padding: '12px 14px' }}>Student ID &amp; Name</th>
+                  <th style={{ padding: '12px 14px' }}>Student Name</th>
                   <th style={{ padding: '12px 14px' }}>{reviewType === 'courses' ? 'Course' : 'Recording & Course'}</th>
                   <th style={{ padding: '12px 14px' }}>Rating</th>
                   <th style={{ padding: '12px 14px', width: '32%' }}>Comment / Feedback</th>
@@ -779,7 +779,7 @@ export default function AdminReviewsPage() {
                       transition: 'background 0.15s ease'
                     }}
                   >
-                    {/* Student Info: ID, Name, Email, Avatar */}
+                    {/* Student Info: Name, Email, Avatar */}
                     <td style={{ padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {rev.studentAvatar ? (
@@ -806,21 +806,8 @@ export default function AdminReviewsPage() {
                           </div>
                         )}
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                              {rev.studentName}
-                            </span>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              fontWeight: '700',
-                              background: 'rgba(99, 102, 241, 0.12)',
-                              color: 'var(--accent-primary)',
-                              padding: '1px 6px',
-                              borderRadius: '4px',
-                              fontFamily: 'monospace'
-                            }}>
-                              ID: #{rev.studentId}
-                            </span>
+                          <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                            {rev.studentName}
                           </div>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                             {rev.studentEmail || 'student@onetutor.local'}
@@ -835,7 +822,7 @@ export default function AdminReviewsPage() {
                         <div>
                           <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <i className="fa-solid fa-film" style={{ color: '#5A70D3', fontSize: '0.85rem' }}></i>
-                            {rev.recordingTitle || `Recording #${rev.recordingId}`}
+                            {rev.recordingTitle || 'Session Recording'}
                           </div>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                             {rev.sessionTitle ? `${rev.sessionTitle} • ` : ''}{rev.courseName}
@@ -859,9 +846,6 @@ export default function AdminReviewsPage() {
                             {rev.courseName}
                             <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
                           </Link>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            Course #{rev.courseId}
-                          </div>
                         </div>
                       )}
                     </td>
@@ -1245,23 +1229,8 @@ export default function AdminReviewsPage() {
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, color: 'var(--text-primary, #0f172a)', fontSize: '0.95rem' }}>
-                        {selectedReview.studentName}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          background: 'rgba(99, 102, 241, 0.12)',
-                          color: '#5A70D3',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          fontFamily: 'monospace'
-                        }}
-                      >
-                        ID: #{selectedReview.studentId}
-                      </span>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary, #0f172a)', fontSize: '0.95rem' }}>
+                      {selectedReview.studentName}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', marginTop: '2px' }}>
                       {selectedReview.studentEmail || 'student@onetutor.local'}
