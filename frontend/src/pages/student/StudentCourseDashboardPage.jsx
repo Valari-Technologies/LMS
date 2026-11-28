@@ -395,18 +395,34 @@ export default function StudentCourseDashboardPage() {
     }, 3500);
 
     try {
-      const [courseRes, myCoursesRes, progressRes, liveRes, attRes] = await Promise.allSettled([
+      const [courseRes, myCoursesRes, progressRes, liveRes, attRes, sectionsRes] = await Promise.allSettled([
         getCourse(courseId),
         myCourses(),
         getCourseProgress(courseId),
         getLiveSessions(),
-        getCourseAttendance(courseId)
+        getCourseAttendance(courseId),
+        listSections(courseId)
       ]);
 
+      let loadedSections = [];
+      if (sectionsRes.status === 'fulfilled' && Array.isArray(sectionsRes.value)) {
+        loadedSections = await Promise.all(
+          sectionsRes.value.map(async (sec) => {
+            try {
+              const contents = await listContents(sec.id);
+              return { ...sec, contents: contents || [] };
+            } catch {
+              return { ...sec, contents: [] };
+            }
+          })
+        );
+      }
+
       if (courseRes.status === 'fulfilled' && courseRes.value) {
-        setCourse(courseRes.value);
+        const fullCourse = { ...courseRes.value, sections: loadedSections };
+        setCourse(fullCourse);
         setLoadError(null);
-        fetchCourseAssessments(courseRes.value);
+        fetchCourseAssessments(fullCourse);
       } else if (courseRes.status === 'rejected') {
         const msg = courseRes.reason?.response?.data?.message || courseRes.reason?.message || 'Course details could not be loaded.';
         console.warn('Course query failed:', courseRes.reason);
@@ -652,19 +668,7 @@ export default function StudentCourseDashboardPage() {
   // Open Lecture Classroom: Opens the course curriculum video lectures (uploaded in Course Videos)
   const handleOpenLectureClassroom = () => {
     setMobileSidebarOpen(false);
-
-    if (loading) return;
-
-    // Check if this course has curriculum video lessons uploaded in course video
-    const hasCurriculumLessons = totalLessons > 0 || (course?.sections && course.sections.some(s => s.contents && s.contents.length > 0));
-
-    if (hasCurriculumLessons) {
-      navigate(`/student/learn/${courseId}`);
-      return;
-    }
-
-    // If no curriculum video lectures uploaded for this course
-    toast.info('No course video lectures have been uploaded for this course yet.');
+    navigate(`/student/learn/${courseId}`);
   };
 
   const handleClosePlayer = () => {

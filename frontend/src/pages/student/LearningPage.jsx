@@ -1214,7 +1214,7 @@ export default function LearningPage() {
         const firstWithContent = (sectionData || []).find((s) => contentMap[s.id]?.length);
         if (firstWithContent && contentMap[firstWithContent.id]?.length > 0) {
           const firstItem = contentMap[firstWithContent.id][0];
-          selectContent(firstItem);
+          selectContent(firstItem, true);
         }
         refreshCourseProgress();
       } catch (err) {
