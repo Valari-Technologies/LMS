@@ -2,6 +2,12 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { browseCourses } from '../api/courses';
 import { listCategories } from '../api/categories';
+import {
+  recordSearch,
+  recordCourseSearch,
+  getTopSearchedCourses,
+  getTopSearchQueries
+} from '../utils/searchAnalytics';
 
 /**
  * Helper component that renders text with exact matched query substring highlighted.
@@ -58,9 +64,31 @@ export default function SearchBox({
   const [categories, setCategories] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [analyticsVersion, setAnalyticsVersion] = useState(0);
 
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+
+  // Sync when search analytics updates across tabs or searches
+  useEffect(() => {
+    const handleAnalyticsUpdate = () => setAnalyticsVersion(v => v + 1);
+    window.addEventListener('onetutor-search-analytics-updated', handleAnalyticsUpdate);
+    window.addEventListener('storage', handleAnalyticsUpdate);
+    return () => {
+      window.removeEventListener('onetutor-search-analytics-updated', handleAnalyticsUpdate);
+      window.removeEventListener('storage', handleAnalyticsUpdate);
+    };
+  }, []);
+
+  // Compute top 4 most searched courses dynamically
+  const topSearchedCourses = useMemo(() => {
+    return getTopSearchedCourses(courses, 4);
+  }, [courses, analyticsVersion]);
+
+  // Compute top popular search queries dynamically
+  const dynamicPopularTopics = useMemo(() => {
+    return getTopSearchQueries(8);
+  }, [analyticsVersion]);
 
   // Preload courses & categories for instant suggestions
   useEffect(() => {
@@ -197,6 +225,11 @@ export default function SearchBox({
   }, [suggestions, query]);
 
   function handleItemClick(item) {
+    if (item.type === 'course') {
+      recordCourseSearch(item.id, item.name);
+    } else if (item.type === 'keyword' || item.type === 'all') {
+      recordSearch(item.text);
+    }
     setShowDropdown(false);
     setActiveIndex(-1);
     setQuery('');
@@ -215,6 +248,8 @@ export default function SearchBox({
     setActiveIndex(-1);
     onClose();
     if (trimmed) {
+      const matchedCourseIds = suggestions.courses.map(c => c.id);
+      recordSearch(trimmed, matchedCourseIds);
       navigate(`/student/courses?search=${encodeURIComponent(trimmed)}`);
     } else {
       navigate('/student/courses');
@@ -309,19 +344,94 @@ export default function SearchBox({
         {/* Suggestions Body */}
         <div className="ud-amazon-suggestions-container">
           {query.trim() === '' ? (
-            /* Popular topics when empty */
-            <div className="ud-trending-box">
-              <div className="ud-suggestions-section-title">
-                <i className="fa-solid fa-fire" style={{ color: '#e67e22', marginRight: '6px' }}></i>
-                POPULAR TOPICS
+            /* Popular courses & topics when empty */
+            <div className="ud-trending-box" style={{ padding: '12px 14px' }}>
+              {topSearchedCourses.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div className="ud-suggestions-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>
+                      <i className="fa-solid fa-fire" style={{ color: '#ef4444', marginRight: '6px' }}></i>
+                      TOP SEARCHED COURSES
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                      Top 4 Learners' Choice
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {topSearchedCourses.map((c, i) => (
+                      <div
+                        key={`m-top-c-${c.id}`}
+                        className="ud-suggestion-course-row"
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          background: 'rgba(248, 250, 252, 0.8)'
+                        }}
+                        onClick={() => {
+                          recordCourseSearch(c.id, c.name);
+                          setQuery('');
+                          onClose();
+                          navigate(`/student/courses/${c.id}`);
+                        }}
+                      >
+                        <div style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '6px',
+                          background: i === 0 ? 'rgba(239, 68, 68, 0.12)' : i === 1 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(90, 112, 211, 0.1)',
+                          color: i === 0 ? '#ef4444' : i === 1 ? '#d97706' : '#5A70D3',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.72rem',
+                          fontWeight: 900,
+                          flexShrink: 0,
+                          marginRight: '8px'
+                        }}>
+                          {i + 1}
+                        </div>
+                        <div className="ud-suggestion-course-thumb" style={{ width: '36px', height: '36px', borderRadius: '6px', flexShrink: 0 }}>
+                          {c.thumbnail ? (
+                            <img src={c.thumbnail} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+                          ) : (
+                            <i className="fa-solid fa-graduation-cap" style={{ fontSize: '1rem', color: 'var(--ud-purple)' }}></i>
+                          )}
+                        </div>
+                        <div className="ud-suggestion-course-meta" style={{ flex: 1, minWidth: 0, marginLeft: '10px' }}>
+                          <div className="ud-suggestion-course-title" style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {c.name}
+                          </div>
+                          <div className="ud-suggestion-course-cat" style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            {c.categoryName || 'General'}
+                            {c.pricingType === 'free' || Number(c.price) === 0 ? (
+                              <span style={{ marginLeft: '8px', color: '#10b981', fontWeight: 700 }}>Free</span>
+                            ) : (
+                              <span style={{ marginLeft: '8px', color: '#5A70D3', fontWeight: 700 }}>From ₹{Number(c.price).toLocaleString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.72rem', color: '#cbd5e1', marginLeft: '6px' }}></i>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="ud-suggestions-section-title" style={{ marginTop: '10px' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ color: '#5A70D3', marginRight: '6px' }}></i>
+                POPULAR SEARCHES
               </div>
               <div className="ud-trending-chips">
-                {DEFAULT_POPULAR_TOPICS.map((topic, i) => (
+                {dynamicPopularTopics.map((topic, i) => (
                   <button
                     key={i}
                     type="button"
                     className="ud-trending-chip"
                     onClick={() => {
+                      recordSearch(topic);
                       setQuery('');
                       onClose();
                       navigate(`/student/courses?search=${encodeURIComponent(topic)}`);
@@ -510,20 +620,99 @@ export default function SearchBox({
         <div className="ud-desktop-suggestions-menu">
           {query.trim() === '' ? (
             <div style={{ padding: '14px 16px' }}>
-              <div className="ud-suggestions-section-title">
-                <i className="fa-solid fa-fire" style={{ color: '#e67e22', marginRight: '6px' }}></i>
+              {/* Top 4 Most Searched Courses dynamically */}
+              {topSearchedCourses.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div className="ud-suggestions-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>
+                      <i className="fa-solid fa-fire" style={{ color: '#ef4444', marginRight: '6px' }}></i>
+                      MOST SEARCHED COURSES
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                      Top 4 Learners' Choice
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {topSearchedCourses.map((c, i) => (
+                      <div
+                        key={`d-top-c-${c.id}`}
+                        className="ud-suggestion-course-row"
+                        style={{
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          recordCourseSearch(c.id, c.name);
+                          setShowDropdown(false);
+                          setQuery('');
+                          onClose();
+                          navigate(`/student/courses/${c.id}`);
+                        }}
+                      >
+                        <div style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '6px',
+                          background: i === 0 ? 'rgba(239, 68, 68, 0.12)' : i === 1 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(90, 112, 211, 0.1)',
+                          color: i === 0 ? '#ef4444' : i === 1 ? '#d97706' : '#5A70D3',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.72rem',
+                          fontWeight: 900,
+                          flexShrink: 0,
+                          marginRight: '8px'
+                        }}>
+                          {i + 1}
+                        </div>
+                        <div className="ud-suggestion-course-thumb" style={{ width: '36px', height: '36px', borderRadius: '6px', flexShrink: 0 }}>
+                          {c.thumbnail ? (
+                            <img src={c.thumbnail} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+                          ) : (
+                            <i className="fa-solid fa-graduation-cap" style={{ fontSize: '1rem', color: 'var(--ud-purple)' }}></i>
+                          )}
+                        </div>
+                        <div className="ud-suggestion-course-meta" style={{ flex: 1, minWidth: 0, marginLeft: '10px' }}>
+                          <div className="ud-suggestion-course-title" style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {c.name}
+                          </div>
+                          <div className="ud-suggestion-course-cat" style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            {c.categoryName || 'General'}
+                            {c.pricingType === 'free' || Number(c.price) === 0 ? (
+                              <span style={{ marginLeft: '8px', color: '#10b981', fontWeight: 700 }}>Free</span>
+                            ) : (
+                              <span style={{ marginLeft: '8px', color: '#5A70D3', fontWeight: 700 }}>From ₹{Number(c.price).toLocaleString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        <i className="fa-solid fa-chevron-right" style={{ fontSize: '0.72rem', color: '#cbd5e1', marginLeft: '6px' }}></i>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="ud-suggestions-section-title" style={{ marginTop: '10px' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ color: '#5A70D3', marginRight: '6px' }}></i>
                 POPULAR SEARCHES
               </div>
               <div className="ud-trending-chips">
-                {DEFAULT_POPULAR_TOPICS.map((topic, i) => (
+                {dynamicPopularTopics.map((topic, i) => (
                   <button
                     key={i}
                     type="button"
                     className="ud-trending-chip"
                     onMouseDown={(e) => {
                       e.preventDefault();
+                      recordSearch(topic);
                       setQuery('');
                       setShowDropdown(false);
+                      onClose();
                       navigate(`/student/courses?search=${encodeURIComponent(topic)}`);
                     }}
                   >

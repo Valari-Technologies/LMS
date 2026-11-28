@@ -11,6 +11,7 @@ import { useNotification } from '../../context/NotificationContext';
 import RecordingVideoPlayer from '../../components/RecordingVideoPlayer';
 import CoursePublishBatchModal from '../../components/CoursePublishBatchModal';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
+import { getAvailablePlanList } from '../../utils/courseSellingPlans';
 
 export default function AdminCoursePreviewPage() {
   const { isReadOnly } = usePermission();
@@ -852,6 +853,109 @@ export default function AdminCoursePreviewPage() {
                         <span>Test Curriculum Player</span>
                       </button>
                     </div>
+
+                    {/* Course Pricing & 3 Selling Plans List */}
+                    {(() => {
+                      const availablePlans = getAvailablePlanList(course);
+                      const isFree = course.pricingType === 'free' || Number(course.price) === 0;
+
+                      return (
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginBottom: '18px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <i className="fa-solid fa-tags" style={{ color: '#5A70D3' }}></i>
+                              <span>Course Pricing &amp; Selling Plans</span>
+                            </div>
+                            {!isFree && availablePlans.length > 0 && (
+                              <span style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                background: 'rgba(90, 112, 211, 0.1)',
+                                color: '#5A70D3',
+                                padding: '2px 8px',
+                                borderRadius: '9999px'
+                              }}>
+                                {availablePlans.length} Selling Plans
+                              </span>
+                            )}
+                          </div>
+
+                          {!isFree && availablePlans.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {availablePlans.map((plan) => (
+                                <div
+                                  key={plan.id}
+                                  style={{
+                                    border: plan.isRecommended ? '2px solid #5A70D3' : '1px solid var(--border-default)',
+                                    background: plan.isRecommended ? 'rgba(90, 112, 211, 0.04)' : 'var(--bg-subtle, #f8fafc)',
+                                    borderRadius: '12px',
+                                    padding: '12px 14px'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                                          {plan.name}
+                                        </span>
+                                        {plan.isRecommended && (
+                                          <span style={{
+                                            fontSize: '0.62rem',
+                                            fontWeight: 800,
+                                            padding: '2px 6px',
+                                            borderRadius: '9999px',
+                                            background: '#5A70D3',
+                                            color: '#ffffff',
+                                            textTransform: 'uppercase'
+                                          }}>
+                                            Best Value
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                        {plan.tag}
+                                      </div>
+                                    </div>
+                                    <div style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                                      {plan.displayPrice}
+                                    </div>
+                                  </div>
+
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 8px 0', lineHeight: 1.4 }}>
+                                    {plan.description}
+                                  </p>
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px dashed var(--border-subtle)', paddingTop: '6px' }}>
+                                    {plan.features.slice(0, 3).map((f, fIdx) => (
+                                      <div key={fIdx} style={{ fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '6px', color: f.included ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+                                        <i className={f.included ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: f.included ? '#10b981' : '#cbd5e1', fontSize: '0.7rem' }}></i>
+                                        <span>{f.text}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{
+                              padding: '12px 14px',
+                              borderRadius: '10px',
+                              background: 'rgba(16, 185, 129, 0.08)',
+                              border: '1px solid rgba(16, 185, 129, 0.25)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fa-solid fa-gift" style={{ color: '#10b981' }}></i>
+                                <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#065f46' }}>Free Access</span>
+                              </div>
+                              <span style={{ fontSize: '0.76rem', color: '#047857', fontWeight: 600 }}>100% Free Enrollment</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Course Form Attributes Summary */}
                     <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>

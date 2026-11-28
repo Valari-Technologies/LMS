@@ -2640,7 +2640,7 @@ export default function CourseDetailsPage() {
                 </div>
 
                 {/* 3 Course Selling Plans / Tiers Selector */}
-                {isPaidCourse && !isEnrolled && isPublished && availablePlans.length > 0 && (
+                {isPaidCourse && availablePlans.length > 0 && (
                   <div style={{ marginBottom: '18px', marginTop: '14px' }}>
                     <div style={{
                       display: 'flex',
@@ -2657,12 +2657,31 @@ export default function CourseDetailsPage() {
                         gap: '6px'
                       }}>
                         <i className="fa-solid fa-layer-group" style={{ color: '#5A70D3' }}></i>
-                        <span>Choose Access Option</span>
+                        <span>{isEnrolled ? 'Course Pricing & Access Tiers' : 'Choose Access Option'}</span>
                       </label>
                       <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
                         {availablePlans.length} plans available
                       </span>
                     </div>
+
+                    {isEnrolled && (
+                      <div style={{
+                        padding: '8px 12px',
+                        background: 'rgba(16, 185, 129, 0.08)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        borderRadius: '8px',
+                        color: '#065f46',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '10px'
+                      }}>
+                        <i className="fa-solid fa-circle-check" style={{ color: '#10b981' }}></i>
+                        <span>You are enrolled in this course. Showing all available pricing tiers:</span>
+                      </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {availablePlans.map((plan) => {
