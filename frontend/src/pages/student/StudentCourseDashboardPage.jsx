@@ -958,57 +958,109 @@ export default function StudentCourseDashboardPage() {
                     </div>
 
                     {/* Rating Summary Card inside Overview */}
-                    <div style={{
-                      padding: '16px 20px',
-                      background: curTotalRatings > 0 ? 'rgba(234, 179, 8, 0.06)' : '#f8fafc',
-                      border: curTotalRatings > 0 ? '1px solid rgba(234, 179, 8, 0.25)' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '14px'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{ fontSize: '2rem', fontWeight: 900, color: curTotalRatings > 0 ? '#ca8a04' : '#94a3b8', lineHeight: 1 }}>
-                          {curTotalRatings > 0 && curAvgRating ? curAvgRating.toFixed(1) : '—'}
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', gap: '3px', fontSize: '1rem', marginBottom: '4px' }}>
-                            {renderStars(curAvgRating || 0)}
+                    <div className={`ot-overview-rating-card ${curTotalRatings > 0 ? 'has-ratings' : 'no-ratings'}`}>
+                      {curTotalRatings > 0 && curAvgRating ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                          <div style={{
+                            minWidth: '56px',
+                            height: '52px',
+                            padding: '0 12px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(217, 119, 6, 0.08) 100%)',
+                            border: '1px solid rgba(245, 158, 11, 0.32)',
+                            color: '#b45309',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.75rem',
+                            fontWeight: 900,
+                            lineHeight: 1
+                          }}>
+                            {curAvgRating.toFixed(1)}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                            {curTotalRatings > 0
-                              ? `${curTotalRatings} ${curTotalRatings === 1 ? 'student rating' : 'student ratings'}`
-                              : 'No student ratings yet'}
-                            {curUserRating && (
-                              <span style={{ marginLeft: '8px', color: '#ca8a04', fontWeight: 700 }}>
-                                • Your rating: {curUserRating}★ {myPendingReview ? '(Awaiting Admin Approval)' : ''}
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', marginBottom: '4px' }}>
+                              {renderStars(curAvgRating || 0)}
+                              <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#b45309', marginLeft: '6px' }}>
+                                {curAvgRating.toFixed(1)} / 5
                               </span>
-                            )}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span>Based on {curTotalRatings} {curTotalRatings === 1 ? 'student rating' : 'student ratings'}</span>
+                              {curUserRating && (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'rgba(217, 119, 6, 0.12)',
+                                  color: '#92400e',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontWeight: 700,
+                                  fontSize: '0.74rem'
+                                }}>
+                                  <i className="fa-solid fa-circle-check" style={{ fontSize: '0.68rem', color: '#16a34a' }}></i>
+                                  You rated: {curUserRating}★ {myPendingReview ? '(Awaiting approval)' : ''}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.05) 100%)',
+                            border: '1px solid rgba(245, 158, 11, 0.25)',
+                            color: '#d97706',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.25rem',
+                            flexShrink: 0
+                          }}>
+                            <i className="fa-solid fa-star"></i>
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '1rem', marginBottom: '4px' }}>
+                              {renderStars(0)}
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#94a3b8', marginLeft: '6px' }}>
+                                Unrated
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span>No student ratings yet &bull; Be the first to share your feedback!</span>
+                              {curUserRating && (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'rgba(217, 119, 6, 0.12)',
+                                  color: '#92400e',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontWeight: 700,
+                                  fontSize: '0.74rem'
+                                }}>
+                                  <i className="fa-solid fa-circle-check" style={{ fontSize: '0.68rem', color: '#16a34a' }}></i>
+                                  You rated: {curUserRating}★ {myPendingReview ? '(Awaiting approval)' : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <button
                         type="button"
                         onClick={() => handleOpenRatingModal(selectedRecording, selectedRecording.sessionTitle)}
-                        style={{
-                          padding: '9px 18px',
-                          borderRadius: '8px',
-                          background: '#eab308',
-                          color: '#0f172a',
-                          fontWeight: 800,
-                          fontSize: '0.86rem',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
+                        className={`ot-rating-action-btn ${curUserRating ? 'btn-edit' : 'btn-rate'}`}
+                        title={curUserRating ? "Edit your submitted rating and feedback" : "Rate this recording replay and write a review"}
                       >
-                        <i className="fa-solid fa-star"></i>
-                        <span>{curUserRating ? 'Edit Rating' : 'Rate this Recording'}</span>
+                        <i className={curUserRating ? "fa-solid fa-pen-to-square" : "fa-solid fa-star"}></i>
+                        <span>{curUserRating ? `Edit Rating (${curUserRating}★)` : 'Rate this Recording'}</span>
                       </button>
                     </div>
 
