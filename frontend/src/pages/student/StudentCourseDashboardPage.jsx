@@ -137,6 +137,8 @@ export default function StudentCourseDashboardPage() {
   const [, setChatMuteVersion] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [loadingSlow, setLoadingSlow] = useState(false);
   const [course, setCourse] = useState(null);
   const [enrollment, setEnrollment] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -383,7 +385,15 @@ export default function StudentCourseDashboardPage() {
   const [, setTick] = useState(0);
 
   const loadData = async (showSpinner = true) => {
-    if (showSpinner) setLoading(true);
+    if (showSpinner) {
+      setLoading(true);
+      setLoadError(null);
+      setLoadingSlow(false);
+    }
+    const slowTimer = setTimeout(() => {
+      setLoadingSlow(true);
+    }, 3500);
+
     try {
       const [courseRes, myCoursesRes, progressRes, liveRes, attRes] = await Promise.allSettled([
         getCourse(courseId),
@@ -393,9 +403,17 @@ export default function StudentCourseDashboardPage() {
         getCourseAttendance(courseId)
       ]);
 
-      if (courseRes.status === 'fulfilled') {
+      if (courseRes.status === 'fulfilled' && courseRes.value) {
         setCourse(courseRes.value);
+        setLoadError(null);
         fetchCourseAssessments(courseRes.value);
+      } else if (courseRes.status === 'rejected') {
+        const msg = courseRes.reason?.response?.data?.message || courseRes.reason?.message || 'Course details could not be loaded.';
+        console.warn('Course query failed:', courseRes.reason);
+        setCourse(prev => {
+          if (!prev) setLoadError(msg);
+          return prev;
+        });
       }
 
       if (myCoursesRes.status === 'fulfilled' && Array.isArray(myCoursesRes.value)) {
@@ -430,12 +448,19 @@ export default function StudentCourseDashboardPage() {
       }
     } catch (err) {
       console.error('Failed to load course dashboard data:', err);
+      setLoadError(err?.message || 'Failed to load course dashboard data');
     } finally {
+      clearTimeout(slowTimer);
       if (showSpinner) setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!courseId) {
+      setLoading(false);
+      setLoadError('No course ID specified.');
+      return;
+    }
     loadData(true);
 
     const unsub = subscribeSyncEvents((event) => {
@@ -711,9 +736,280 @@ export default function StudentCourseDashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', background: '#0f172a', color: '#94a3b8' }}>
-        <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '2.4rem', color: '#5A70D3' }}></i>
-        <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#f8fafc', letterSpacing: '0.5px' }}>CONNECTING COURSE TERMINAL...</div>
+      <div
+        className="ot-dashboard-loading-container"
+        style={{
+          minHeight: '100vh',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--onetutor-background, #f8fafc)',
+          padding: '40px 20px',
+          boxSizing: 'border-box'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '460px',
+            width: '100%',
+            background: '#ffffff',
+            borderRadius: '24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 12px 36px rgba(90, 112, 211, 0.08)',
+            padding: '44px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            position: 'relative'
+          }}
+        >
+          {/* Animated Logo / Icon with Pulse Ring */}
+          <div style={{ position: 'relative', width: '84px', height: '84px', marginBottom: '24px' }}>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '3px solid rgba(90, 112, 211, 0.15)',
+                borderTopColor: '#5A70D3',
+                animation: 'ot-spin 1s linear infinite'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: '6px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(90, 112, 211, 0.12) 0%, rgba(90, 112, 211, 0.04) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden'
+              }}
+            >
+              <img
+                src={oneTutorBrandImg}
+                alt="OneTutor"
+                style={{ width: '42px', height: '42px', objectFit: 'contain' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex';
+                }}
+              />
+              <i
+                className="fa-solid fa-graduation-cap"
+                style={{ fontSize: '1.8rem', color: '#5A70D3', display: 'none' }}
+              />
+            </div>
+          </div>
+
+          <h2
+            style={{
+              fontSize: '1.28rem',
+              fontWeight: 800,
+              color: '#0f172a',
+              margin: '0 0 8px 0',
+              letterSpacing: '-0.3px'
+            }}
+          >
+            Loading Course Space...
+          </h2>
+
+          <p
+            style={{
+              fontSize: '0.88rem',
+              color: '#64748b',
+              margin: '0 0 24px 0',
+              lineHeight: 1.55,
+              maxWidth: '340px'
+            }}
+          >
+            Preparing your live interactive classes, attendance records, and curriculum telemetry.
+          </p>
+
+          {/* Smooth Gradient Shimmer Progress Line */}
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '260px',
+              height: '5px',
+              background: '#f1f5f9',
+              borderRadius: '999px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                width: '45%',
+                background: 'linear-gradient(90deg, #5A70D3, #818cf8, #5A70D3)',
+                borderRadius: '999px',
+                animation: 'ot-shimmer 1.4s ease-in-out infinite'
+              }}
+            />
+          </div>
+
+          {/* Cloud sync hint if taking more than 3.5 seconds */}
+          {loadingSlow && (
+            <div
+              style={{
+                marginTop: '22px',
+                padding: '8px 14px',
+                background: 'rgba(90, 112, 211, 0.06)',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                color: '#5A70D3',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="fa-solid fa-cloud-arrow-down fa-bounce" />
+              <span>Connecting to live services... Almost ready!</span>
+            </div>
+          )}
+
+          {/* Navigation fallback */}
+          <div style={{ marginTop: '26px' }}>
+            <Link
+              to="/student/my-courses"
+              style={{
+                fontSize: '0.82rem',
+                color: '#94a3b8',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 600,
+                transition: 'color 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#5A70D3')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            >
+              <i className="fa-solid fa-arrow-left" style={{ fontSize: '0.75rem' }} />
+              <span>Back to My Learning</span>
+            </Link>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes ot-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes ot-shimmer {
+            0% { left: -50%; }
+            50% { left: 50%; }
+            100% { left: 110%; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!loading && (!course || loadError)) {
+    return (
+      <div
+        className="ot-dashboard-error-container"
+        style={{
+          minHeight: '100vh',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--onetutor-background, #f8fafc)',
+          padding: '40px 20px',
+          boxSizing: 'border-box'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '460px',
+            width: '100%',
+            background: '#ffffff',
+            borderRadius: '24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 12px 36px rgba(11, 31, 58, 0.08)',
+            padding: '44px 32px',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.9rem',
+              margin: '0 auto 20px auto'
+            }}
+          >
+            <i className="fa-solid fa-triangle-exclamation" />
+          </div>
+
+          <h2 style={{ fontSize: '1.28rem', fontWeight: 800, color: '#0f172a', margin: '0 0 10px 0' }}>
+            Course Space Unavailable
+          </h2>
+
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '26px', lineHeight: 1.55 }}>
+            {loadError || "We couldn't retrieve this course's dashboard. The course may be unpublished, deleted, or your session has expired."}
+          </p>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => loadData(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '11px 22px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#5A70D3',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(90, 112, 211, 0.25)'
+              }}
+            >
+              <i className="fa-solid fa-rotate-right" />
+              <span>Try Again</span>
+            </button>
+            <Link
+              to="/student/my-courses"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '11px 22px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#334155',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                textDecoration: 'none'
+              }}
+            >
+              <i className="fa-solid fa-arrow-left" />
+              <span>Back to My Learning</span>
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
