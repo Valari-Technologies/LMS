@@ -227,8 +227,11 @@ public class EnrollmentService {
                 student.getId(), EnrollmentStatus.active, pageable);
         return PageResponse.from(page.map(e -> {
             Double pct = null;
+            Integer totalContents = null;
             try {
-                pct = progressService.getCourseProgressForStudent(e.getCourse().getId(), student.getId()).progressPercent();
+                var cp = progressService.getCourseProgressForStudent(e.getCourse().getId(), student.getId());
+                pct = cp.progressPercent();
+                totalContents = cp.totalContents();
             } catch (Exception ignored) {}
             return new MyCourseResponse(
                     e.getId(), e.getCourse().getId(), e.getCourse().getName(),
@@ -237,7 +240,8 @@ public class EnrollmentService {
                     e.getBatch() != null ? e.getBatch().getId() : null,
                     e.getBatch() != null ? e.getBatch().getName() : null,
                     e.getCourse().getLevel(),
-                    e.getPlanType() != null ? e.getPlanType() : "FULL_ACCESS"
+                    e.getPlanType() != null ? e.getPlanType() : "FULL_ACCESS",
+                    totalContents
             );
         }));
     }

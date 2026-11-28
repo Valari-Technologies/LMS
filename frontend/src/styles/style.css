@@ -6222,7 +6222,8 @@ h6,
 }
 
 .ot-card-actions-row {
-  margin-top: 16px;
+  margin-top: auto;
+  padding-top: 16px;
   display: flex;
   gap: 10px;
   align-items: center;

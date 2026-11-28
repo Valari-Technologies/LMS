@@ -469,6 +469,9 @@ export default function EnrolledCoursesRowSection({ courses = [], fallbackCourse
             {rawList.map((course, idx) => {
               const pct = Math.round(course.progressPercent ?? 0);
               const isDone = pct >= 100;
+              const hasVideos = (course.totalContents ?? course.totalLessons ?? null) !== null
+                ? (course.totalContents ?? course.totalLessons) > 0
+                : (pct > 0);
               const batchText = formatBatchText(course.batchName || (idx % 2 === 0 ? 'A' : 'B'));
               const thumbUrl = resolveMediaUrl(course.courseThumbnail || course.thumbnailUrl || course.imageUrl);
 
@@ -711,64 +714,66 @@ export default function EnrolledCoursesRowSection({ courses = [], fallbackCourse
                       </div>
                     </div>
 
-                    {/* PROGRESS BAR & PERCENTAGE STATUS */}
-                    <div>
-                      <div
-                        className="progress-bar-wrap"
-                        style={{
-                          width: '100%',
-                          height: '7px',
-                          background: '#e8f1ee',
-                          borderRadius: '999px',
-                          overflow: 'hidden',
-                          marginBottom: '8px',
-                        }}
-                      >
+                    {/* PROGRESS BAR & PERCENTAGE STATUS - Hidden if course has no videos */}
+                    {hasVideos && (
+                      <div>
                         <div
-                          className="progress-bar-fill"
+                          className="progress-bar-wrap"
                           style={{
-                            height: '100%',
-                            width: `${isDone ? 100 : Math.max(pct, 4)}%`,
-                            background: '#5A70D3',
+                            width: '100%',
+                            height: '7px',
+                            background: '#e8f1ee',
                             borderRadius: '999px',
-                            transition: 'width 0.3s ease',
+                            overflow: 'hidden',
+                            marginBottom: '8px',
                           }}
-                        />
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontSize: '0.8rem',
-                        }}
-                      >
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>
-                          {pct}% complete
-                        </span>
-
-                        {isDone ? (
-                          <span
-                            className="course-completed"
+                        >
+                          <div
+                            className="progress-bar-fill"
                             style={{
-                              color: '#059669',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
+                              height: '100%',
+                              width: `${isDone ? 100 : Math.max(pct, 4)}%`,
+                              background: '#5A70D3',
+                              borderRadius: '999px',
+                              transition: 'width 0.3s ease',
                             }}
-                          >
-                            <i className="fa-solid fa-circle-check" style={{ fontSize: '0.82rem' }}></i>
-                            <span>Finished</span>
+                          />
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: '0.8rem',
+                          }}
+                        >
+                          <span style={{ color: '#64748b', fontWeight: 600 }}>
+                            {pct}% complete
                           </span>
-                        ) : (
-                          <span style={{ color: '#94a3b8', fontWeight: 600 }}>
-                            {pct === 0 ? 'Not Started' : 'In Progress'}
-                          </span>
-                        )}
+
+                          {isDone ? (
+                            <span
+                              className="course-completed"
+                              style={{
+                                color: '#059669',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                              }}
+                            >
+                              <i className="fa-solid fa-circle-check" style={{ fontSize: '0.82rem' }}></i>
+                              <span>Finished</span>
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontWeight: 600 }}>
+                              {pct === 0 ? 'Not Started' : 'In Progress'}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* ACTION BUTTON ROW */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

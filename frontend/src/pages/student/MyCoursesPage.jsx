@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { myCourses } from '../../api/enrollment';
+import { getCourseProgress } from '../../api/progress';
 import { resolveMediaUrl } from '../../utils/mediaUtils';
 import { getCourseAccessTimestamp } from '../../utils/courseHistory';
 
@@ -19,9 +20,35 @@ export default function MyCoursesPage() {
 
   useEffect(() => {
     myCourses({ size: 100 })
-      .then((data) => setCourses(data?.content || []))
-      .catch(() => setCourses([]))
-      .finally(() => setLoading(false));
+      .then(async (data) => {
+        const list = data?.content || [];
+        setCourses(list);
+        setLoading(false);
+        try {
+          const enriched = await Promise.all(
+            list.map(async (c) => {
+              if (typeof c.totalContents === 'number') return c;
+              try {
+                const prog = await getCourseProgress(c.courseId);
+                return {
+                  ...c,
+                  totalContents: prog?.totalContents ?? 0,
+                  progressPercent: prog?.progressPercent ?? c.progressPercent ?? 0
+                };
+              } catch {
+                return c;
+              }
+            })
+          );
+          setCourses(enriched);
+        } catch {
+          // ignore
+        }
+      })
+      .catch(() => {
+        setCourses([]);
+        setLoading(false);
+      });
   }, []);
 
   // Show access error banner if redirected from LearningPage due to removed enrollment
@@ -491,6 +518,9 @@ export default function MyCoursesPage() {
               const isCompleted = pct >= 100;
               const isNotStarted = pct === 0;
               const isInProgress = pct > 0 && pct < 100;
+              const hasVideos = (c.totalContents ?? c.totalLessons ?? null) !== null
+                ? (c.totalContents ?? c.totalLessons) > 0
+                : (pct > 0 || c.lastAccessedContentId != null);
 
               // Batch label fallback matching the UI
               const batchLabel = c.batchName || c.batchCode || (c.enrollmentId ? `Batch ${String.fromCharCode(65 + ((c.courseId || 1) % 2))}` : 'Batch A');
@@ -794,34 +824,29 @@ export default function MyCoursesPage() {
                       </div>
                     </div>
 
-                    {/* Progress Track & Percentage */}
-                    <div>
-                      <div
-                        style={{
-                          height: '5px',
-                          borderRadius: '9999px',
-                          background: '#e2e8f0',
-                          overflow: 'hidden',
-                          marginBottom: '6px',
-                        }}
-                      >
+                    {/* Progress Track & Percentage - Only shown if course has videos/lectures */}
+                    {hasVideos && (
+                      <div className="ot-card-progress-track">
                         <div
                           style={{
-                            width: `${pct}%`,
-                            height: '100%',
-                            background: '#5A70D3',
+                            height: '5px',
                             borderRadius: '9999px',
-                            transition: 'width 0.3s ease',
+                            background: '#e2e8f0',
+                            overflow: 'hidden',
+                            marginBottom: '6px',
                           }}
-                        />
-                      </div>
-
-                      {c.totalContents === 0 || c.totalLessons === 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600, color: '#64748b' }}>
-                          <i className="fa-solid fa-video-slash" style={{ fontSize: '0.72rem', color: '#94a3b8' }}></i>
-                          <span>No videos (Recordings only)</span>
+                        >
+                          <div
+                            style={{
+                              width: `${pct}%`,
+                              height: '100%',
+                              background: '#5A70D3',
+                              borderRadius: '9999px',
+                              transition: 'width 0.3s ease',
+                            }}
+                          />
                         </div>
-                      ) : (
+
                         <div
                           style={{
                             display: 'flex',
@@ -857,8 +882,8 @@ export default function MyCoursesPage() {
                             </span>
                           )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Action Buttons Row */}
                     <div className="ot-card-actions-row">
