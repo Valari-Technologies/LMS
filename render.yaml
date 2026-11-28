@@ -5,6 +5,15 @@ services:
     dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /api/v1/health
+    buildFilter:
+      paths:
+        - backend/**
+        - Dockerfile
+        - render.yaml
+      ignoredPaths:
+        - frontend/**
+        - .github/**
+        - README.md
     envVars:
       - key: PORT
         value: 8080
