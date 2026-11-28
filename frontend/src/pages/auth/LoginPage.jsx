@@ -22,6 +22,22 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submittingSeconds, setSubmittingSeconds] = useState(0);
+
+  useEffect(() => {
+    let timer = null;
+    if (submitting) {
+      setSubmittingSeconds(0);
+      timer = setInterval(() => {
+        setSubmittingSeconds(s => s + 1);
+      }, 1000);
+    } else {
+      setSubmittingSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [submitting]);
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
@@ -176,8 +192,36 @@ export default function LoginPage() {
             disabled={submitting}
           >
             <span>{submitting ? 'Authenticating…' : 'Sign In'}</span>
-            <i className="fa-solid fa-arrow-right"></i>
+            {submitting ? (
+              <i className="fa-solid fa-circle-notch fa-spin"></i>
+            ) : (
+              <i className="fa-solid fa-arrow-right"></i>
+            )}
           </button>
+
+          {submitting && submittingSeconds >= 3 && (
+            <div style={{
+              marginTop: '10px',
+              padding: '9px 12px',
+              borderRadius: '8px',
+              background: 'rgba(90, 112, 211, 0.08)',
+              border: '1px solid rgba(90, 112, 211, 0.22)',
+              color: '#5A70D3',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textAlign: 'left'
+            }}>
+              <i className="fa-solid fa-circle-notch fa-spin" style={{ flexShrink: 0 }} />
+              <span>
+                {submittingSeconds >= 7
+                  ? 'Waking up cloud server from idle (Render cold start, ~30s)… please wait'
+                  : 'Connecting to server…'}
+              </span>
+            </div>
+          )}
         </form>
 
         {/* Quick Demo Fill Buttons */}

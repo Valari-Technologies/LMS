@@ -54,6 +54,22 @@ export default function FloatingAuthModal() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submittingSeconds, setSubmittingSeconds] = useState(0);
+
+  useEffect(() => {
+    let timer = null;
+    if (submitting) {
+      setSubmittingSeconds(0);
+      timer = setInterval(() => {
+        setSubmittingSeconds(s => s + 1);
+      }, 1000);
+    } else {
+      setSubmittingSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [submitting]);
 
   const regOtpRef = useRef(null);
   const forgotOtpRef = useRef(null);
@@ -432,8 +448,36 @@ export default function FloatingAuthModal() {
 
               <button type="submit" className="ot-auth-submit-btn" disabled={submitting}>
                 <span>{submitting ? 'Signing In…' : 'Sign In'}</span>
-                <i className="fa-solid fa-arrow-right"></i>
+                {submitting ? (
+                  <i className="fa-solid fa-circle-notch fa-spin"></i>
+                ) : (
+                  <i className="fa-solid fa-arrow-right"></i>
+                )}
               </button>
+
+              {submitting && submittingSeconds >= 3 && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(90, 112, 211, 0.08)',
+                  border: '1px solid rgba(90, 112, 211, 0.22)',
+                  color: '#5A70D3',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textAlign: 'left'
+                }}>
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ flexShrink: 0 }} />
+                  <span>
+                    {submittingSeconds >= 7
+                      ? 'Waking up cloud server from idle (Render cold start, ~30s)… please wait'
+                      : 'Connecting to server…'}
+                  </span>
+                </div>
+              )}
             </form>
 
             {/* Quick Demo Fill Buttons */}
@@ -546,7 +590,7 @@ export default function FloatingAuthModal() {
 
                   <button type="submit" className="ot-auth-submit-btn" disabled={submitting}>
                     <span>{submitting ? 'Sending Code…' : 'Continue with Email'}</span>
-                    <i className="fa-solid fa-arrow-right"></i>
+                    {submitting ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-arrow-right"></i>}
                   </button>
                 </form>
               </>
@@ -612,7 +656,7 @@ export default function FloatingAuthModal() {
 
                 <button type="submit" className="ot-auth-submit-btn" disabled={submitting || regOtp.length !== 6}>
                   <span>{submitting ? 'Verifying…' : 'Complete Registration'}</span>
-                  <i className="fa-solid fa-check"></i>
+                  {submitting ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-check"></i>}
                 </button>
               </form>
             )}
@@ -652,7 +696,7 @@ export default function FloatingAuthModal() {
                 </div>
                 <button type="submit" className="ot-auth-submit-btn" disabled={submitting}>
                   <span>{submitting ? 'Dispatching…' : 'Send Recovery Code'}</span>
-                  <i className="fa-solid fa-paper-plane"></i>
+                  {submitting ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-paper-plane"></i>}
                 </button>
               </form>
             )}
@@ -745,7 +789,7 @@ export default function FloatingAuthModal() {
 
                 <button type="submit" className="ot-auth-submit-btn" disabled={submitting || forgotOtp.length !== 6}>
                   <span>{submitting ? 'Updating Password…' : 'Reset Password & Proceed'}</span>
-                  <i className="fa-solid fa-lock"></i>
+                  {submitting ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-lock"></i>}
                 </button>
               </form>
             )}
