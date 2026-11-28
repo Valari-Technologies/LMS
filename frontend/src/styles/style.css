@@ -9102,8 +9102,8 @@ h6,
    ========================================================================== */
 .ot-community-wrap {
   display: flex;
-  height: calc(100dvh - 64px);
-  max-height: calc(100dvh - 64px);
+  height: calc(100dvh - 58px);
+  max-height: calc(100dvh - 58px);
   overflow: hidden;
   background: #F7F8FC;
 }
@@ -9115,6 +9115,14 @@ h6,
   }
 }
 
+.ot-course-content-main .ot-community-wrap,
+.ot-course-content-main.community-tab-fullbleed .ot-community-wrap {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 !important;
+}
+
 .ot-community-sidebar {
   width: 310px;
   flex-shrink: 0;
@@ -9124,6 +9132,7 @@ h6,
   flex-direction: column;
   overflow: hidden;
   box-shadow: 2px 0 12px rgba(11, 31, 58, 0.02);
+  min-height: 0;
 }
 
 .ot-community-chat {
@@ -9132,6 +9141,7 @@ h6,
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
   background: #ffffff;
 }
 
@@ -9165,21 +9175,22 @@ h6,
   margin: 0 !important;
   max-width: 100% !important;
   width: 100% !important;
-  height: 100vh !important;
-  min-height: 100vh !important;
-  max-height: 100vh !important;
+  height: calc(100dvh - 64px) !important;
+  min-height: calc(100dvh - 64px) !important;
+  max-height: calc(100dvh - 64px) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+  flex: 1 !important;
 }
 
 .ot-dashboard-community-hub,
 .ot-dashboard-community-fullbleed,
 .ot-course-content-main.community-tab-active .ot-dashboard-community-hub,
 .ot-course-content-main.community-tab-fullbleed .ot-dashboard-community-fullbleed {
-  height: 100vh !important;
-  max-height: 100vh !important;
-  min-height: 100vh !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
   border-radius: 0 !important;
   border: none !important;
   box-shadow: none !important;
@@ -9188,6 +9199,8 @@ h6,
   margin: 0 !important;
   padding: 0 !important;
   flex: 1 !important;
+  overflow: hidden !important;
+  display: flex !important;
 }
 
 .ot-whatsapp-back-btn {
@@ -9207,6 +9220,7 @@ h6,
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
+    flex: 1 !important;
   }
 
   .ot-dashboard-community-hub,
@@ -9215,13 +9229,15 @@ h6,
   .ot-course-content-main.community-tab-fullbleed .ot-dashboard-community-fullbleed {
     height: 100% !important;
     max-height: 100% !important;
-    min-height: 100% !important;
+    min-height: 0 !important;
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
     width: 100% !important;
     flex: 1 !important;
+    overflow: hidden !important;
+    display: flex !important;
   }
 
   .ot-whatsapp-back-btn {
@@ -11872,6 +11888,7 @@ body:has(.ud-header) .ot-course-content-sidebar {
 
 .ot-course-topbar {
   height: 64px;
+  flex-shrink: 0;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   padding: 0 24px;

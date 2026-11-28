@@ -525,9 +525,9 @@ export default function StudentTutorDoubtView({
     <div
       className={`ot-community-wrap ot-dashboard-community-fullbleed ot-dashboard-community-hub ${mobileShowChat ? 'sc-chat-open' : ''}`}
       style={{
-        height: '100vh',
-        maxHeight: '100vh',
-        minHeight: '100vh',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
         width: '100%',
         margin: 0,
         padding: 0,
@@ -535,7 +535,9 @@ export default function StudentTutorDoubtView({
         border: 'none',
         boxShadow: 'none',
         background: '#ffffff',
-        flex: 1
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden'
       }}
     >
       {/* ──────────────────────────────────────────────────────────────────
@@ -600,7 +602,7 @@ export default function StudentTutorDoubtView({
         </div>
 
         {/* Course Doubt Channels List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px' }}>
           {loadingCourses && courses.length === 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '140px', color: '#5A70D3' }}>
               <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: '22px' }} />
@@ -695,7 +697,7 @@ export default function StudentTutorDoubtView({
       {/* ──────────────────────────────────────────────────────────────────
           2. Right Area: Conversation Pane (WhatsApp Style Chat Screen)
           ────────────────────────────────────────────────────────────────── */}
-      <div className="ot-community-chat" style={{ borderRadius: 0 }}>
+      <div className="ot-community-chat" style={{ borderRadius: 0, minHeight: 0 }}>
         {selectedCourse ? (
           <>
             {/* Top Navigation Bar */}
@@ -774,6 +776,7 @@ export default function StudentTutorDoubtView({
               ref={messagesContainerRef}
               style={{
                 flex: 1,
+                minHeight: 0,
                 overflowY: 'auto',
                 padding: '16px 20px',
                 background: '#f8fafc',
@@ -1034,6 +1037,7 @@ export default function StudentTutorDoubtView({
             {/* Bottom Input Bar */}
             <div style={{
               padding: '12px 16px',
+              paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
               background: '#ffffff',
               borderTop: '1px solid #e2e8f0',
               display: 'flex',

@@ -233,7 +233,7 @@ export default function StudentCommunityPage() {
         </div>
 
         {/* Channels List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px' }}>
           {filteredCourses.map(c => {
             const isActive = selectedCourse?.courseId === c.courseId;
             return (
@@ -366,7 +366,7 @@ export default function StudentCommunityPage() {
               </div>
             </div>
 
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <ChatPanel
                 key={selectedCourse.courseId}
                 courseId={selectedCourse.courseId}

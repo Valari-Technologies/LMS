@@ -907,7 +907,7 @@ export default function AdminDoubtsPage() {
         </div>
 
         {/* Threads List */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {filteredThreads.map(t => {
             const isSelected = selectedThread &&
               selectedThread.studentId === t.studentId &&
@@ -1000,7 +1000,7 @@ export default function AdminDoubtsPage() {
       {/* ──────────────────────────────────────────────────────────────────
           2. Right Chat Area: WhatsApp Screen (Matches AdminCommunityPage)
           ────────────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {selectedThread ? (
           <>
             {/* WhatsApp Header */}
@@ -1048,7 +1048,7 @@ export default function AdminDoubtsPage() {
             </div>
 
             {/* Messages Stream */}
-            <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--bg-page)' }}>
+            <div ref={messagesContainerRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--bg-page)' }}>
               {loadingMessages && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
                   <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--accent-primary)' }} />
@@ -1190,7 +1190,7 @@ export default function AdminDoubtsPage() {
             </div>
 
             {/* Input Bar */}
-            <div style={{ padding: '12px 16px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-default)' }}>
+            <div style={{ padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-default)', flexShrink: 0 }}>
               {selectedFile && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', marginBottom: '8px' }}>
                   <i className="fa-solid fa-paperclip" style={{ color: 'var(--text-muted)' }} />

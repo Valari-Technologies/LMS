@@ -1056,9 +1056,9 @@ export function ChatPanel({ courseId, courseName, currentUser, availableCourses 
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       {/* Messages area */}
-      <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      <div ref={messagesContainerRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
             <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--accent-primary)' }} />
@@ -1178,7 +1178,7 @@ export function ChatPanel({ courseId, courseName, currentUser, availableCourses 
           <span>Read-Only Mode: Messaging is disabled for read-only accounts.</span>
         </div>
       ) : (
-        <div style={{ padding: '12px', borderTop: '1px solid var(--border-default)', background: 'var(--bg-surface)' }}>
+        <div style={{ padding: '12px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0 }}>
           <form onSubmit={handleSend} style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
             {!editingMsg && (
               <>
@@ -1881,7 +1881,7 @@ export default function AdminCommunityPage() {
       </div>
 
       {/* Chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {selectedCourse ? (
           <>
             {/* Chat header (Click title or avatar for WhatsApp Group Info) */}
@@ -1950,7 +1950,7 @@ export default function AdminCommunityPage() {
             </div>
 
             {/* Chat messages + input */}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <ChatPanel
                 key={selectedCourse.courseId}
                 courseId={selectedCourse.courseId}

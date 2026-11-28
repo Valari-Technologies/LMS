@@ -2172,8 +2172,8 @@ export default function StudentCourseDashboardPage() {
   // =========================================================================
   return (
     <div
-      className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${activeTab === 'community' ? 'community-tab-fullbleed community-tab-active' : ''}`}
-      style={activeTab === 'community' ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}}
+      className={`ot-course-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${(activeTab === 'community' || activeTab === 'doubts') ? 'community-tab-fullbleed community-tab-active' : ''}`}
+      style={(activeTab === 'community' || activeTab === 'doubts') ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}}
     >
       {/* Mobile Backdrop Overlay */}
       {mobileSidebarOpen && (
@@ -2500,7 +2500,9 @@ export default function StudentCourseDashboardPage() {
           minHeight: '100vh',
           height: (activeTab === 'community' || activeTab === 'doubts') ? '100vh' : 'auto',
           maxHeight: (activeTab === 'community' || activeTab === 'doubts') ? '100vh' : 'none',
-          overflow: (activeTab === 'community' || activeTab === 'doubts') ? 'hidden' : 'visible'
+          overflow: (activeTab === 'community' || activeTab === 'doubts') ? 'hidden' : 'visible',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
 
@@ -2784,10 +2786,13 @@ export default function StudentCourseDashboardPage() {
             width: '100%',
             margin: (activeTab === 'community' || activeTab === 'doubts') ? '0' : '0 auto',
             padding: (activeTab === 'community' || activeTab === 'doubts') ? '0' : '24px 20px 60px 20px',
-            height: (activeTab === 'community' || activeTab === 'doubts') ? '100%' : 'auto',
-            maxHeight: (activeTab === 'community' || activeTab === 'doubts') ? '100%' : 'none',
+            height: (activeTab === 'community' || activeTab === 'doubts') ? 'calc(100vh - 64px)' : 'auto',
+            maxHeight: (activeTab === 'community' || activeTab === 'doubts') ? 'calc(100vh - 64px)' : 'none',
+            minHeight: (activeTab === 'community' || activeTab === 'doubts') ? 0 : 'auto',
             overflow: (activeTab === 'community' || activeTab === 'doubts') ? 'hidden' : 'visible',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            display: (activeTab === 'community' || activeTab === 'doubts') ? 'flex' : 'block',
+            flexDirection: 'column'
           }}
         >
 
@@ -3924,7 +3929,10 @@ export default function StudentCourseDashboardPage() {
             =================================================================== */}
           {activeTab === 'doubts' && (
             <div style={{
-              height: '100vh',
+              height: '100%',
+              maxHeight: '100%',
+              minHeight: 0,
+              flex: 1,
               background: '#ffffff',
               borderRadius: 0,
               border: 'none',

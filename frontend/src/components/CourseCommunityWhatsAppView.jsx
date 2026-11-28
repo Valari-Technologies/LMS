@@ -147,9 +147,9 @@ export default function CourseCommunityWhatsAppView({
     <div
       className={`ot-community-wrap ot-dashboard-community-fullbleed ot-dashboard-community-hub ${mobileShowChat ? 'sc-chat-open' : ''}`}
       style={{
-        height: '100vh',
-        maxHeight: '100vh',
-        minHeight: '100vh',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
         width: '100%',
         margin: 0,
         padding: 0,
@@ -157,7 +157,9 @@ export default function CourseCommunityWhatsAppView({
         border: 'none',
         boxShadow: 'none',
         background: '#ffffff',
-        flex: 1
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden'
       }}
     >
       {/* 1. Left Channels / Chats Sidebar (WhatsApp Chats List) */}
@@ -217,7 +219,7 @@ export default function CourseCommunityWhatsAppView({
         </div>
 
         {/* Channels List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px' }}>
           {filteredCourses.map(c => {
             const isActive = String(selectedCourse?.courseId) === String(c.courseId);
             return (
@@ -414,7 +416,7 @@ export default function CourseCommunityWhatsAppView({
             </div>
 
             {/* Chat Messages Panel */}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <ChatPanel
                 key={selectedCourse.courseId}
                 courseId={selectedCourse.courseId}
