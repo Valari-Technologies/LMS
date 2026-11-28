@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAdminBatch, getBatchStudents, updateBatch, removeBatchStudent, changeBatchStudent, getCourseBatches } from '../../api/batches';
 import { getStudentDetail } from '../../api/users';
 import { getAdminLiveSessions, getSessionAttendance } from '../../api/live';
+import { getAdminAssessments } from '../../api/assessments';
+import { listSections } from '../../api/sections';
 import {
   getStoredAttendanceRecords,
   computeStudentAttendance,
@@ -13,6 +15,78 @@ import {
 import { toast, confirmDialog } from '../../context/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
 import { PLAN_DEFINITIONS, PLAN_TYPES, getStudentEnrolledPlan } from '../../utils/courseSellingPlans';
+
+function formatLastSeen(timestamp) {
+  if (!timestamp) return { primary: 'Offline', secondary: 'No activity recorded', isOnline: false };
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  if (isNaN(diffMs)) return { primary: 'Offline', secondary: 'No activity recorded', isOnline: false };
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  const formattedDateTime = date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  if (diffSecs >= 0 && diffSecs < 90) {
+    return { primary: 'Online Now', secondary: 'Active currently', isOnline: true };
+  }
+  if (diffMins < 60) {
+    return { primary: `${Math.max(1, diffMins)}m ago`, secondary: formattedDateTime, isOnline: false };
+  }
+  if (diffHours < 24) {
+    return { primary: `${diffHours}h ago`, secondary: formattedDateTime, isOnline: false };
+  }
+  if (diffDays < 7) {
+    return { primary: `${diffDays}d ago`, secondary: formattedDateTime, isOnline: false };
+  }
+  return { primary: formattedDateTime, secondary: null, isOnline: false };
+}
+
+function getResolvedLastSeen(student, detail, attSessions) {
+  const candidates = [];
+  if (detail?.lastActiveAt) candidates.push(new Date(detail.lastActiveAt));
+  if (student?.lastActiveAt) candidates.push(new Date(student.lastActiveAt));
+  if (student?.lastLogin) candidates.push(new Date(student.lastLogin));
+
+  // Check course summary last accessed
+  const courseSummary = (detail?.enrolledCourses || []).find(c => String(c.courseId) === String(student?.courseId));
+  if (courseSummary?.lastAccessedAt) candidates.push(new Date(courseSummary.lastAccessedAt));
+
+  // Check attendance records
+  (attSessions || []).forEach(ses => {
+    if (ses.attendedAt && ses.attendanceStatus === 'PRESENT') {
+      candidates.push(new Date(ses.attendedAt));
+    }
+  });
+
+  // Check assessment attempts
+  (detail?.assessments || []).forEach(a => {
+    if (a.completedAt) candidates.push(new Date(a.completedAt));
+    else if (a.startedAt) candidates.push(new Date(a.startedAt));
+  });
+
+  // Check recent activities
+  (detail?.recentActivity || []).forEach(act => {
+    if (act.timestamp) candidates.push(new Date(act.timestamp));
+  });
+
+  // Fallback to enrolledAt
+  if (student?.enrolledAt) candidates.push(new Date(student.enrolledAt));
+
+  const validDates = candidates.filter(d => d instanceof Date && !isNaN(d.getTime()));
+  if (validDates.length === 0) return null;
+  validDates.sort((a, b) => b.getTime() - a.getTime());
+  return validDates[0];
+}
 
 export default function AdminBatchDetailsPage() {
   const { isReadOnly } = usePermission();
@@ -48,6 +122,9 @@ export default function AdminBatchDetailsPage() {
   const [viewStudent, setViewStudent] = useState(null);
   const [studentDetail, setStudentDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [studentModalTab, setStudentModalTab] = useState('overview'); // 'overview' | 'curriculum' | 'attendance' | 'assessments'
+  const [courseAssessmentsList, setCourseAssessmentsList] = useState([]);
+  const [courseSectionsList, setCourseSectionsList] = useState([]);
 
   // Change Batch Modal
   const [batchChangeStudent, setBatchChangeStudent] = useState(null);
@@ -230,11 +307,21 @@ export default function AdminBatchDetailsPage() {
     setViewStudent(student);
     setDetailLoading(true);
     setStudentDetail(null);
+    setStudentModalTab('overview');
     try {
-      const detail = await getStudentDetail(student.studentId);
+      const [detail, assessments, sections] = await Promise.all([
+        getStudentDetail(student.studentId).catch(err => {
+          console.debug('Failed to load student detail', err);
+          return null;
+        }),
+        batch?.courseId ? getAdminAssessments(batch.courseId).catch(() => []) : Promise.resolve([]),
+        batch?.courseId ? listSections(batch.courseId).catch(() => []) : Promise.resolve([])
+      ]);
       setStudentDetail(detail);
+      setCourseAssessmentsList(Array.isArray(assessments) ? assessments : []);
+      setCourseSectionsList(Array.isArray(sections) ? sections : []);
     } catch (err) {
-      console.error('Failed to load student detail', err);
+      console.error('Failed to load student detail info', err);
     } finally {
       setDetailLoading(false);
     }
@@ -764,6 +851,11 @@ export default function AdminBatchDetailsPage() {
         </div>
 
         <div className="table-responsive">
+          <style>{`
+            .student-batch-table-row:hover td {
+              background-color: var(--bg-surface-hover, rgba(99, 102, 241, 0.05)) !important;
+            }
+          `}</style>
           <table className="modern-table">
             <thead>
               <tr>
@@ -803,7 +895,13 @@ export default function AdminBatchDetailsPage() {
                 </tr>
               ) : (
                 filteredStudents.map((s, idx) => (
-                  <tr key={s.enrollmentId}>
+                  <tr
+                    key={s.enrollmentId}
+                    onClick={() => handleViewStudent(s)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.15s ease' }}
+                    className="student-batch-table-row"
+                    title="Click to view student details, curriculum progress, attendance & assessment marks"
+                  >
                     <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
                       {page * 20 + idx + 1}
                     </td>
@@ -868,7 +966,7 @@ export default function AdminBatchDetailsPage() {
                         if (!att.totalHeld) {
                           return (
                             <span
-                              onClick={() => setSelectedAttendanceStudent({ student: s, att })}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAttendanceStudent({ student: s, att }); }}
                               style={{
                                 cursor: 'pointer',
                                 display: 'inline-flex',
@@ -896,7 +994,7 @@ export default function AdminBatchDetailsPage() {
 
                         return (
                           <div
-                            onClick={() => setSelectedAttendanceStudent({ student: s, att })}
+                            onClick={(e) => { e.stopPropagation(); setSelectedAttendanceStudent({ student: s, att }); }}
                             style={{
                               cursor: 'pointer',
                               display: 'inline-flex',
@@ -1012,7 +1110,7 @@ export default function AdminBatchDetailsPage() {
                         </div>
                       )}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
                           type="button"
@@ -1177,331 +1275,1070 @@ export default function AdminBatchDetailsPage() {
       )}
 
       {/* VIEW STUDENT DETAILS & PROGRESS MODAL */}
-      {viewStudent && (
-        <div className="modal-backdrop" onClick={() => { setViewStudent(null); setStudentDetail(null); }}>
-          <div className="modal-dialog" style={{ maxWidth: '580px', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <i className="fa-solid fa-user-graduate" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}></i>
-                <h2 className="modal-title">Student Details & Progress</h2>
-              </div>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => { setViewStudent(null); setStudentDetail(null); }}
+      {viewStudent && (() => {
+        const sPlan = getStudentEnrolledPlan(batch.courseId, viewStudent.studentId || viewStudent.studentEmail, viewStudent);
+        const att = computeStudentAttendance(viewStudent, liveSessions, attendanceRecords);
+        const courseSummary = (studentDetail?.enrolledCourses || []).find(c => String(c.courseId) === String(batch.courseId)) || studentDetail?.enrolledCourses?.[0];
+        const lastSeenDate = getResolvedLastSeen(viewStudent, studentDetail, att?.sessions);
+        const { primary: lastSeenPrimary, secondary: lastSeenSecondary, isOnline } = formatLastSeen(lastSeenDate);
+
+        // Student assessment attempts for this course / general
+        const allStudentAssessments = studentDetail?.assessments || [];
+        const courseAttempts = allStudentAssessments.filter(a => {
+          if (!a.courseName) return true;
+          if (batch.courseName && a.courseName.toLowerCase().includes(batch.courseName.toLowerCase())) return true;
+          if (a.courseName === 'Course Assessment' || a.courseName === 'Module Assessment') return true;
+          return (studentDetail?.enrolledCourses || []).length <= 1;
+        });
+        const activeAssessmentsList = courseAttempts.length > 0 ? courseAttempts : allStudentAssessments;
+        const totalAttemptsCount = activeAssessmentsList.length;
+        const passedAttemptsCount = activeAssessmentsList.filter(a => a.passed).length;
+        const avgScore = totalAttemptsCount > 0
+          ? Math.round(activeAssessmentsList.reduce((acc, a) => acc + (a.percentage || 0), 0) / totalAttemptsCount)
+          : null;
+
+        // Video and lesson progress
+        const overallVideoPct = Math.round(courseSummary?.progressPercent ?? viewStudent.progressPercent ?? 0);
+        const completedLessonsCount = courseSummary?.completedContents ?? viewStudent.completedContents ?? 0;
+        const totalLessonsCount = courseSummary?.totalContents ?? viewStudent.totalContents ?? 0;
+
+        // Section breakdown
+        const displaySections = (courseSummary?.sections && courseSummary.sections.length > 0)
+          ? courseSummary.sections
+          : courseSectionsList.map(sec => ({
+              sectionId: sec.id,
+              sectionTitle: sec.title,
+              totalContents: sec.contents?.length || 0,
+              completedContents: 0,
+              progressPercent: 0,
+              contents: sec.contents || []
+            }));
+
+        return (
+          <div className="modal-backdrop" onClick={() => { setViewStudent(null); setStudentDetail(null); }}>
+            <div
+              className="modal-dialog"
+              style={{
+                maxWidth: '780px',
+                width: '94vw',
+                maxHeight: '92vh',
+                display: 'flex',
+                flexDirection: 'column',
+                pointerEvents: 'auto',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div
+                className="modal-header"
+                style={{
+                  padding: '16px 22px',
+                  borderBottom: '1px solid var(--border-default)',
+                  background: 'var(--bg-card, #ffffff)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
               >
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* Profile Card */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px' }}>
-                <div
-                  style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: '1.3rem',
-                    overflow: 'hidden',
-                    flexShrink: 0
-                  }}
-                >
-                  {viewStudent.profileImage || studentDetail?.profileImage ? (
-                    <img src={viewStudent.profileImage || studentDetail?.profileImage} alt={viewStudent.studentName} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    viewStudent.studentName ? viewStudent.studentName.charAt(0).toUpperCase() : 'S'
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {viewStudent.studentName}
-                  </div>
-                  <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    {viewStudent.studentEmail}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px', alignItems: 'center' }}>
-                    <span className="status-badge active" style={{ fontSize: '0.72rem' }}>Enrolled</span>
-                    {studentDetail?.emailVerified && (
-                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', fontWeight: 700 }}>
-                        <i className="fa-solid fa-check-circle" style={{ marginRight: '4px' }}></i> Verified
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Batch Enrollment Details */}
-              <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px' }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                  Batch Enrollment Info
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.88rem' }}>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.78rem' }}>Course</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{batch.courseName}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.78rem' }}>Batch</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{batch.name} ({batch.code})</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.78rem' }}>Enrolled Date</span>
-                    <span style={{ color: 'var(--text-primary)' }}>
-                      {viewStudent.enrolledAt ? new Date(viewStudent.enrolledAt).toLocaleString() : '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.78rem' }}>Enrollment ID</span>
-                    <code style={{ color: 'var(--primary)' }}>#{viewStudent.enrollmentId}</code>
-                  </div>
-                </div>
-              </div>
-
-              {/* Purchased Selling Plan Info */}
-              {(() => {
-                const plan = getStudentEnrolledPlan(batch.courseId, viewStudent.studentId || viewStudent.studentEmail, viewStudent);
-                return (
-                  <div style={{
-                    padding: '16px',
-                    background: plan?.bgColor || 'rgba(90, 112, 211, 0.05)',
-                    border: `1.5px solid ${plan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
-                    borderRadius: '10px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: plan?.color || '#5A70D3', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <i className={plan?.icon || 'fa-solid fa-layer-group'}></i>
-                        <span>Purchased Plan & Access Tier</span>
-                      </div>
-                      <span style={{
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        padding: '3px 9px',
-                        borderRadius: '9999px',
-                        background: plan?.color || '#5A70D3',
-                        color: '#ffffff'
-                      }}>
-                        {plan?.shortName || plan?.name}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 800, marginBottom: '4px' }}>
-                      {plan?.name}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '10px' }}>
-                      {plan?.description}
-                    </div>
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.78rem', fontWeight: 700, flexWrap: 'wrap' }}>
-                      <span style={{ color: plan?.allowsLive ? '#0284c7' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <i className={plan?.allowsLive ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: plan?.allowsLive ? '#10b981' : '#94a3b8' }}></i>
-                        Live Interactive Classes & Attendance
-                      </span>
-                      <span style={{ color: plan?.allowsRecordings ? '#059669' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <i className={plan?.allowsRecordings ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: plan?.allowsRecordings ? '#10b981' : '#94a3b8' }}></i>
-                        Recorded Video Replays
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Course Progress Tracking */}
-              <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                    Course Progress Tracking
-                  </div>
-                  {(viewStudent.totalContents || 0) > 0 && (
-                    <span style={{ fontSize: '1rem', fontWeight: 800, color: (viewStudent.progressPercent || 0) >= 100 ? '#10b981' : '#6366f1' }}>
-                      {Math.round(viewStudent.progressPercent || 0)}%
-                    </span>
-                  )}
-                </div>
-
-                {(viewStudent.totalContents || 0) === 0 ? (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', background: 'rgba(148, 163, 184, 0.12)', border: '1px solid var(--border-default)', fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                    <i className="fa-solid fa-video-slash" style={{ color: '#94a3b8' }}></i>
-                    <span>No videos (This class has session recordings only)</span>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ height: '10px', width: '100%', background: 'var(--border-default)', borderRadius: '5px', overflow: 'hidden', marginBottom: '8px' }}>
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${Math.min(100, Math.round(viewStudent.progressPercent || 0))}%`,
-                          background: (viewStudent.progressPercent || 0) >= 100 ? '#10b981' : '#6366f1',
-                          borderRadius: '5px',
-                          transition: 'width 0.4s ease',
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      <span>Completed: <strong>{viewStudent.completedContents || 0}</strong> lessons</span>
-                      <span>Total Course Contents: <strong>{viewStudent.totalContents || 0}</strong></span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Live Session Attendance Tracking */}
-              {(() => {
-                const att = computeStudentAttendance(viewStudent, liveSessions, attendanceRecords);
-                const hasHeld = att.totalHeld > 0;
-                const rate = att.percentage ?? (hasHeld ? 0 : 100);
-                return (
-                  <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <i className="fa-solid fa-clipboard-user" style={{ color: 'var(--primary)' }}></i>
-                        Live Session Attendance
-                      </div>
-                      <span style={{ fontSize: '1rem', fontWeight: 800, color: hasHeld ? (rate >= 80 ? '#10b981' : rate > 40 ? '#6366f1' : '#ef4444') : '#64748b' }}>
-                        {hasHeld ? `${rate}%` : 'No held sessions yet'}
-                      </span>
-                    </div>
-
-                    <div style={{ height: '10px', width: '100%', background: 'var(--border-default)', borderRadius: '5px', overflow: 'hidden', marginBottom: '8px' }}>
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${Math.min(100, rate)}%`,
-                          background: hasHeld ? (rate >= 80 ? '#10b981' : rate > 40 ? '#6366f1' : '#ef4444') : '#94a3b8',
-                          borderRadius: '5px',
-                          transition: 'width 0.4s ease',
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ color: '#10b981', fontWeight: 700 }}>
-                        <i className="fa-solid fa-check" style={{ marginRight: '4px' }}></i>
-                        Attended: <strong>{att.attendedCount}</strong>
-                      </span>
-                      <span style={{ color: '#ef4444', fontWeight: 700 }}>
-                        <i className="fa-solid fa-xmark" style={{ marginRight: '4px' }}></i>
-                        Absent: <strong>{att.absentCount}</strong>
-                      </span>
-                      <span>Total Held: <strong>{att.totalHeld}</strong></span>
-                    </div>
-
-                    {att.sessions && att.sessions.length > 0 && (
-                      <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {att.sessions.map((ses, i) => (
-                          <div key={ses.sessionId || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '4px 0' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ses.sessionTitle}</span>
-                            <span
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 800,
-                                padding: '2px 8px',
-                                borderRadius: '9999px',
-                                background: ses.attendanceStatus === 'PRESENT' ? 'rgba(16, 185, 129, 0.12)' : (ses.attendanceStatus === 'UPCOMING' ? '#e0f2fe' : '#fee2e2'),
-                                color: ses.attendanceStatus === 'PRESENT' ? '#10b981' : (ses.attendanceStatus === 'UPCOMING' ? '#0284c7' : '#ef4444')
-                              }}
-                            >
-                              {ses.attendanceStatus === 'PRESENT' ? 'Present' : (ses.attendanceStatus === 'UPCOMING' ? 'Upcoming' : 'Absent')}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Other Enrolled Courses (if any) */}
-              {detailLoading ? (
-                <div style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  Loading profile overview…
-                </div>
-              ) : studentDetail?.enrolledCourses?.length > 1 ? (
-                <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px' }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                    Other Enrolled Courses ({studentDetail.enrolledCourses.length - 1})
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {studentDetail.enrolledCourses
-                      .filter(c => c.courseId !== batch.courseId)
-                      .map(c => (
-                        <div key={c.enrollmentId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', padding: '6px 0', borderBottom: '1px dashed var(--border-subtle)' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.courseName}</span>
-                          {(c.totalContents || 0) === 0 ? (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>No videos</span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{Math.round(c.progressPercent || 0)}%</span>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {!isReadOnly && (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
                     style={{
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      color: '#ef4444',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      fontWeight: 600,
-                      display: 'inline-flex',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'rgba(99, 102, 241, 0.12)',
+                      color: 'var(--primary, #6366f1)',
+                      display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '7px 14px',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
+                      justifyContent: 'center',
+                      fontSize: '1.15rem'
                     }}
-                    onClick={() => handleRemoveStudent(viewStudent)}
                   >
-                    <i className="fa-solid fa-user-minus"></i> Remove from Batch
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => {
-                      const s = viewStudent;
-                      setViewStudent(null);
-                      setStudentDetail(null);
-                      handleOpenChangeBatch(s);
-                    }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <i className="fa-solid fa-arrow-right-arrow-left"></i> Change Batch
-                  </button>
+                    <i className="fa-solid fa-user-graduate"></i>
+                  </div>
+                  <div>
+                    <h2 className="modal-title" style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                      Student Course & Curriculum Profile
+                    </h2>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {batch.name} ({batch.code}) • {batch.courseName}
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Link
-                  to={`/admin/students?search=${encodeURIComponent(viewStudent.studentEmail)}`}
-                  className="btn btn-secondary btn-sm"
-                  style={{ textDecoration: 'none' }}
-                >
-                  <i className="fa-solid fa-arrow-up-right-from-square" style={{ marginRight: '6px' }}></i> Full Profile
-                </Link>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => { setViewStudent(null); setStudentDetail(null); }}
+                  style={{ borderRadius: '8px', padding: '6px 12px', fontSize: '0.85rem' }}
                 >
-                  Close
+                  ✕
                 </button>
+              </div>
+
+              {/* Modal Body */}
+              <div
+                className="modal-body"
+                style={{
+                  padding: '20px 22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '18px',
+                  overflowY: 'auto'
+                }}
+              >
+                {/* 1. Profile & Last Seen Bar */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '16px',
+                    padding: '16px 18px',
+                    background: 'var(--bg-surface, #f8fafc)',
+                    border: '1px solid var(--border-default, #e2e8f0)',
+                    borderRadius: '14px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 800,
+                        fontSize: '1.4rem',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)'
+                      }}
+                    >
+                      {viewStudent.profileImage || studentDetail?.profileImage ? (
+                        <img
+                          src={viewStudent.profileImage || studentDetail?.profileImage}
+                          alt={viewStudent.studentName}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        viewStudent.studentName ? viewStudent.studentName.charAt(0).toUpperCase() : 'S'
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '1.18rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{viewStudent.studentName}</span>
+                        {studentDetail?.emailVerified && (
+                          <span title="Email Verified" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                            <i className="fa-solid fa-circle-check" style={{ color: '#10b981', fontSize: '0.9rem' }}></i>
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-all' }}>
+                        {viewStudent.studentEmail}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                          <i className="fa-regular fa-calendar" style={{ marginRight: '4px' }}></i>
+                          Enrolled: {viewStudent.enrolledAt ? new Date(viewStudent.enrolledAt).toLocaleDateString() : '—'}
+                        </span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '9999px',
+                            background: sPlan?.bgColor || 'rgba(90, 112, 211, 0.1)',
+                            color: sPlan?.color || '#5A70D3',
+                            border: `1px solid ${sPlan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`
+                          }}
+                        >
+                          <i className={sPlan?.icon || 'fa-solid fa-layer-group'} style={{ fontSize: '0.68rem' }}></i>
+                          {sPlan?.shortName || sPlan?.name || 'Full Access'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Last Seen / Active Status Badge */}
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      background: isOnline ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-card, #ffffff)',
+                      border: `1px solid ${isOnline ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-default, #e2e8f0)'}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '3px',
+                      minWidth: '150px',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}
+                  >
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: isOnline ? '#10b981' : '#94a3b8',
+                          display: 'inline-block',
+                          boxShadow: isOnline ? '0 0 0 2px rgba(16, 185, 129, 0.25)' : 'none'
+                        }}
+                      />
+                      <span>Last Seen</span>
+                    </div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: isOnline ? '#059669' : 'var(--text-primary)' }}>
+                      {lastSeenPrimary}
+                    </div>
+                    {lastSeenSecondary && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {lastSeenSecondary}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Four Key Stats Grid */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '12px'
+                  }}
+                >
+                  {/* Video Progress */}
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(79, 70, 229, 0.02) 100%)',
+                      border: '1px solid rgba(99, 102, 241, 0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Video Progress</span>
+                      <span style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                        <i className="fa-solid fa-play"></i>
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: overallVideoPct >= 100 ? '#10b981' : '#6366f1' }}>
+                        {overallVideoPct}%
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {completedLessonsCount} / {totalLessonsCount} Lessons Done
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Attendance */}
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(5, 150, 105, 0.02) 100%)',
+                      border: '1px solid rgba(16, 185, 129, 0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Live Attendance</span>
+                      <span style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.12)', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                        <i className="fa-solid fa-video"></i>
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: att.totalHeld ? (att.percentage >= 75 ? '#10b981' : att.percentage >= 50 ? '#6366f1' : '#ef4444') : '#64748b' }}>
+                        {att.totalHeld ? `${att.percentage}%` : 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {att.attendedCount} Present • {att.absentCount} Absent
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Assessment Marks */}
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(217, 119, 6, 0.02) 100%)',
+                      border: '1px solid rgba(245, 158, 11, 0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Assessments</span>
+                      <span style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                        <i className="fa-solid fa-award"></i>
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#d97706' }}>
+                        {avgScore !== null ? `${avgScore}%` : (totalAttemptsCount > 0 ? `${passedAttemptsCount}/${totalAttemptsCount} Passed` : '—')}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {totalAttemptsCount > 0 ? `${passedAttemptsCount} of ${totalAttemptsCount} Passed` : 'No Tests Attempted'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Purchased Plan */}
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(124, 58, 237, 0.02) 100%)',
+                      border: '1px solid rgba(139, 92, 246, 0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Plan Access</span>
+                      <span style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                        <i className="fa-solid fa-layer-group"></i>
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {sPlan?.shortName || sPlan?.name || 'Full Access'}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {sPlan?.allowsLive && sPlan?.allowsRecordings ? 'Live + Videos' : sPlan?.allowsLive ? 'Live Only' : 'Recordings Only'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Navigation Tabs */}
+                <div
+                  style={{
+                    display: 'flex',
+                    borderBottom: '1px solid var(--border-default)',
+                    gap: '4px',
+                    paddingBottom: '0',
+                    overflowX: 'auto'
+                  }}
+                >
+                  {[
+                    { id: 'overview', label: 'Overview', icon: 'fa-chart-pie' },
+                    {
+                      id: 'curriculum',
+                      label: 'Curriculum & Video Progress',
+                      icon: 'fa-book-open',
+                      count: `${completedLessonsCount}/${totalLessonsCount}`
+                    },
+                    {
+                      id: 'attendance',
+                      label: 'Class Attendance',
+                      icon: 'fa-clipboard-user',
+                      count: att.totalHeld ? `${att.attendedCount}/${att.totalHeld}` : null
+                    },
+                    {
+                      id: 'assessments',
+                      label: 'Assessment Marks',
+                      icon: 'fa-award',
+                      count: totalAttemptsCount || (courseAssessmentsList.length > 0 ? courseAssessmentsList.length : null)
+                    }
+                  ].map((t) => {
+                    const isActive = studentModalTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setStudentModalTab(t.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '7px',
+                          padding: '10px 16px',
+                          borderRadius: '8px 8px 0 0',
+                          border: 'none',
+                          borderBottom: isActive ? '3px solid var(--primary, #6366f1)' : '3px solid transparent',
+                          background: isActive ? 'var(--bg-surface, #f8fafc)' : 'transparent',
+                          color: isActive ? 'var(--primary, #6366f1)' : 'var(--text-secondary)',
+                          fontWeight: isActive ? 800 : 600,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <i className={`fa-solid ${t.icon}`}></i>
+                        <span>{t.label}</span>
+                        {t.count !== null && t.count !== undefined && (
+                          <span
+                            style={{
+                              fontSize: '0.72rem',
+                              padding: '1px 7px',
+                              borderRadius: '9999px',
+                              background: isActive ? 'var(--primary, #6366f1)' : 'var(--border-default, #e2e8f0)',
+                              color: isActive ? '#ffffff' : 'var(--text-muted)',
+                              fontWeight: 700
+                            }}
+                          >
+                            {t.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 4. TAB CONTENTS */}
+                {detailLoading ? (
+                  <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)' }}>
+                    <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--primary)' }}></i>
+                    <div style={{ fontSize: '0.88rem' }}>Loading student curriculum activity…</div>
+                  </div>
+                ) : (
+                  <>
+                    {/* TAB 1: OVERVIEW */}
+                    {studentModalTab === 'overview' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Batch Info Details */}
+                        <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '12px' }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                            Batch & Enrollment Specifications
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.88rem' }}>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.76rem' }}>Course Name</span>
+                              <strong style={{ color: 'var(--text-primary)' }}>{batch.courseName}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.76rem' }}>Batch Assigned</span>
+                              <strong style={{ color: 'var(--text-primary)' }}>{batch.name} ({batch.code})</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.76rem' }}>Enrolled Timestamp</span>
+                              <span style={{ color: 'var(--text-primary)' }}>
+                                {viewStudent.enrolledAt ? new Date(viewStudent.enrolledAt).toLocaleString() : '—'}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.76rem' }}>Student Status</span>
+                              <span className="status-badge active" style={{ fontSize: '0.72rem' }}>Active Enrollment</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Plan Details & Permissions */}
+                        <div
+                          style={{
+                            padding: '16px',
+                            background: sPlan?.bgColor || 'rgba(90, 112, 211, 0.05)',
+                            border: `1.5px solid ${sPlan?.borderColor || 'rgba(90, 112, 211, 0.2)'}`,
+                            borderRadius: '12px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: sPlan?.color || '#5A70D3', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <i className={sPlan?.icon || 'fa-solid fa-layer-group'}></i>
+                              <span>Purchased Plan Privileges</span>
+                            </div>
+                            <span
+                              style={{
+                                fontSize: '0.74rem',
+                                fontWeight: 800,
+                                padding: '3px 9px',
+                                borderRadius: '9999px',
+                                background: sPlan?.color || '#5A70D3',
+                                color: '#ffffff'
+                              }}
+                            >
+                              {sPlan?.shortName || sPlan?.name}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', fontWeight: 800, marginBottom: '4px' }}>
+                            {sPlan?.name}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '10px' }}>
+                            {sPlan?.description}
+                          </div>
+                          <div style={{ display: 'flex', gap: '14px', fontSize: '0.78rem', fontWeight: 700, flexWrap: 'wrap' }}>
+                            <span style={{ color: sPlan?.allowsLive ? '#0284c7' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <i className={sPlan?.allowsLive ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: sPlan?.allowsLive ? '#10b981' : '#94a3b8' }}></i>
+                              Live Interactive Classes & Realtime Attendance
+                            </span>
+                            <span style={{ color: sPlan?.allowsRecordings ? '#059669' : '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <i className={sPlan?.allowsRecordings ? "fa-solid fa-check" : "fa-solid fa-xmark"} style={{ color: sPlan?.allowsRecordings ? '#10b981' : '#94a3b8' }}></i>
+                              Curriculum Video Lessons & Playback Recordings
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Recent Activity Timeline Feed */}
+                        {studentDetail?.recentActivity && studentDetail.recentActivity.length > 0 && (
+                          <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '12px' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <i className="fa-solid fa-clock-rotate-left" style={{ color: 'var(--primary)' }}></i>
+                              <span>Recent Student Milestones & Activity</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {studentDetail.recentActivity.slice(0, 4).map((act, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    background: 'var(--bg-card, #ffffff)',
+                                    border: '1px solid var(--border-subtle, #f1f5f9)'
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: '30px',
+                                      height: '30px',
+                                      borderRadius: '50%',
+                                      background: act.type === 'LESSON_COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : act.type === 'ASSESSMENT' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.12)',
+                                      color: act.type === 'LESSON_COMPLETED' ? '#059669' : act.type === 'ASSESSMENT' ? '#d97706' : '#6366f1',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '0.75rem',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    <i className={`fa-solid ${act.icon || 'fa-bolt'}`}></i>
+                                  </span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {act.title}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                      {act.description}
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                    {act.timestamp ? new Date(act.timestamp).toLocaleDateString() : ''}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TAB 2: CURRICULUM & VIDEO PROGRESS */}
+                    {studentModalTab === 'curriculum' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Overall Progress Bar Card */}
+                        <div style={{ padding: '18px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                              Overall Course Progress
+                            </div>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: overallVideoPct >= 100 ? '#10b981' : '#6366f1' }}>
+                              {overallVideoPct}% Completed
+                            </span>
+                          </div>
+                          <div style={{ height: '10px', width: '100%', background: 'var(--border-default)', borderRadius: '5px', overflow: 'hidden', marginBottom: '8px' }}>
+                            <div
+                              style={{
+                                height: '100%',
+                                width: `${Math.min(100, overallVideoPct)}%`,
+                                background: overallVideoPct >= 100 ? '#10b981' : '#6366f1',
+                                borderRadius: '5px',
+                                transition: 'width 0.4s ease'
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            <span>Completed: <strong>{completedLessonsCount}</strong> of <strong>{totalLessonsCount}</strong> lessons</span>
+                            {courseSummary?.lastAccessedAt && (
+                              <span>Last lesson access: <strong>{new Date(courseSummary.lastAccessedAt).toLocaleDateString()}</strong></span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Curriculum Modules & Sections */}
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                            Curriculum Sections & Video Breakdown ({displaySections.length})
+                          </div>
+
+                          {displaySections.length === 0 ? (
+                            <div
+                              style={{
+                                textAlign: 'center',
+                                padding: '36px 20px',
+                                background: 'var(--bg-surface)',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border-default)',
+                                color: 'var(--text-muted)'
+                              }}
+                            >
+                              <i className="fa-solid fa-video-slash" style={{ fontSize: '1.8rem', marginBottom: '8px', color: '#94a3b8' }}></i>
+                              <div style={{ fontWeight: 700 }}>No Video Lessons Configured</div>
+                              <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                                This course is delivered exclusively via interactive live sessions.
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {displaySections.map((sec, sIdx) => {
+                                const secPct = Math.round(sec.progressPercent || 0);
+                                return (
+                                  <div
+                                    key={sec.sectionId || sIdx}
+                                    style={{
+                                      padding: '14px 16px',
+                                      borderRadius: '10px',
+                                      background: 'var(--bg-card, #ffffff)',
+                                      border: '1px solid var(--border-default, #e2e8f0)',
+                                      boxShadow: 'var(--shadow-sm)'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                                        {sec.sectionTitle || `Section ${sIdx + 1}`}
+                                      </div>
+                                      <span
+                                        style={{
+                                          fontSize: '0.78rem',
+                                          fontWeight: 800,
+                                          color: secPct >= 100 ? '#10b981' : '#6366f1'
+                                        }}
+                                      >
+                                        {secPct}%
+                                      </span>
+                                    </div>
+                                    <div style={{ height: '6px', width: '100%', background: 'var(--border-default)', borderRadius: '3px', overflow: 'hidden', marginBottom: '6px' }}>
+                                      <div
+                                        style={{
+                                          height: '100%',
+                                          width: `${Math.min(100, secPct)}%`,
+                                          background: secPct >= 100 ? '#10b981' : '#6366f1',
+                                          borderRadius: '3px'
+                                        }}
+                                      />
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                      <span>{sec.completedContents || 0} / {sec.totalContents || 0} lessons completed</span>
+                                      {secPct >= 100 && (
+                                        <span style={{ color: '#10b981', fontWeight: 700 }}>
+                                          <i className="fa-solid fa-circle-check" style={{ marginRight: '4px' }}></i> Completed
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Sub-lessons list if available */}
+                                    {sec.contents && sec.contents.length > 0 && (
+                                      <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-subtle)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        {sec.contents.map((item, iIdx) => (
+                                          <div
+                                            key={item.id || iIdx}
+                                            style={{
+                                              display: 'flex',
+                                              justifyContent: 'space-between',
+                                              alignItems: 'center',
+                                              fontSize: '0.78rem',
+                                              padding: '3px 0'
+                                            }}
+                                          >
+                                            <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                              <i className={item.type === 'video' ? 'fa-solid fa-circle-play' : item.type === 'quiz' ? 'fa-solid fa-award' : 'fa-solid fa-file-lines'} style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}></i>
+                                              {item.title}
+                                            </span>
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                              {item.duration ? `${Math.round(item.duration / 60)}m` : 'Lesson'}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 3: LIVE CLASS ATTENDANCE */}
+                    {studentModalTab === 'attendance' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Attendance Summary Banner */}
+                        <div
+                          style={{
+                            padding: '16px 18px',
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '12px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <i className="fa-solid fa-clipboard-user" style={{ color: 'var(--primary)' }}></i>
+                              Live Interactive Attendance
+                            </div>
+                            <span
+                              style={{
+                                fontSize: '1.1rem',
+                                fontWeight: 800,
+                                color: att.totalHeld ? (att.percentage >= 75 ? '#10b981' : att.percentage >= 50 ? '#6366f1' : '#ef4444') : '#64748b'
+                              }}
+                            >
+                              {att.totalHeld ? `${att.percentage}% Overall Attendance` : 'No live sessions held yet'}
+                            </span>
+                          </div>
+
+                          <div style={{ height: '8px', width: '100%', background: 'var(--border-default)', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
+                            <div
+                              style={{
+                                height: '100%',
+                                width: `${Math.min(100, att.percentage || 0)}%`,
+                                background: att.percentage >= 75 ? '#10b981' : att.percentage >= 50 ? '#6366f1' : '#ef4444',
+                                borderRadius: '4px'
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', flexWrap: 'wrap', gap: '8px' }}>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>
+                              <i className="fa-solid fa-check" style={{ marginRight: '4px' }}></i>
+                              Present: <strong>{att.attendedCount}</strong>
+                            </span>
+                            <span style={{ color: '#ef4444', fontWeight: 700 }}>
+                              <i className="fa-solid fa-xmark" style={{ marginRight: '4px' }}></i>
+                              Absent: <strong>{att.absentCount}</strong>
+                            </span>
+                            <span>Total Held Sessions: <strong>{att.totalHeld}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Session Attendance Log */}
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                            Scheduled Live Meeting Attendance Log ({att.sessions?.length || 0})
+                          </div>
+
+                          {(!att.sessions || att.sessions.length === 0) ? (
+                            <div
+                              style={{
+                                textAlign: 'center',
+                                padding: '36px 20px',
+                                background: 'var(--bg-surface)',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border-default)',
+                                color: 'var(--text-muted)'
+                              }}
+                            >
+                              <i className="fa-solid fa-calendar-xmark" style={{ fontSize: '1.8rem', marginBottom: '8px', color: '#94a3b8' }}></i>
+                              <div style={{ fontWeight: 700 }}>No Sessions Scheduled</div>
+                              <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                                There are no live sessions scheduled for this batch yet.
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {att.sessions.map((ses, i) => {
+                                const isPresent = ses.attendanceStatus === 'PRESENT';
+                                const isUpcoming = ses.attendanceStatus === 'UPCOMING';
+                                return (
+                                  <div
+                                    key={ses.sessionId || i}
+                                    style={{
+                                      padding: '12px 16px',
+                                      borderRadius: '10px',
+                                      background: 'var(--bg-card, #ffffff)',
+                                      border: `1px solid ${isPresent ? 'rgba(16, 185, 129, 0.25)' : isUpcoming ? 'rgba(56, 189, 248, 0.25)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      gap: '12px',
+                                      boxShadow: 'var(--shadow-sm)'
+                                    }}
+                                  >
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                                        {ses.sessionTitle}
+                                      </div>
+                                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        <span>
+                                          <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                                          {ses.scheduledAt ? new Date(ses.scheduledAt).toLocaleString() : 'Scheduled'}
+                                        </span>
+                                        {ses.attendedAt && (
+                                          <span style={{ color: '#059669', fontWeight: 600 }}>
+                                            <i className="fa-solid fa-right-to-bracket" style={{ marginRight: '4px' }}></i>
+                                            Joined: {new Date(ses.attendedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span
+                                        style={{
+                                          fontSize: '0.74rem',
+                                          fontWeight: 800,
+                                          padding: '3px 10px',
+                                          borderRadius: '9999px',
+                                          background: isPresent ? 'rgba(16, 185, 129, 0.12)' : isUpcoming ? 'rgba(56, 189, 248, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                          color: isPresent ? '#10b981' : isUpcoming ? '#0284c7' : '#ef4444'
+                                        }}
+                                      >
+                                        <i className={`fa-solid ${isPresent ? 'fa-check' : isUpcoming ? 'fa-hourglass-start' : 'fa-xmark'}`} style={{ marginRight: '4px' }}></i>
+                                        {isPresent ? 'Present' : isUpcoming ? 'Upcoming' : 'Absent'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 4: ASSESSMENT MARKS & ACTIVITY */}
+                    {studentModalTab === 'assessments' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Assessment Marks Banner */}
+                        <div
+                          style={{
+                            padding: '16px 18px',
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '12px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <i className="fa-solid fa-award" style={{ color: '#d97706' }}></i>
+                              Course Assessment & Quiz Scores
+                            </div>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#d97706' }}>
+                              {avgScore !== null ? `Average Score: ${avgScore}%` : 'Tests & Quizzes'}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '16px', fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            <span>Attempted: <strong>{totalAttemptsCount}</strong></span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>Passed: <strong>{passedAttemptsCount}</strong></span>
+                            <span style={{ color: '#ef4444', fontWeight: 700 }}>Needs Review: <strong>{Math.max(0, totalAttemptsCount - passedAttemptsCount)}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* List of Assessments */}
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                            Curriculum Test Performance & Marks
+                          </div>
+
+                          {activeAssessmentsList.length === 0 && courseAssessmentsList.length === 0 ? (
+                            <div
+                              style={{
+                                textAlign: 'center',
+                                padding: '36px 20px',
+                                background: 'var(--bg-surface)',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border-default)',
+                                color: 'var(--text-muted)'
+                              }}
+                            >
+                              <i className="fa-solid fa-file-circle-question" style={{ fontSize: '1.8rem', marginBottom: '8px', color: '#94a3b8' }}></i>
+                              <div style={{ fontWeight: 700 }}>No Assessments Attempted</div>
+                              <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                                This student has not submitted any module quizzes or exams for this course yet.
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {/* 1. Show all student attempts */}
+                              {activeAssessmentsList.map((a) => (
+                                <div
+                                  key={a.attemptId}
+                                  style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    background: 'var(--bg-card, #ffffff)',
+                                    border: `1px solid ${a.passed ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                                    boxShadow: 'var(--shadow-sm)'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                                      {a.title || 'Course Assessment'}
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        padding: '3px 10px',
+                                        borderRadius: '9999px',
+                                        background: a.passed ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                        color: a.passed ? '#10b981' : '#ef4444'
+                                      }}
+                                    >
+                                      {a.passed ? 'PASSED' : 'FAILED'}
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '0.82rem', marginTop: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                      <span style={{ fontWeight: 800, color: a.passed ? '#059669' : '#dc2626', fontSize: '0.94rem' }}>
+                                        Marks: {a.score != null ? a.score : Math.round((a.percentage || 0) * (a.totalMarks || 10) / 100)} / {a.totalMarks || 10}
+                                      </span>
+                                      <span style={{ color: 'var(--text-muted)' }}>
+                                        ({Math.round(a.percentage || 0)}%)
+                                      </span>
+                                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: '4px' }}>
+                                        Pass requirement: {a.passingPercentage || 60}%
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                      <i className="fa-regular fa-clock" style={{ marginRight: '4px' }}></i>
+                                      {a.completedAt ? new Date(a.completedAt).toLocaleString() : (a.startedAt ? new Date(a.startedAt).toLocaleString() : '')}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* 2. Show unattempted course assessments if any */}
+                              {courseAssessmentsList
+                                .filter(ca => !activeAssessmentsList.some(att => att.assessmentId === ca.id || (att.title && ca.title && att.title.toLowerCase() === ca.title.toLowerCase())))
+                                .map((ca) => (
+                                  <div
+                                    key={`unatt-${ca.id}`}
+                                    style={{
+                                      padding: '12px 16px',
+                                      borderRadius: '10px',
+                                      background: 'var(--bg-surface, #f8fafc)',
+                                      border: '1px dashed var(--border-default, #cbd5e1)',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center'
+                                    }}
+                                  >
+                                    <div>
+                                      <div style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text-primary)' }}>
+                                        {ca.title || 'Course Module Assessment'}
+                                      </div>
+                                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                        {ca.totalQuestions || 10} Questions • Pass requirement: {ca.passPercentage || 60}%
+                                      </div>
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        padding: '2px 8px',
+                                        borderRadius: '9999px',
+                                        background: 'rgba(245, 158, 11, 0.1)',
+                                        color: '#d97706'
+                                      }}
+                                    >
+                                      Not Attempted
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div
+                className="modal-footer"
+                style={{
+                  padding: '14px 22px',
+                  borderTop: '1px solid var(--border-default)',
+                  background: 'var(--bg-card, #ffffff)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                {!isReadOnly && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#ef4444',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '7px 14px',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => handleRemoveStudent(viewStudent)}
+                    >
+                      <i className="fa-solid fa-user-minus"></i> Remove from Batch
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        const s = viewStudent;
+                        setViewStudent(null);
+                        setStudentDetail(null);
+                        handleOpenChangeBatch(s);
+                      }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <i className="fa-solid fa-arrow-right-arrow-left"></i> Change Batch
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                  <Link
+                    to={`/admin/students?search=${encodeURIComponent(viewStudent.studentEmail)}`}
+                    className="btn btn-secondary btn-sm"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square"></i> Full Profile
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => { setViewStudent(null); setStudentDetail(null); }}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* CHANGE STUDENT BATCH MODAL */}
       {batchChangeStudent && (
@@ -1901,7 +2738,7 @@ export default function AdminBatchDetailsPage() {
                                 {hasHeld ? `${rate}%` : 'N/A'}
                               </span>
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
