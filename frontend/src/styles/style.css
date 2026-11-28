@@ -2232,6 +2232,16 @@ h6,
   padding-top: 12px;
   border-top: 1px solid var(--ud-border);
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ud-course-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .ud-price-tag {

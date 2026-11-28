@@ -207,7 +207,91 @@ export default function AdminCoursePreviewPage() {
     : [];
 
   return (
-    <div className="page">
+    <div className="page ot-preview-page-container">
+      <style>{`
+        .ot-preview-page-container {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+
+        .ot-preview-hero {
+          background: #1c1d1f;
+          color: #ffffff;
+          border-radius: var(--radius-lg);
+          padding: 36px 32px;
+          margin-bottom: 28px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .ot-preview-hero-title {
+          font-size: 2.1rem;
+          font-weight: 800;
+          line-height: 1.25;
+          margin-bottom: 12px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .ot-admin-preview-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 340px;
+          gap: 32px;
+          align-items: start;
+        }
+
+        .ot-preview-sticky-sidebar {
+          position: sticky;
+          top: 24px;
+        }
+
+        .ot-admin-player-grid {
+          display: grid;
+          grid-template-columns: minmax(280px, 340px) 1fr;
+          gap: 24px;
+          align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+          .ot-admin-preview-grid {
+            grid-template-columns: minmax(0, 1fr) 300px;
+            gap: 20px;
+          }
+          .ot-preview-hero {
+            padding: 28px 24px;
+          }
+          .ot-preview-hero-title {
+            font-size: 1.75rem;
+          }
+        }
+
+        @media (max-width: 880px) {
+          .ot-admin-preview-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+          .ot-preview-sticky-sidebar {
+            position: static;
+          }
+          .ot-admin-player-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .ot-preview-hero {
+            padding: 20px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+          }
+          .ot-preview-hero-title {
+            font-size: 1.35rem;
+          }
+        }
+      `}</style>
       {/* Top Admin Preview Banner & Controls */}
       <div
         style={{
@@ -417,7 +501,7 @@ export default function AdminCoursePreviewPage() {
         </div>
 
         {/* The Card Component with onClick staying 100% inside Admin */}
-        <div style={{ maxWidth: '280px' }}>
+        <div style={{ maxWidth: '320px', width: '100%' }}>
           <CourseCard
             course={diffMode === 'live' ? rawCourse : course}
             isEnrolled={false}
@@ -458,18 +542,9 @@ export default function AdminCoursePreviewPage() {
             </div>
 
             {/* Course Landing Hero Banner */}
-            <div
-              style={{
-                background: '#1c1d1f',
-                color: '#ffffff',
-                borderRadius: 'var(--radius-lg)',
-                padding: '36px 32px',
-                marginBottom: '28px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
-              }}
-            >
+            <div className="ot-preview-hero">
               {/* Category Breadcrumb */}
-              <div style={{ fontSize: '0.86rem', color: '#c084fc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.86rem', color: '#c084fc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, flexWrap: 'wrap' }}>
                 <span>Courses</span>
                 <span style={{ opacity: 0.5 }}>›</span>
                 <span>{course.categoryName || 'General'}</span>
@@ -478,16 +553,8 @@ export default function AdminCoursePreviewPage() {
               </div>
 
               {/* Course Title & Description Rendering */}
-              <h1 style={{
-                fontSize: '2.1rem',
-                fontWeight: 800,
-                lineHeight: 1.25,
-                marginBottom: '12px',
-                color: (diffMode !== 'live' && proposedEdits?.name && proposedEdits.name !== rawCourse?.name) ? '#6ee7b7' : '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                flexWrap: 'wrap'
+              <h1 className="ot-preview-hero-title" style={{
+                color: (diffMode !== 'live' && proposedEdits?.name && proposedEdits.name !== rawCourse?.name) ? '#6ee7b7' : '#ffffff'
               }}>
                 <span>{diffMode === 'live' ? rawCourse?.name : course.name}</span>
                 {(diffMode !== 'live' && proposedEdits?.name && proposedEdits.name !== rawCourse?.name) && (
@@ -537,9 +604,9 @@ export default function AdminCoursePreviewPage() {
             </div>
 
             {/* Two-Column Details Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '32px', alignItems: 'start' }}>
+            <div className="ot-admin-preview-grid">
               {/* Left Main Content Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
                 {/* What You'll Learn Box - ONLY if entered in form */}
                 {outcomesList.length > 0 && (
                   <div
@@ -802,7 +869,7 @@ export default function AdminCoursePreviewPage() {
               </div>
 
               {/* Right Column: Sticky Admin Preview Summary Card */}
-              <div style={{ position: 'sticky', top: '24px' }}>
+              <div className="ot-preview-sticky-sidebar">
                 <div
                   style={{
                     border: '1px solid var(--border-default)',
@@ -861,10 +928,26 @@ export default function AdminCoursePreviewPage() {
 
                       return (
                         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginBottom: '18px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                            marginBottom: '14px'
+                          }}>
+                            <div style={{
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              textTransform: 'uppercase',
+                              color: 'var(--text-muted)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              letterSpacing: '0.04em'
+                            }}>
                               <i className="fa-solid fa-tags" style={{ color: '#5A70D3' }}></i>
-                              <span>Course Pricing &amp; Selling Plans</span>
+                              <span>Selling Plans &amp; Pricing</span>
                             </div>
                             {!isFree && availablePlans.length > 0 && (
                               <span style={{
@@ -872,8 +955,9 @@ export default function AdminCoursePreviewPage() {
                                 fontWeight: 700,
                                 background: 'rgba(90, 112, 211, 0.1)',
                                 color: '#5A70D3',
-                                padding: '2px 8px',
-                                borderRadius: '9999px'
+                                padding: '3px 8px',
+                                borderRadius: '9999px',
+                                whiteSpace: 'nowrap'
                               }}>
                                 {availablePlans.length} Selling Plans
                               </span>
@@ -1020,9 +1104,9 @@ export default function AdminCoursePreviewPage() {
               Curriculum Lesson Player
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '24px', alignItems: 'start' }}>
+            <div className="ot-admin-player-grid">
               {/* Left Syllabus Sidebar */}
-              <div className="card" style={{ padding: '18px' }}>
+              <div className="card" style={{ padding: '18px', minWidth: 0 }}>
                 <div style={{ marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px' }}>
                   <span className="course-category-tag">{course.categoryName || 'Curriculum'}</span>
                   <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>
@@ -1101,7 +1185,7 @@ export default function AdminCoursePreviewPage() {
               </div>
 
               {/* Right Content Viewer */}
-              <div>
+              <div style={{ minWidth: 0 }}>
                 {activeContent ? (
                   <div className="card" style={{ padding: '24px' }}>
                     <div style={{ marginBottom: '18px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '14px' }}>

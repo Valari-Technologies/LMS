@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveMediaUrl } from '../utils/mediaUtils';
 import { getCourseDefaultRating } from '../utils/courseRatingUtils';
+import { getAvailablePlanList } from '../utils/courseSellingPlans';
 
 const gradients = [
   '#5A70D3',
@@ -30,6 +31,17 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
       onClick(course);
     }
   };
+
+  const availablePlans = useMemo(() => {
+    return getAvailablePlanList(course);
+  }, [course]);
+
+  const hasMultiplePlans = availablePlans && availablePlans.length > 1;
+  const isPaid = (course.pricingType === 'subscription' || course.pricingType === 'paid') && Number(course.price) > 0;
+  const minPrice = hasMultiplePlans
+    ? Math.min(...availablePlans.map(p => Number(p.price) || 0))
+    : Number(course.price || 0);
+  const currencySymbol = course.currency === 'USD' ? '$' : course.currency === 'EUR' ? '€' : course.currency === 'GBP' ? '£' : '₹';
 
   const cardInner = (
     <div
@@ -103,16 +115,26 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
         )}
 
         <div className="ud-course-footer">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="ud-course-footer-left">
             <span className="ud-price-tag" style={{
-              color: isEnrolled ? '#10b981' : ((course.pricingType === 'subscription' || course.pricingType === 'paid') && Number(course.price) > 0) ? '#4f46e5' : '#059669',
-              fontWeight: 800
+              color: isEnrolled ? '#10b981' : isPaid ? '#4f46e5' : '#059669',
+              fontWeight: 800,
+              display: 'inline-flex',
+              alignItems: 'baseline',
+              gap: '3px'
             }}>
               {isEnrolled ? (
                 'Enrolled'
-              ) : ((course.pricingType === 'subscription' || course.pricingType === 'paid') && Number(course.price) > 0) ? (
+              ) : isPaid ? (
                 <>
-                  {course.currency === 'USD' ? '$' : '₹'}{Number.isInteger(Number(course.price)) ? Number(course.price).toLocaleString() : Number(course.price).toFixed(2)}
+                  {hasMultiplePlans && (
+                    <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b' }}>
+                      From
+                    </span>
+                  )}
+                  <span>
+                    {currencySymbol}{Number.isInteger(minPrice) ? minPrice.toLocaleString() : minPrice.toFixed(2)}
+                  </span>
                   {course.pricingType === 'subscription' && course.subscriptionPeriod !== 'lifetime' && course.subscriptionPeriod !== 'one-time' && (
                     <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b' }}>
                       /{course.subscriptionPeriod === 'yearly' ? 'yr' : 'mo'}
@@ -123,10 +145,12 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
                 'Free'
               )}
             </span>
+
             {course.isBestseller && (
               <span className="ud-badge-bestseller">Bestseller</span>
             )}
-            {!isEnrolled && (course.pricingType === 'subscription' || course.pricingType === 'paid') && Number(course.price) > 0 && (
+
+            {!isEnrolled && isPaid && (
               <span style={{
                 fontSize: '0.68rem',
                 fontWeight: 700,
@@ -134,9 +158,12 @@ export default function CourseCard({ course, isEnrolled = false, onClick, linkTo
                 borderRadius: '4px',
                 background: '#eef2ff',
                 color: '#4f46e5',
-                border: '1px solid #c7d2fe'
+                border: '1px solid #c7d2fe',
+                whiteSpace: 'nowrap'
               }}>
-                {(course.subscriptionPeriod === 'lifetime' || course.subscriptionPeriod === 'one-time' || course.pricingType === 'paid') ? 'Lifetime Access' : 'Subscription'}
+                {hasMultiplePlans
+                  ? `${availablePlans.length} Selling Plans`
+                  : ((course.subscriptionPeriod === 'lifetime' || course.subscriptionPeriod === 'one-time' || course.pricingType === 'paid') ? 'Lifetime Access' : 'Subscription')}
               </span>
             )}
           </div>

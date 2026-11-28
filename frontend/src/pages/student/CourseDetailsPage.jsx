@@ -2646,6 +2646,8 @@ export default function CourseDetailsPage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      gap: '8px',
+                      flexWrap: 'wrap',
                       marginBottom: '10px'
                     }}>
                       <label style={{
